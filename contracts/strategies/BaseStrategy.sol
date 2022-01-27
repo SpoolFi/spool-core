@@ -122,7 +122,7 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
 
     function processReallocation(uint256[] calldata slippages, ProcessReallocationData calldata processReallocationData) external override returns(uint128)
     {
-        if (depositSlippageSlots != 0)
+        if (reallocationSlippageSlots != 0)
             _validateReallocationSlippage(slippages);
 
         _process(slippages, processReallocationData.sharesToWithdraw);

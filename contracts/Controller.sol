@@ -4,7 +4,6 @@ pragma solidity 0.8.11;
 
 // extends
 import "./interfaces/IController.sol";
-import "./interfaces/IFundsTransfer.sol";
 import "./shared/SpoolOwnable.sol";
 import "./shared/Constants.sol";
 
@@ -31,7 +30,7 @@ import "./vault/VaultNonUpgradableProxy.sol";
  * The contract can be thought of as the central point of contract
  * for assessing the validity of data in the system (i.e. supported strategy, vault etc.).
  */
-contract Controller is IController, IFundsTransfer, SpoolOwnable, BaseConstants {
+contract Controller is IController, SpoolOwnable, BaseConstants {
     using SafeERC20 for IERC20;
 
     /* ========== CONSTANTS ========== */
@@ -262,7 +261,7 @@ contract Controller is IController, IFundsTransfer, SpoolOwnable, BaseConstants 
         validVault[vault] = true;
         totalVaults++;
 
-        emit VaultCreated(vault, details.strategies);
+        emit VaultCreated(vault);
     }
 
     /**
@@ -403,8 +402,6 @@ contract Controller is IController, IFundsTransfer, SpoolOwnable, BaseConstants 
             allStrategies = _addStrategy(allStrategies, strategy);
             _updateStrategiesHash(allStrategies);
         }
-
-        _updateStrategiesHash(strategies);
 
         emit StrategyAdded(strategy);
     }
@@ -596,7 +593,7 @@ contract Controller is IController, IFundsTransfer, SpoolOwnable, BaseConstants 
 
         strategies.pop();
 
-        _updateStrategiesHash(allStrategies);
+        _updateStrategiesHash(newStrategies);
     }
 
     /**
@@ -616,6 +613,8 @@ contract Controller is IController, IFundsTransfer, SpoolOwnable, BaseConstants 
             _getEmergencyRecipient(),
             data
         );
+
+        emit EmergencyWithdrawStrategy(strategy);
     }
 
     /**
@@ -631,6 +630,28 @@ contract Controller is IController, IFundsTransfer, SpoolOwnable, BaseConstants 
     }
 
     /**
+     * @notice Execute strategy disable function after it was removed.
+     *
+     * @dev
+     * Requirements:
+     *
+     * - the caller must be the emergency withdrawer
+     *
+     * @param strategy strategy to execute disable
+     */
+    function runDisableStrategy(address strategy)
+        external
+        onlyEmergencyWithdrawer
+    {
+        require(
+            !validStrategy[strategy],
+            "Controller::runDisableStrategy: Strategy is still valid"
+        );
+
+        spool.runDisableStrategy(strategy);
+    }
+
+    /**
      * @notice Add or remove the emergency withdrawer right
      *
      * @dev
@@ -640,6 +661,7 @@ contract Controller is IController, IFundsTransfer, SpoolOwnable, BaseConstants 
      */
     function setEmergencyWithdrawer(address user, bool _isEmergencyWithdrawer) external onlyOwner {
         isEmergencyWithdrawer[user] = _isEmergencyWithdrawer;
+        emit EmergencyWithdrawerUpdated(user, _isEmergencyWithdrawer);
     }
 
     /**
@@ -652,6 +674,7 @@ contract Controller is IController, IFundsTransfer, SpoolOwnable, BaseConstants 
      */
     function setEmergencyRecipient(address _emergencyRecipient) external onlyOwner {
         emergencyRecipient = _emergencyRecipient;
+        emit EmergencyRecipientUpdated(_emergencyRecipient);
     }
 
     /* ========== PRIVATE FUNCTIONS ========== */

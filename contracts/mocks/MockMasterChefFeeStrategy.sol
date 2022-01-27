@@ -31,7 +31,6 @@ contract MockMasterChefFeeStrategy is MasterChefStrategyBase, MockUniswapHelper 
         return SafeCast.toUint128(balanceAfter - balanceBefore);
     }
 
-    // TODO: make preetier (maybe interface on Rewards strategy level)
     function _approveAndSwap(
         IERC20 from,
         IERC20 to,

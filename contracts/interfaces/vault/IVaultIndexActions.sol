@@ -25,4 +25,9 @@ interface IVaultIndexActions {
         uint128 depositShares;
         uint128 withdrawnAmount;
     }
+
+    /* ========== EVENTS ========== */
+
+    event VaultRedeem(uint indexed vaultIndex);
+    event UserRedeem(address indexed member, uint indexed vaultIndex);
 }

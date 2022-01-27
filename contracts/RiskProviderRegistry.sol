@@ -225,7 +225,7 @@ contract RiskProviderRegistry is IRiskProviderRegistry, SpoolOwnable {
      * @param strategy strategy to set risk score for
      * @param riskScore risk score to set on the strategy
      */
-    function _setRisk(address strategy, uint8 riskScore) public {
+    function _setRisk(address strategy, uint8 riskScore) private {
         require(riskScore <= MAX_RISK_SCORE, "RiskProviderRegistry::_setRisk: Risk score too big");
 
         _risk[msg.sender][strategy] = riskScore;

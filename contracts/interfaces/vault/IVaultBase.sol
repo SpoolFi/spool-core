@@ -15,12 +15,5 @@ interface IVaultBase {
 
     /* ========== EVENTS ========== */
 
-    event Deposit(address indexed member, uint256 indexed globalIndex, uint256 indexed vaultIndex, uint256 amount);
-    event Withdrawal(address indexed member, uint256 indexed globalIndex, uint256 indexed vaultIndex, uint256 shares);
-    event LazyWithdrawal(address indexed member, uint256 indexed vaultIndex, uint256 shares);
-    event LazyWithdrawalProcess(uint256 indexed globalIndex, uint256 indexed vaultIndex, uint256 shares);
-
-    event DebtClaim(address indexed member, uint256 amount);
-    event FeesExtracted(address indexed member, address beneficiary, uint256 fees);
-    event AllocationChanged(uint256[] previous, uint256[] next);
+    event Claimed(address indexed member, uint256 claimAmount);
 }

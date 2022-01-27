@@ -13,7 +13,7 @@ contract MockRewardDrip is RewardDrip, IVaultImmutable {
 
     constructor(
         ISpool _spool,
-        IFundsTransfer _fundsTransfer,
+        IController _controller,
         IFastWithdraw _fastWithdraw,
         IFeeHandler _feeHandler,
         ISpoolOwner _spoolOwner,
@@ -22,7 +22,7 @@ contract MockRewardDrip is RewardDrip, IVaultImmutable {
     )
         VaultBase(
             _spool,
-            _fundsTransfer,
+            _controller,
             _fastWithdraw,
             _feeHandler
         )

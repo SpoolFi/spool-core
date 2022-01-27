@@ -165,6 +165,8 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         totalShares = _totalShares + newShares;
 
         redeems[_vaultIndex] = Redeem(newShares, totalWithdrawn);
+
+        emit VaultRedeem(_vaultIndex);
     }
 
     // =========== USER REDEEM ============ //
@@ -249,6 +251,8 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
             // set user deposit amount for index to 0
             userIndex.depositAmount = 0;
         }
+        
+        emit UserRedeem(msg.sender, index);
     }
 
     // =========== VAULT INDEX ============ //

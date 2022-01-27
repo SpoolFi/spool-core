@@ -24,19 +24,17 @@ interface IController {
 
     function verifyStrategies(address[] calldata _strategies) external view;
 
+    function transferToSpool(
+        address transferFrom,
+        uint256 amount
+    ) external;
+
     /* ========== EVENTS ========== */
 
-    // event VaultCreated(
-    //     address vault,
-    //     string name,
-    //     int8 riskTolerance,
-    //     IERC20 underlying,
-    //     address[] _strategies,
-    //     uint256[] proportions
-    // );
-    event VaultCreated(address vault, address[] strategies);
+    event EmergencyWithdrawStrategy(address indexed strategy);
+    event EmergencyRecipientUpdated(address indexed recipient);
+    event EmergencyWithdrawerUpdated(address indexed withdrawer, bool set);
+    event VaultCreated(address vault);
     event StrategyAdded(address strategy);
     event StrategyRemoved(address strategy);
-    event FeeChanged(uint96 previous, uint96 next);
-    event ControllerInitialized(address spool, address vaultFactory);
 }

@@ -77,7 +77,12 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
 
         // check parameters
         require(reallocationIndex != globalIndex, "RLC");
-        require(stratIndexes.length > 0 && stratIndexes.length == slippages.length, "BIPT");
+        require(
+            stratIndexes.length > 0 &&
+            stratIndexes.length == slippages.length &&
+            stratIndexes.length == rewardSlippages.length,
+            "BIPT"
+        );
 
         if (forceOneTxDoHardWork) {
             require(stratIndexes.length == allStrategies.length, "1TX");
@@ -114,8 +119,6 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         require(strategy.index < globalIndex, "SFIN");
 
         _process(strat, slippages, rewardSlippages.doClaim, rewardSlippages.swapData);
-
-        // emit Worked(strat); // TODO: update event
     }
 
     /* ========== DO HARD WORK when REALLOCATING ========== */
@@ -306,7 +309,6 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         uint128 withdrawnReallocationRecieved = _processReallocation(strat, slippages, processReallocationData);
 
         return withdrawnReallocationRecieved;
-        // emit WorkedWithdraw(strat, amountProcessed, reward); // TODO: update event
     }
 
     /**
@@ -318,8 +320,6 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         uint256[] memory slippages
     ) private {
         _processDeposit(strat, slippages);
-
-        // emit WorkedDeposit(strat, amountProcessed, reward); // TODO: update event
     }
 
     /**
@@ -419,8 +419,6 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         address[] memory _strategies,
         uint256[] memory stratReallocationShares
     ) private {
-        // TODO: remove
-        // uint256[] memory stratReallocationShares = reallocationShares[stratIndex];
         for (uint256 i = 0; i < stratReallocationShares.length; i++) {
             if (stratReallocationShares[i] > 0) {
                 Strategy storage depositStrategy = strategies[_strategies[i]];
@@ -446,7 +444,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         
         strategy.index++;
 
-        // TODO: emit event?
+        emit DoHardWorkStrategyCompleted(strat, strategy.index);
     }
 
     /**

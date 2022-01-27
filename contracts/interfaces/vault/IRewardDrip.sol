@@ -24,8 +24,5 @@ interface IRewardDrip {
 
     /* ========== EVENTS ========== */
     
-    event TokenAdded(IERC20 token);
-    event RewardAdded(IERC20 token, uint256 reward);
     event RewardPaid(IERC20 token, address indexed user, uint256 reward);
-    event RewardsDurationUpdated(IERC20 token, uint256 newDuration);
 }

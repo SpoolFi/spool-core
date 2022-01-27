@@ -28,7 +28,7 @@ import "./interfaces/spool/ISpoolExternal.sol";
  * 2. VaultBase: holds vault state variables and provides some of the common vault functions
  * 3. RewardDrip: distributes vault incentivized rewards to users participating in the vault
  * 4. VaultIndexActions: implements functions to synchronize the vault with central Spool contract
- * 5. VaultRestricred: exposes functions restricted for other Spool specific contracts
+ * 5. VaultRestricted: exposes functions restricted for other Spool specific contracts
  * 6. Vault: exposes unrestricted functons to interact with the core vault functionality (deposit/withdraw/claim)
  */
 contract Vault is VaultRestricted {
@@ -45,21 +45,21 @@ contract Vault is VaultRestricted {
      * that no additional checks need to be applied here.
      *
      * @param _spool the spool implemenation
-     * @param _fundsTransfer address used as proxy to transfer funds (Controller)
+     * @param _controller the controller implemenation
      * @param _fastWithdraw fast withdraw implementation
      * @param _feeHandler fee handler implementation
      * @param _spoolOwner spool owner contract
      */
     constructor(
         ISpool _spool,
-        IFundsTransfer _fundsTransfer,
+        IController _controller,
         IFastWithdraw _fastWithdraw,
         IFeeHandler _feeHandler,
         ISpoolOwner _spoolOwner
     )
         VaultBase(
             _spool,
-            _fundsTransfer,
+            _controller,
             _fastWithdraw,
             _feeHandler
         )
@@ -118,8 +118,6 @@ contract Vault is VaultRestricted {
 
         // store user deposit amount
         _addInstantDeposit(amount);
-
-        emit Deposit(msg.sender, activeGlobalIndex, _vaultIndex, amount);
     }
     
     /**
@@ -205,8 +203,6 @@ contract Vault is VaultRestricted {
         // mark that vault and user interacted at index
         _updateInteractedIndex();
         _updateUserInteractedIndex();
-
-        emit Withdrawal(msg.sender, activeGlobalIndex, _vaultIndex, sharesToWithdraw);
     }
 
     /* ========== FAST WITHDRAW ========== */
@@ -395,8 +391,6 @@ contract Vault is VaultRestricted {
         lazyWithdrawnShares += sharesToWithdraw;
 
         _updateUserInteractedIndex();
-
-        emit LazyWithdrawal(msg.sender, _vaultIndex, sharesToWithdraw);
     }
 
     /**
@@ -441,8 +435,6 @@ contract Vault is VaultRestricted {
         vaultIndexAction[_vaultIndex].withdrawShares += _lazyWithdrawnShares;
 
         _withdrawFromStrats(vaultStrategies, _lazyWithdrawnShares, activeGlobalIndex);
-
-        emit LazyWithdrawalProcess(activeGlobalIndex, _vaultIndex, _lazyWithdrawnShares);
     }
 
     function _withdrawFromStrats(address[] memory vaultStrategies, uint128 totalSharesToWithdraw, uint256 activeGlobalIndex) private {
@@ -511,7 +503,7 @@ contract Vault is VaultRestricted {
 
         _underlying().safeTransfer(msg.sender, claimAmount);
 
-        emit DebtClaim(msg.sender, claimAmount);
+        emit Claimed(msg.sender, claimAmount);
     }
 
     /* ========== REDEEM ========== */
@@ -566,7 +558,6 @@ contract Vault is VaultRestricted {
     /* ========== STRATEGY REMOVED ========== */
 
     function notifyStrategyRemoved(
-        address strat,
         address[] memory vaultStrategies,
         uint256 i
     )
@@ -575,9 +566,14 @@ contract Vault is VaultRestricted {
         hasStrategies(vaultStrategies)
         redeemVaultStrategiesModifier(vaultStrategies)
     {
-        require(vaultStrategies[i] == strat, "NSTR");
+        require(
+            i < vaultStrategies.length &&
+            !controller.validStrategy(vaultStrategies[i]),
+            "BSTR"
+        );
 
         uint256 lastElement = vaultStrategies.length - 1;
+        
         address[] memory newStrategies = new address[](lastElement);
         
         if (lastElement > 0) {
@@ -624,6 +620,12 @@ contract Vault is VaultRestricted {
         _updateStrategiesHash(newStrategies);
     }
 
+    /* ========== PRIVATE FUNCTIONS ========== */
+
+    function _hasStrategies(address[] memory vaultStrategies) private pure {
+        require(vaultStrategies.length > 0, "NST");
+    }
+
     /* ========== MODIFIERS ========== */
 
     modifier processLazyModifier(address[] memory vaultStrategies) {
@@ -632,7 +634,7 @@ contract Vault is VaultRestricted {
     }
 
     modifier hasStrategies(address[] memory vaultStrategies) {
-        require(vaultStrategies.length > 0, "NST");
+        _hasStrategies(vaultStrategies);
         _;
     }
 }

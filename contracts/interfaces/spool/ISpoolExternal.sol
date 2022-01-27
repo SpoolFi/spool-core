@@ -40,4 +40,13 @@ interface ISpoolExternal {
         address[] strategies;
         uint256 withdrawnProportion;
     }
+
+    /* ========== EVENTS ========== */
+    
+    event SpoolDeposit(address indexed vault, address indexed strat);
+    event SpoolWithdraw(address indexed vault, address indexed strat);
+    event SpoolRedeem(address indexed vault, address indexed strat);
+    event SpoolRedeemReallocation(address indexed vault);
+    event SpoolSharesRemoved(address indexed vault);
+    event SpoolSharesRemovedReallocating(address indexed vault);
 }

@@ -5,9 +5,6 @@ pragma solidity 0.8.11;
 interface ISpoolDoHardWork {
     /* ========== EVENTS ========== */
 
-    event Worked(
-        address indexed strategy
-    );
-
+    event DoHardWorkStrategyCompleted(address indexed strat, uint256 indexed index);
     event DoHardWorkCompleted(uint256 indexed index);
 }

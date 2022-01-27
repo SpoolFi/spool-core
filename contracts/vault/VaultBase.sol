@@ -17,7 +17,7 @@ import "../shared/Constants.sol";
 // other imports
 import "../interfaces/vault/IVaultDetails.sol";
 import "../interfaces/ISpool.sol";
-import "../interfaces/IFundsTransfer.sol";
+import "../interfaces/IController.sol";
 import "../interfaces/IFastWithdraw.sol";
 import "../interfaces/IFeeHandler.sol";
 
@@ -37,12 +37,12 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
     ISpool internal immutable spool;
 
     /// @notice The funds transfer contract, transfers user deposit to spool
-    IFundsTransfer internal immutable fundsTransfer;
+    IController internal immutable controller;
 
     /// @notice The fast withdraw contract
     IFastWithdraw internal immutable fastWithdraw;
 
-    /// @notice The fast withdraw contract
+    /// @notice The fee handler contract
     IFeeHandler internal immutable feeHandler;
 
     /// @notice Boolean signaling if the contract was initialized yet
@@ -99,24 +99,24 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
      * that no additional checks need to be applied here.
      *
      * @param _spool the spool implemenation
-     * @param _fundsTransfer address used as proxy to transfer funds (Controller)
+     * @param _controller the controller implementation
      * @param _fastWithdraw fast withdraw implementation
      * @param _feeHandler fee handler implementation
      */
     constructor(
         ISpool _spool,
-        IFundsTransfer _fundsTransfer,
+        IController _controller,
         IFastWithdraw _fastWithdraw,
         IFeeHandler _feeHandler
     )
     {
         require(address(_spool) != address(0), "VaultBase::constructor: Spool address cannot be 0");
-        require(address(_fundsTransfer) != address(0), "VaultBase::constructor: Funds Transfer address cannot be 0");
+        require(address(_controller) != address(0), "VaultBase::constructor: Funds Transfer address cannot be 0");
         require(address(_fastWithdraw) != address(0), "VaultBase::constructor: FastWithdraw address cannot be 0");
         require(address(_feeHandler) != address(0), "VaultBase::constructor: Fee Handler address cannot be 0");
 
         spool = _spool;
-        fundsTransfer = _fundsTransfer;
+        controller = _controller;
         fastWithdraw = _fastWithdraw;
         feeHandler = _feeHandler;
     }
@@ -237,7 +237,7 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
         if (fromVault) {
             _underlying().safeTransferFrom(msg.sender, address(spool), amount);
         } else {
-            fundsTransfer.transferToSpool(msg.sender, amount);
+            controller.transferToSpool(msg.sender, amount);
         }
     }
 
@@ -260,7 +260,7 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
             require(
                 userShares >= sharesToWithdraw &&
                 sharesToWithdraw > 0, 
-                "VSH"
+                "WSH"
             );
 
             uint128 instantDepositWithdrawn = _getProportion128(user.instantDeposit, sharesToWithdraw, userShares);

@@ -137,6 +137,8 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
                 amount--;
                 collectedFees[msg.sender][tokens[i]] = 1;
                 tokens[i].safeTransfer(msg.sender, amount);
+
+                emit FeeCollected(msg.sender, tokens[i], amount);
             }
         }
     }
@@ -157,6 +159,8 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
                 amount--;
                 platformCollectedFees[tokens[i]].ecosystem = 1;
                 tokens[i].safeTransfer(ecosystemFeeCollector, amount);
+
+                emit EcosystemFeeCollected(tokens[i], amount);
             }
         }
     }
@@ -176,6 +180,8 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
                 amount--;
                 platformCollectedFees[tokens[i]].treasury = 1;
                 tokens[i].safeTransfer(treasuryFeeCollector, amount);
+
+                emit TreasuryFeeCollected(tokens[i], amount);
             }
         }
     }
@@ -238,6 +244,8 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
             collectedFees[vaultOwner][underlying] += riskProviderColected;
             feesPaid += vaultFeeCollected;
         }
+
+        emit FeesPaid(msg.sender, profit, ecosystemCollected, treasuryCollected, riskProviderColected, vaultFeeCollected);
     }
 
     /**
@@ -335,6 +343,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
     function _setRiskProviderFee(address riskProvider, uint16 fee) private {
         require(fee <= MAX_RISK_PROVIDER_FEE, "FeeHandler::_setRiskProviderFee: Risk Provider fee too big");
         riskProviderFees[riskProvider] = fee;
+        emit RiskProviderFeeUpdated(riskProvider, fee);
     }
 
     /**
@@ -350,6 +359,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
      function _setEcosystemFee(uint16 fee) private {
         require(fee <= MAX_ECOSYSTEM_FEE, "FeeHandler::_setEcosystemFee: Ecosystem fee too big");
         ecosystemFee = fee;
+        emit EcosystemFeeUpdated(fee);
     }
 
     /**
@@ -365,6 +375,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
     function _setTreasuryFee(uint16 fee) private {
         require(fee <= MAX_TREASURY_FEE, "FeeHandler::_setTreasuryFee: Treasury fee too big");
         treasuryFee = fee;
+        emit TreasuryFeeUpdated(fee);
     }
 
     /**
@@ -379,6 +390,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
     function _setEcosystemCollector(address collector) private {
         require(collector != address(0), "FeeHandler::_setEcosystemCollector: Ecosystem Fee Collector address cannot be 0");
         ecosystemFeeCollector = collector;
+        emit EcosystemCollectorUpdated(collector);
     }
 
     /**
@@ -393,6 +405,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
     function _setTreasuryCollector(address collector) private {
         require(collector != address(0), "FeeHandler::_setTreasuryCollector: Treasury Fee Collector address cannot be 0");
         treasuryFeeCollector = collector;
+        emit TreasuryCollectorUpdated(collector);
     }
 
     /**

@@ -61,7 +61,7 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         strategyPending.deposit = strategyPending.deposit.add(amount);
         vaultBatch.deposited += amount;
 
-        // emit Deposit(msg.sender, strat, amount); // TODO: update event
+        emit SpoolDeposit(msg.sender, strat);
     }
 
     /* ========== WITHDRAW ========== */
@@ -94,12 +94,7 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         strategyPending.sharesToWithdraw = strategyPending.sharesToWithdraw.add(sharesToWithdraw);
         vaultBatch.withdrawnShares += sharesToWithdraw;
 
-        // emit SingleCollateralWithdrawal(  // TODO: update event
-        //     msg.sender,
-        //     strat,
-        //     amount,
-        //     vaultShares
-        // );
+        emit SpoolWithdraw(msg.sender, strat);
     }
 
     /* ========== DEPOSIT/WITHDRAW SHARED ========== */
@@ -161,6 +156,8 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         }
 
         vault.shares = vaultShares;
+
+        emit SpoolRedeem(msg.sender, strat);
 
         return (vaultDepositReceived, vaultWithdrawnReceived);
     }
@@ -247,6 +244,8 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
                 depositVault.shares += SafeCast.toUint128((batch.depositedReallocationSharesRecieved * depositAmount) / batch.depositedReallocation);
             }
         }
+
+        emit SpoolRedeemReallocation(msg.sender);
     }
 
     /* ========== FAST WITHDRAW ========== */
@@ -314,6 +313,8 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
             removedShares[i] = sharesToWithdraw;
             vault.shares -= sharesToWithdraw;
         }
+
+        emit SpoolSharesRemoved(msg.sender);
         
         return removedShares;
     }
@@ -364,6 +365,8 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         }
 
         _hashReallocationProportions(reallocationProportions);
+
+        emit SpoolSharesRemovedReallocating(msg.sender);
         
         return removedShares;
     }

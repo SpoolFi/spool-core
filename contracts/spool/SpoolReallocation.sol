@@ -121,13 +121,6 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
 
         // save to storage
         vault.withdrawnReallocationShares = newSharesWithdrawn;
-
-        // emit RedistributeWithdraw(  // TODO: update event
-        //     msg.sender,
-        //     strat,
-        //     amount,
-        //     vaultShares
-        // );
     }
 
     function _isNextStrategyIndex(

@@ -126,7 +126,7 @@ abstract contract BaseStorage {
     // Spool variables
     // ----- DHW VARIABLES -----
     bool public forceOneTxDoHardWork;
-    uint24 internal globalIndex;
+    uint24 public globalIndex;
     uint8 internal doHardWorksLeft;
     // ----- REALLOCATION VARIABLES -----
     // NOTE: Used for offchain execution to get the new reallocation table.

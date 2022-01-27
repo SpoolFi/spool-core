@@ -154,7 +154,7 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         RewardConfiguration storage config = rewardConfiguration[token];
         require(
             rewardsDuration != 0 &&
-            config.rewardsDuration == 0,
+            config.lastUpdateTime == 0,
             "BCFG"
         );
         require(
@@ -166,8 +166,6 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         rewardTokensCount++;
 
         config.rewardsDuration = rewardsDuration;
-
-        emit TokenAdded(token);
 
         if (reward > 0) {
             _notifyRewardAmount(token, reward);
@@ -205,11 +203,9 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
 
             config.rewardRate = newRewardRate;
         }
-        
 
         config.lastUpdateTime = uint32(block.timestamp);
         config.periodFinish = uint32(block.timestamp) + config.rewardsDuration;
-        emit RewardAdded(token, reward);
     }
 
     // End rewards emission earlier
@@ -227,7 +223,6 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         onlyFinished(token)
     {
         rewardConfiguration[token].rewardsDuration = _rewardsDuration;
-        emit RewardsDurationUpdated(token, _rewardsDuration);
     }
 
     /**
@@ -328,10 +323,6 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
             }
         }
     }
-
-    // function _timestamp() private view returns(uint32) {
-    //     return uint32(block.timestamp);
-    // }
 
     function _exceptUnderlying(IERC20 token) private view {
         require(

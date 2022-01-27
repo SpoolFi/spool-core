@@ -18,4 +18,10 @@ interface IFastWithdraw {
         address user,
         FastWithdrawParams calldata fastWithdrawParams
     ) external;
+
+        /* ========== EVENTS ========== */
+
+    event StrategyWithdrawn(address indexed user, address indexed vault, address indexed strategy);
+    event UserSharesSaved(address indexed user, address indexed vault);
+    event FastWithdrawExecuted(address indexed user, address indexed vault, uint256 totalWithdrawn);
 }

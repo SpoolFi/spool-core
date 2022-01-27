@@ -155,6 +155,7 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
         external
         nonReentrant
     {
+        _onlyVault(address(vault));
         require(strategies.length > 0, "FastWithdraw::withdraw: No strategies");
 
         _executeWithdraw(msg.sender, vault, strategies, slippages, swapData);
@@ -186,8 +187,10 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
         vaultWithdraw.proportionateDeposit = proportionateDeposit;
         
         for (uint256 i = 0; i < vaultStrategies.length; i++) {
-            vaultWithdraw.userStrategyShares[vaultStrategies[i]] = sharesWithdrawn[i];
+            vaultWithdraw.userStrategyShares[vaultStrategies[i]] += sharesWithdrawn[i];
         }
+
+        emit UserSharesSaved(user, address(vault));
     }
 
     /**
@@ -221,6 +224,7 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
             if(strategyShares > 0) {
                 totalWithdrawn += spool.fastWithdrawStrat(strategies[i], address(vault.underlying()), strategyShares, slippages[i], swapData[i]);
                 vaultWithdraw.userStrategyShares[strategies[i]] = 0;
+                emit StrategyWithdrawn(user, address(vault), strategies[i]);
             }
         }
         
@@ -240,6 +244,7 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
         }
 
         vault.underlying().safeTransfer(user, totalWithdrawn);
+        emit FastWithdrawExecuted(user, address(vault), totalWithdrawn);
     }
 
     /**
@@ -256,9 +261,9 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
     /**
      * @dev Ensures that the caller is a valid vault
      */
-    function _onlyVault() private view {
+    function _onlyVault(address vault) private view {
         require(
-            controller.validVault(msg.sender),
+            controller.validVault(vault),
             "FastWithdraw::_onlyVault: Can only be invoked by vault"
         );
     }
@@ -269,7 +274,7 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
      * @dev Throws if called by a non-valid vault
      */
     modifier onlyVault() {
-        _onlyVault();
+        _onlyVault(msg.sender);
         _;
     }
 }

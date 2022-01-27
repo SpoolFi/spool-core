@@ -18,5 +18,4 @@ interface IRiskProviderRegistry {
     event RiskAssessed(address indexed provider, address indexed strategy, uint8 riskScore);
     event ProviderAdded(address provider);
     event ProviderRemoved(address provider);
-    event RiskProviderRegistryInitialized(address feeHandler);
 }
