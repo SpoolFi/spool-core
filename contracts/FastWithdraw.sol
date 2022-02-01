@@ -184,7 +184,7 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
     ) private {
         VaultWithdraw storage vaultWithdraw = userVaultWithdraw[user][vault];
 
-        vaultWithdraw.proportionateDeposit = proportionateDeposit;
+        vaultWithdraw.proportionateDeposit += proportionateDeposit;
         
         for (uint256 i = 0; i < vaultStrategies.length; i++) {
             vaultWithdraw.userStrategyShares[vaultStrategies[i]] += sharesWithdrawn[i];

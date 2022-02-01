@@ -278,12 +278,11 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
 
             // redistribute withdrawn to other strategies
             _depositRedistributedAmount(
-                // withdrawData.stratIndexes[stratIndex],
                 reallocation.totalSharesWithdrawn[stratIndex],
                 withdrawnReallocationRecieved,
                 reallocation.optimizedWithdraws[stratIndex],
                 allStrategies,
-                withdrawData.reallocationProportions[withdrawData.stratIndexes[stratIndex]]
+                withdrawData.reallocationProportions[stratIndex]
             );
 
             _updatePending(stratAddress);

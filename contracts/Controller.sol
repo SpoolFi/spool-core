@@ -722,7 +722,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
     function _validStrategiesOrEmpty(address[] memory _strategies) private view {
         require(
             _strategies.length == 0 ||
-            Hash.sameStrategies(strategies, strategiesHash),
+            Hash.sameStrategies(_strategies, strategiesHash),
             "Controller::_validStrategiesOrEmpty: Strategies do not match"
         );
     }

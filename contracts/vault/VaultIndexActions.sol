@@ -22,9 +22,10 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
 
     /* ========== CONSTANTS ========== */
 
-    /// @notice size of vault index in bits
-    uint256 internal constant VAULT_INDEX_BIT_SIZE = 24;
-
+    /// @notice number of vault indexes that can be stored in one word 
+    /// @dev Vault index has 24 bits so we can fit 10 indexes in a word (256 / 24)
+    uint256 internal constant VAULT_INDEXES_PER_WORD = 10;
+    
     /* ========== STATE VARIABLES ========== */
 
     /// @notice Holds up to 2 vault indexes vault last interacted at and havend been claimed yet
@@ -325,9 +326,9 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
      *      Word position is determined by applying modulo operator on vault index by bit size.
      */
     function _getVaultIndexKeyAndPosition(uint256 _vaultIndex) private pure returns(uint256, uint256) {
-        uint256 vaultIndexKey = _vaultIndex / VAULT_INDEX_BIT_SIZE;
+        uint256 vaultIndexKey = _vaultIndex / VAULT_INDEXES_PER_WORD;
 
-        uint256 vaultIndexPosition = _vaultIndex % VAULT_INDEX_BIT_SIZE;
+        uint256 vaultIndexPosition = _vaultIndex % VAULT_INDEXES_PER_WORD;
 
         return (vaultIndexKey, vaultIndexPosition);
     }
