@@ -32,7 +32,7 @@ contract CompoundStrategy is ClaimFullSingleRewardStrategy {
     {
         require(address(_cToken) != address(0), "CompoundStrategy::constructor: Token address cannot be 0");
         require(address(_comptroller) != address(0), "CompoundStrategy::constructor: Comptroller address cannot be 0");
-        require(address(_underlying) != _cToken.underlying(), "CompoundStrategy::constructor: Underlying and cToken underlying do not match");
+        require(address(_underlying) == _cToken.underlying(), "CompoundStrategy::constructor: Underlying and cToken underlying do not match");
         cToken = _cToken;
         comptroller = _comptroller;
     }

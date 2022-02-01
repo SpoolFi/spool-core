@@ -411,21 +411,14 @@ contract Vault is VaultRestricted {
     }
 
     function _processLazy(address[] memory vaultStrategies) private {
-        bool didProcess = false;
         if (lazyWithdrawnShares > 0) {
             _processLazyWithdrawals(vaultStrategies);
-            didProcess = true;
-        }
-
-        if (didProcess) {
             _updateInteractedIndex();
         }
     }
 
     function _processLazyWithdrawals(address[] memory vaultStrategies)
         private
-        verifyStrategies(vaultStrategies)
-        redeemVaultStrategiesModifier(vaultStrategies)
     {
         (uint256 activeGlobalIndex, uint256 _vaultIndex) = _getAndSetActiveGlobalIndex();
 
@@ -603,7 +596,7 @@ contract Vault is VaultRestricted {
                 for (uint256 j; j < lastNewElement; j++) {
                     uint256 propJ = _proportions.get14BitUintByIndex(j);
                     propJ = (propJ * FULL_PERCENT) / proportionsLeft;
-                    newProportions = newProportions.set14BitUintByIndex(i, propJ);
+                    newProportions = newProportions.set14BitUintByIndex(j, propJ);
                     newProportionsLeft -= propJ;
                 }
 
