@@ -172,7 +172,7 @@ abstract contract VaultRestricted is IVaultRestricted, VaultIndexActions {
         // normalize deposit proportions to FULL_PERCENT
         uint256 newDepositProportions;
         uint256 totalDepositProp;
-        for (uint256 i; i < lastDepositIndex; i++) {
+        for (uint256 i; i <= lastDepositIndex; i++) {
             if (depositProportionsArray[i] > 0) {
                 uint256 proportion = (depositProportionsArray[i] * FULL_PERCENT) / totalDepositProportion;
 

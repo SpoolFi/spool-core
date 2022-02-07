@@ -23,5 +23,5 @@ interface IBaseRewardPool {
 
     function withdrawAndUnwrap(uint256 amount, bool claim) external returns(bool);
 
-    function withdrawAllAndUnwrap(bool claim) external returns(bool);
+    function withdrawAllAndUnwrap(bool claim) external;
 }
