@@ -24,7 +24,7 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
         IPoolMulti _rewardPool,
         IERC20 _underlying
     )
-        BaseStrategy(_underlying, 0, 1, 1, 1, false)
+        BaseStrategy(_underlying, 0, 1, 1, 1, false, false)
     {
         require(
             _yield != ISmartYield(address(0)),

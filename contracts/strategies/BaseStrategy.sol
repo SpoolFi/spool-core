@@ -40,6 +40,8 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      */
     bool internal immutable forceClaim;
 
+    bool internal immutable doValidateBalance;
+
     /// @notice The self address, set at initialization to allow proper share accounting
     address internal immutable self;
 
@@ -72,7 +74,8 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         uint256 _processSlippageSlots,
         uint256 _reallocationSlippageSlots,
         uint256 _depositSlippageSlots,
-        bool _forceClaim
+        bool _forceClaim,
+        bool _doValidateBalance
     ) {
         require(
             _underlying != IERC20(address(0)),
@@ -86,6 +89,7 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         reallocationSlippageSlots = _reallocationSlippageSlots;
         depositSlippageSlots = _depositSlippageSlots;
         forceClaim = _forceClaim;
+        doValidateBalance = _doValidateBalance;
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
@@ -109,6 +113,8 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      */
     function process(uint256[] calldata slippages, bool redeposit, SwapData[] calldata swapData) external override
     {
+        slippages = _validateStrategyBalance(slippages);
+
         if (forceClaim || redeposit) {
             _validateRewardsSlippage(swapData);
             _processRewards(swapData);
@@ -121,7 +127,9 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
     }
 
     function processReallocation(uint256[] calldata slippages, ProcessReallocationData calldata processReallocationData) external override returns(uint128)
-    {
+    {   
+        slippages = _validateStrategyBalance(slippages);
+
         if (reallocationSlippageSlots != 0)
             _validateReallocationSlippage(slippages);
 
@@ -151,6 +159,8 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         external
         override
     {
+        slippages = _validateStrategyBalance(slippages);
+
         if (depositSlippageSlots != 0)
             _validateDepositSlippage(slippages);
 
@@ -164,6 +174,8 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
 
     function fastWithdraw(uint128 shares, uint256[] calldata slippages, SwapData[] calldata swapData) external override returns(uint128)
     {
+        slippages = _validateStrategyBalance(slippages);
+
         _validateRewardsSlippage(swapData);
 
         if (processSlippageSlots != 0)
@@ -249,6 +261,23 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
     function disable() external virtual override {}
 
     /* ========== INTERNAL FUNCTIONS ========== */
+
+    function _validateStrategyBalance(uint256[] calldata slippages) internal virtual returns(uint256[] calldata) {
+        if (doValidateBalance) {
+            require(slippages.length >= 2, "BaseStrategy:: _validateStrategyBalance: Invalid number of slippages");
+            uint128 strategyBalance =  getStrategyBalance();
+
+            require(
+                slippages[0] <= strategyBalance &&
+                slippages[1] >= strategyBalance,
+                "BaseStrategy::_validateStrategyBalance: Bad strategy balance"
+            );
+
+            return slippages[2:];
+        }
+
+        return slippages;
+    }
 
     function _validateRewardsSlippage(SwapData[] calldata swapData) internal view virtual {
         if (swapData.length > 0) {

@@ -28,7 +28,7 @@ contract AaveStrategy is RewardStrategy, SwapHelperMainnet {
         IAaveIncentivesController _incentive,
         IERC20 _underlying
     )
-        BaseStrategy(_underlying, 1, 0, 0, 0, false)
+        BaseStrategy(_underlying, 1, 0, 0, 0, false, false)
     {
         require(
             _stkAave != IERC20(address(0)),

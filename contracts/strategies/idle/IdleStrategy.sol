@@ -19,7 +19,7 @@ contract IdleStrategy is MultipleRewardStrategy {
         IIdleToken _idleToken,
         IERC20 _underlying
     )
-        BaseStrategy(_underlying, 0, 1, 1, 1, true)
+        BaseStrategy(_underlying, 0, 1, 1, 1, true, false)
     {
         require(address(_idleToken) != address(0), "IdleStrategy::constructor: Token address cannot be 0");
         idleToken = _idleToken;

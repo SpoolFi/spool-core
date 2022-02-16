@@ -144,7 +144,7 @@ describe("Strategies Unit Test: AAVE", () => {
 
                     // ASSERT
                     const balance = await aaveContract.getStrategyBalance();
-                    expect(balance).to.equal(depositAmount);
+                    expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_1);
 
                     const strategyDetails = await getStrategyState(aaveContract);
                     expect(strategyDetails.totalShares).to.equal(depositAmount);

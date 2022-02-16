@@ -23,7 +23,7 @@ import {
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
 
-const { Zero, AddressZero } = constants;
+const { Zero, AddressZero, MaxUint256 } = constants;
 
 use(solidity);
 
@@ -56,6 +56,9 @@ const strategyAssets: ConvexStratSetup[] = [
 ];
 
 const depositSlippage = encodeDepositSlippage(0);
+
+const depositSlippages = [0, MaxUint256, depositSlippage]
+const withdrawSlippages = [0, MaxUint256, 0]
 
 describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
     let accounts: AccountsFixture;
@@ -146,7 +149,7 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     token.transfer(curveContract.address, depositAmount);
 
                     // ACT
-                    await curveContract.process([depositSlippage], false, []);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // ASSERT
                     const balance = await curveContract.getStrategyBalance();
@@ -166,7 +169,7 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     await setStrategyState(curveContract, stratSetup);
                     token.transfer(curveContract.address, depositAmount);
 
-                    await curveContract.process([depositSlippage], false, []);
+                    await curveContract.process(depositSlippages, false, []);
 
                     console.log("mining blocks...");
                     await mineBlocks(100, SECS_DAY);
@@ -178,7 +181,7 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     token.transfer(curveContract.address, depositAmount);
 
                     // ACT
-                    await curveContract.process([depositSlippage], true, [{ slippage: 1, path: swapPath }]);
+                    await curveContract.process(depositSlippages, true, [{ slippage: 1, path: swapPath }]);
 
                     // ASSERT
                     const balance = await curveContract.getStrategyBalance();
@@ -200,7 +203,7 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(curveContract, stratSetupDeposit);
                     token.transfer(curveContract.address, depositAmount);
-                    await curveContract.process([depositSlippage], false, []);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // set withdraw
                     const stratSetupWithdraw = await getStrategyState(curveContract);
@@ -209,7 +212,7 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     await setStrategyState(curveContract, stratSetupWithdraw);
 
                     // ACT
-                    await curveContract.process([0], false, [{ slippage: 1, path: swapPath }]);
+                    await curveContract.process(withdrawSlippages, false, [{ slippage: 1, path: swapPath }]);
 
                     // ASSERT
                     const balance = await curveContract.getStrategyBalance();
@@ -231,7 +234,7 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(curveContract, stratSetupDeposit);
                     token.transfer(curveContract.address, depositAmount);
-                    await curveContract.process([depositSlippage], false, []);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // mine block, to gain reward
                     console.log("mining blocks...");
@@ -255,7 +258,7 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(curveContract, stratSetupDeposit);
                     token.transfer(curveContract.address, depositAmount);
-                    await curveContract.process([depositSlippage], false, []);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // mine block, to gain reward
                     console.log("mining blocks...");
@@ -267,7 +270,7 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     // ACT
                     await curveContract.fastWithdraw(
                         stratSetupWithdraw.totalShares,
-                        [0],
+                        withdrawSlippages,
                         [{ slippage: 1, path: swapPath }]
                     );
 
@@ -294,7 +297,7 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(curveContract, stratSetupDeposit);
                     token.transfer(curveContract.address, depositAmount);
-                    await curveContract.process([depositSlippage], false, []);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // add pending deposit
                     const pendingDeposit = millionUnits.div(5);

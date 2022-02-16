@@ -20,7 +20,7 @@ contract YearnStrategy is NoRewardStrategy {
         IYearnTokenVault _vault,
         IERC20 _underlying
     )
-        NoRewardStrategy(_underlying, 1, 1, 1)
+        NoRewardStrategy(_underlying, 1, 1, 1, false)
     {
         require(address(_vault) != address(0), "YearnStrategy::constructor: Vault address cannot be 0");
         vault = _vault;

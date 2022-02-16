@@ -23,7 +23,7 @@ import {
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
 
-const { Zero, AddressZero } = constants;
+const { Zero, AddressZero, MaxUint256 } = constants;
 
 use(solidity);
 
@@ -70,6 +70,9 @@ const strategyAssets: ConvexStratSetup[] = [
 ];
 
 const depositSlippage = encodeDepositSlippage(0);
+
+const depositSlippages = [0, MaxUint256, depositSlippage]
+const withdrawSlippages = [0, MaxUint256, 0]
 
 describe("Strategies Unit Test: Convex 3pool", () => {
     let accounts: AccountsFixture;
@@ -173,7 +176,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                     token.transfer(convexContract.address, depositAmount);
 
                     // ACT
-                    await convexContract.process([depositSlippage], false, []);
+                    await convexContract.process(depositSlippages, false, []);
 
                     // ASSERT
                     const balance = await convexContract.getStrategyBalance();
@@ -193,7 +196,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                     await setStrategyState(convexContract, stratSetup);
                     token.transfer(convexContract.address, depositAmount);
 
-                    await convexContract.process([depositSlippage], false, []);
+                    await convexContract.process(depositSlippages, false, []);
 
                     console.log("mining blocks...");
                     await mineBlocks(100, SECS_DAY);
@@ -205,7 +208,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                     token.transfer(convexContract.address, depositAmount);
 
                     // ACT
-                    await convexContract.process([depositSlippage], true, swapData);
+                    await convexContract.process(depositSlippages, true, swapData);
 
                     // ASSERT
                     const balance = await convexContract.getStrategyBalance();
@@ -227,7 +230,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(convexContract, stratSetupDeposit);
                     token.transfer(convexContract.address, depositAmount);
-                    await convexContract.process([depositSlippage], false, []);
+                    await convexContract.process(depositSlippages, false, []);
 
                     // set withdraw
                     const stratSetupWithdraw = await getStrategyState(convexContract);
@@ -236,7 +239,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                     await setStrategyState(convexContract, stratSetupWithdraw);
 
                     // ACT
-                    await convexContract.process([0], false, swapData);
+                    await convexContract.process(withdrawSlippages, false, swapData);
 
                     // ASSERT
                     const balance = await convexContract.getStrategyBalance();
@@ -258,7 +261,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(convexContract, stratSetupDeposit);
                     token.transfer(convexContract.address, depositAmount);
-                    await convexContract.process([depositSlippage], false, []);
+                    await convexContract.process(depositSlippages, false, []);
 
                     // mine block, to gain reward
                     console.log("mining blocks...");
@@ -282,7 +285,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(convexContract, stratSetupDeposit);
                     token.transfer(convexContract.address, depositAmount);
-                    await convexContract.process([depositSlippage], false, []);
+                    await convexContract.process(depositSlippages, false, []);
 
                     // mine block, to gain reward
                     console.log("mining blocks...");
@@ -292,7 +295,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                     const stratSetupWithdraw = await getStrategyState(convexContract);
 
                     // ACT
-                    await convexContract.fastWithdraw(stratSetupWithdraw.totalShares, [0], swapData);
+                    await convexContract.fastWithdraw(stratSetupWithdraw.totalShares, withdrawSlippages, swapData);
 
                     // ASSERT
 
@@ -318,7 +321,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(convexContract, stratSetupDeposit);
                     token.transfer(convexContract.address, depositAmount);
-                    await convexContract.process([depositSlippage], false, []);
+                    await convexContract.process(depositSlippages, false, []);
 
                     // add pending deposit
                     const pendingDeposit = millionUnits.div(5);

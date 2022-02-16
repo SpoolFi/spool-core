@@ -11,7 +11,8 @@ abstract contract NoRewardStrategy is ProcessStrategy {
         IERC20 _underlying,
         uint256 _processSlippageSlots,
         uint256 _reallocationSlippageSlots,
-        uint256 _depositSlippageSlots
+        uint256 _depositSlippageSlots,
+        bool _doValidateBalance
     )
         BaseStrategy(
             _underlying,
@@ -19,7 +20,8 @@ abstract contract NoRewardStrategy is ProcessStrategy {
             _processSlippageSlots,
             _reallocationSlippageSlots,
             _depositSlippageSlots,
-            false
+            false,
+            _doValidateBalance
         )
     {}
 

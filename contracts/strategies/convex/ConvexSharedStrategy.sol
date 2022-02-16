@@ -37,7 +37,7 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         IERC20 _underlying,
         IStrategyContractHelper _boosterDeposit
     )
-        BaseStrategy(_underlying, 0, 1, 1, 1, false)
+        BaseStrategy(_underlying, 0, 1, 1, 1, false, true)
         CurveStrategyBase(_pool, _lpToken)
     {
         require(address(_booster) != address(0), "ConvexSharedStrategy::constructor: Booster address cannot be 0");
