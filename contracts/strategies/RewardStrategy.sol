@@ -53,7 +53,7 @@ abstract contract RewardStrategy is ProcessStrategy, SwapHelper {
         withdrawalRewards += _sellRewards(rewards, swapData);
         
         if (strategy.pendingDepositReward > 0) {
-            uint128 fastWithdrawCompound = (strategy.pendingDepositReward * shares) / strategy.totalShares;
+            uint128 fastWithdrawCompound = Math.getProportion128(strategy.pendingDepositReward, shares, strategy.totalShares);
             if (fastWithdrawCompound > 0) {
                 strategy.pendingDepositReward -= fastWithdrawCompound;
                 withdrawalRewards += fastWithdrawCompound;

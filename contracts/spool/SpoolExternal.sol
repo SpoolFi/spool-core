@@ -140,15 +140,15 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
 
         // Make action if deposit in vault batch was performed
         if (vaultBatchDeposited > 0 && batch.deposited > 0) {
-            vaultDepositReceived = (batch.depositedRecieved * vaultBatchDeposited) / batch.deposited;
-            vaultShares += (batch.depositedSharesRecieved * vaultBatchDeposited) / batch.deposited;
+            vaultDepositReceived = Math.getProportion128(batch.depositedRecieved, vaultBatchDeposited, batch.deposited);
+            vaultShares += Math.getProportion128(batch.depositedSharesRecieved, vaultBatchDeposited, batch.deposited);
 
             vaultBatch.deposited = 0;
         }
 
         // Make action if withdraw in vault batch was performed
         if (vaultBatchWithdrawnShares > 0 && batch.withdrawnShares > 0) {
-            vaultWithdrawnReceived = (batch.withdrawnRecieved * vaultBatchWithdrawnShares) / batch.withdrawnShares;
+            vaultWithdrawnReceived = Math.getProportion128(batch.withdrawnRecieved, vaultBatchWithdrawnShares, batch.withdrawnShares);
 
             vaultShares -= vaultBatchWithdrawnShares;
 

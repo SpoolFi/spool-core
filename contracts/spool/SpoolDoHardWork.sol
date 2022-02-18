@@ -6,9 +6,6 @@ pragma solidity 0.8.11;
 import "../interfaces/spool/ISpoolDoHardWork.sol";
 import "./SpoolStrategy.sol";
 
-// libraries
-import "../libraries/Math.sol";
-
 /**
  * @notice Spool part of implementation dealing with the do hard work
  *
@@ -345,7 +342,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                     uint128 amountI = uint128(withdrawData.reallocationProportions[i][j] * priceData[i].totalValue / priceData[i].totalShares);
                     uint128 amountJ = uint128(withdrawData.reallocationProportions[j][i] * priceData[j].totalValue / priceData[j].totalShares);
 
-                    uint128 optimizedAmount = 0;
+                    uint128 optimizedAmount;
                     
                     if (amountI > amountJ) {
                         optimizedAmount = amountJ;
@@ -364,7 +361,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             }
 
             if (optimizedWithdraws[i] > 0) {
-                optimizedShares[i] = optimizedWithdraws[i] * priceData[i].totalShares / priceData[i].totalValue;
+                optimizedShares[i] = Math.getProportion128(optimizedWithdraws[i], priceData[i].totalShares, priceData[i].totalValue);
             }
         }
 

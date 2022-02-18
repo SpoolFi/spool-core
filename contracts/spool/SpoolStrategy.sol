@@ -10,6 +10,7 @@ import "./SpoolBase.sol";
 import "../external/@openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import "../libraries/Max/128Bit.sol";
 import "../libraries/Hash.sol";
+import "../libraries/Math.sol";
 
 // other imports
 import "../interfaces/IBaseStrategy.sol";
@@ -42,7 +43,7 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         uint128 totalStrategyShares = strategy.totalShares;
         if (totalStrategyShares == 0) return 0;
 
-        return (_totalUnderlying(strat) * strategy.vaults[msg.sender].shares) / totalStrategyShares;
+        return Math.getProportion128(_totalUnderlying(strat), strategy.vaults[msg.sender].shares, totalStrategyShares);
     }
 
     /**
@@ -68,7 +69,7 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         TotalUnderlying memory totalUnderlying = strategy.totalUnderlying[index];
 
         if (totalUnderlying.totalShares > 0) {
-            return (totalUnderlying.amount * vault.shares) / totalUnderlying.totalShares;
+            return Math.getProportion128(totalUnderlying.amount, vault.shares, totalUnderlying.totalShares);
         }
         
         return 0;
