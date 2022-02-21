@@ -74,13 +74,6 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         
         return 0;
     }
-
-    /**
-     * @notice Returns current valid strategy count.
-     */
-    function _getStrategiesCount() internal view returns(uint8) {
-        return controller.getStrategiesCount();
-    }
     
     /**
      * @notice Yields the total underlying funds of a strategy.

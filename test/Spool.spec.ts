@@ -59,6 +59,11 @@ describe("Spool", () => {
     });
 
     describe("contract setup tests", () => {
+        it("Should fail attempting to renounce ownership on spool owner contract", async () => {
+            await expect(
+                spool.spoolOwner.renounceOwnership()
+            ).to.be.revertedWith("SpoolOwner::renounceOwnership: Cannot renounce Spool ownership");
+        });
         it("Should fail deploying the Spool with Spool address 0", async () => {
             const SpoolFactory = await new Spool__factory().connect(accounts.administrator);
             await expect(

@@ -34,4 +34,10 @@ Spool is permissionless middleware that allows users and builders to access DeFi
 
 ### Run coverage report
 
-- `npm run coverage`
+To run full coverage you have to run tests on forked mainned
+
+- `npm run coverage-fork`
+
+To run only local net coverage run:
+
+- `npm run coverage-local`

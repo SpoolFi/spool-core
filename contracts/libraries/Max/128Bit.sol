@@ -30,9 +30,4 @@ library Max128Bit {
         a = get(a);
         c = set(a + b);
     }
-
-    function sub(uint128 a, uint128 b) internal pure returns(uint128 c){
-        a = get(a);
-        c = set(a - b);
-    }
 }

@@ -96,6 +96,10 @@ describe("Vault", () => {
 
             await tokens.USDC.transfer(accounts.user0.address, TEN_UNITS_E8);
             await tokens.USDC.connect(accounts.user0).approve(vault.address, TEN_UNITS_E8);
+            
+            // expect failure with 0 deposit amount
+            await expect(vault.connect(accounts.user0).deposit(vaultCreation.strategies, 0, true))
+            .to.be.revertedWith("NDP");
 
             await vault.connect(accounts.user0).deposit(vaultCreation.strategies, TEN_UNITS_E8, true);
 
@@ -289,7 +293,4 @@ describe("Vault", () => {
             expect(user1BalanceAfter.gt(user1BalanceBefore)).to.be.true;
         });
     });
-
-    // TODO: Test for fees
-    // TODO: Test for reverts
 });

@@ -20,14 +20,6 @@ library Bitwise {
         return bitwiseData & (~(16_383 << (14 * i)));
     }
 
-    function get16BitUintByIndex(uint256 bitwiseData, uint256 i) internal pure returns(uint256) {
-        return (bitwiseData >> (16 * i)) & type(uint16).max;
-    }
-
-    function set16BitUintByIndex(uint256 bitwiseData, uint256 i, uint256 num16bit) internal pure returns(uint256) {
-        return bitwiseData + (num16bit << (16 * i));
-    }
-
     function get24BitUintByIndexCast(uint256 bitwiseData, uint256 i) internal pure returns(uint24) {
         return uint24((bitwiseData >> (24 * i)) & type(uint24).max);
     }

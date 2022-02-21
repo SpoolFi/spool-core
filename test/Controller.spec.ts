@@ -429,5 +429,24 @@ describe("Controller", () => {
             ).to.be.revertedWith("Controller::_onlyVault: Can only be invoked by vault");
         });
     });
-    // TODO getRewards tests
+    describe("Emergency withdraw update tests", async () => {
+        it("Should fail trying to update emergency recipient address from non-owner account", async () => {
+            await expect(
+                spool.controller.connect(accounts.user0.address).setEmergencyRecipient(accounts.user0.address)
+            ).to.be.revertedWith("SpoolOwnable::onlyOwner: Caller is not the Spool owner");
+        });
+        it("Should fail trying to update emergency withdrawer address from non-owner account", async () => {
+            await expect(
+                spool.controller.connect(accounts.user0.address).setEmergencyWithdrawer(accounts.user0.address, true)
+            ).to.be.revertedWith("SpoolOwnable::onlyOwner: Caller is not the Spool owner");
+        });
+        it("Should correctly update emergency recipient address", async () => {
+            await spool.controller.setEmergencyRecipient(accounts.user0.address);
+            expect(await spool.controller.emergencyRecipient()).to.be.equal(accounts.user0.address);
+        });
+        it("Should correctly update emergency withdrawer address", async () => {
+            await spool.controller.setEmergencyWithdrawer(accounts.user0.address, true);
+            expect(await spool.controller.isEmergencyWithdrawer(accounts.user0.address)).to.be.true;
+        });
+    });
 });

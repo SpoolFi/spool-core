@@ -26,10 +26,12 @@ export const TEN_UNITS_E8 = TEN_UNITS.div(parseUnits("1", 10));
 // using "Binance 8" address for tokens on mainnet
 export const BINANCE_WALLET = "0xf977814e90da44bfa03b6295a0616a897441acec";
 
+const MaxUint16 = BigNumber.from("0xffff");
 const MaxUint128 = BigNumber.from("0xffffffffffffffffffffffffffffffff");
 const Uint2pow255 = BigNumber.from("0x8000000000000000000000000000000000000000000000000000000000000000");
 
 export const customConstants = {
+    MaxUint16,
     MaxUint128,
 };
 

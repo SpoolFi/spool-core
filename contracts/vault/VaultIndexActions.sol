@@ -95,7 +95,6 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
      */
     function _redeemVaultStrategies(address[] memory vaultStrategies) internal {
         LastIndexInteracted memory _lastIndexInteracted = lastIndexInteracted;
-        
         if (_lastIndexInteracted.index1 > 0) {
             uint256 globalIndex1 = getGlobalIndexFromVaultIndex(_lastIndexInteracted.index1);
             uint256 completedGlobalIndex = spool.getCompletedGlobalIndex();
@@ -212,6 +211,7 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         uint128 userWithdrawalShares = userIndex.withdrawShares;
         if (userWithdrawalShares > 0) {
             // calculate user withdrawn amount
+
             uint128 userWithdrawnAmount = _getProportion128(redeems[index].withdrawnAmount, userWithdrawalShares, vaultIndexAction[index].withdrawShares);
 
             user.owed += userWithdrawnAmount;
@@ -280,6 +280,7 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         } else {
             lit.index1 = vaultIndex;
         }
+
     }
 
     /**
@@ -301,6 +302,7 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
             vaultIndex = _vaultIndex;
             _setGlobalIndex(activeGlobalIndex, _vaultIndex);
         }
+
     }
 
     function _getLazyVaultIndex() internal returns(uint24 _vaultIndex) {

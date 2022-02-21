@@ -365,6 +365,39 @@ describe("Fee Handler unit tests", () => {
             ).to.be.revertedWith("FeeHandler::constructor: Risk Provider Registry address cannot be 0");
         });
 
+        it("Should revert if initialized with Ecosystem Fee Collector as 0 address", async () => {
+            await expect(
+                new FeeHandler__factory()
+                    .connect(owner)
+                    .deploy(
+                        owner.address,
+                        mockController.address,
+                        riskProviderRegistry.address,
+                        ecosystemFee,
+                        treasuryFee,
+                        constants.AddressZero,
+                        treasuryFeeCollector.address
+                    )
+            ).to.be.revertedWith("FeeHandler::constructor: Ecosystem Fee Collector cannot be 0");
+        });
+
+        it("Should revert if initialized with Treasury Fee Collecter as 0 address", async () => {
+            await expect(
+                new FeeHandler__factory()
+                    .connect(owner)
+                    .deploy(
+                        owner.address,
+                        mockController.address,
+                        riskProviderRegistry.address,
+                        ecosystemFee,
+                        treasuryFee,
+                        ecosystemFeeCollector.address,
+                        constants.AddressZero,
+                    )
+            ).to.be.revertedWith("FeeHandler::constructor: Treasury Fee Collector address cannot be 0");
+        });
+
+
         it("Should revert if non-vault tries to pay fees", async () => {
             const { accounts, tokens } = await loadFixture(underlyingTokensFixture);
 

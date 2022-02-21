@@ -29,7 +29,7 @@ task("generate-docs", "Generate docs from contract comments")
     await hre.run("compile");
 });
 
-task("test-fork", "Runs tests on a fork of mainnet").addOptionalParam(
+task("test-fork", "Runs mocha tests on a fork of mainnet").addOptionalParam(
         "placement",
         "The placement of the Mainnet archive node (local or remote)",
         "",
@@ -64,7 +64,7 @@ task("test-fork", "Runs tests on a fork of mainnet").addOptionalParam(
     }
 });
 
-task("test-local", "Runs tests locally")
+task("test-local", "Runs mocha tests locally")
     .addFlag(
         "log",
         "Enable node logging",
@@ -75,6 +75,43 @@ task("test-local", "Runs tests locally")
 
     const tsFiles = glob.sync(path.join(hre.config.paths.tests, "*.spec.ts"));
     await hre.run("test", {testFiles : [...tsFiles]});
+});
+
+task("coverage-fork", "Runs mocha tests on a fork of mainnet with coverage").addOptionalParam(
+        "placement",
+        "The placement of the Mainnet archive node (local or remote)",
+        "",
+        types.string
+    ).addFlag(
+        "strategies",
+        "Only run strategy tests",
+    ).setAction(async (taskArgs, hre) => {
+
+    await hre.run("clean");
+    const _url = 
+        ((taskArgs.placement === "local") ? process.env.LOCALHOST 
+                                        : process.env.MAINNET_URL) as string;
+
+    hre.config.networks.hardhat.forking = {
+        url: _url,
+        blockNumber: FORK_BLOCK_NUMBER,
+        enabled: true
+    };
+
+    if (taskArgs.strategies) {
+        await hre.run("coverage", {testfiles : 'test/**/*.spec.ts'});
+    } else {
+        await hre.run("coverage");
+    }
+});
+
+task("coverage-local", "Runs mocha tests locally with coverage")
+    .setAction(async (taskArgs, hre) => {
+    if (taskArgs.log) {
+        hre.config.networks.hardhat.loggingEnabled = true;
+    }
+
+    await hre.run("coverage", {testfiles : 'test/*.spec.ts'});
 });
 
 export default {
@@ -104,7 +141,7 @@ export default {
     typechain: {
         outDir: "build/types",
         target: "ethers-v5",
-        alwaysGenerateOverloads: false, // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
+        alwaysGenerateOverloads: false,
     },
     solidity: {
         compilers: [
