@@ -72,8 +72,14 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             doHardWorksLeft = uint8(allStrategies.length);
         }
 
-        // check parameters
-        require(reallocationIndex != globalIndex, "RLC");
+        // verify reallocation is not set for the current index
+        if (reallocationIndex == globalIndex) {
+            // if reallocation is set, verify it was disabled
+            require(reallocationTableHash == 0, "RLC");
+            // if yes, reset reallocation index
+            reallocationIndex = 0;
+        }
+        
         require(
             stratIndexes.length > 0 &&
             stratIndexes.length == slippages.length &&
@@ -81,6 +87,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             "BIPT"
         );
 
+        // check if DHW is forcen to be executen on one transaction
         if (forceOneTxDoHardWork) {
             require(stratIndexes.length == allStrategies.length, "1TX");
         }
@@ -96,9 +103,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         _updateDoHardWorksLeft(stratIndexes.length);
 
         // if DHW for index finished
-        if (_isBatchComplete()) {
-            emit DoHardWorkCompleted(globalIndex);
-        }
+        _finishDhw(false);
     }
 
     /**
@@ -136,7 +141,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         ReallocationData memory depositData,
         address[] memory allStrategies,
         bool isOneTransaction
-    ) external onlyDoHardWorker verifyStrategies(allStrategies) {
+    ) external onlyDoHardWorker verifyReallocationStrategies(allStrategies) {
         if (_isBatchComplete()) {
             globalIndex++;
             
@@ -144,28 +149,20 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             withdrawalDoHardWorksLeft = uint8(allStrategies.length);
         }
 
-        // check parameters
-        require(reallocationIndex == globalIndex, "XNRLC");
+        // verify reallocation is set for the current index, and not disabled
+        require(
+            reallocationIndex == globalIndex &&
+            reallocationTableHash != 0,
+            "XNRLC"
+        );
 
         // add all indexes if DHW is in one transaction
         if (isOneTransaction) {
-            if (withdrawData.stratIndexes.length == 0) {
-                // build an array, so we don't have to pass it in parameters
-                uint256[] memory stratIndexes = new uint256[](allStrategies.length);
-
-                for(uint256 i = 0; i < allStrategies.length; i++) {
-                    stratIndexes[i] = i;
-                }
-
-                withdrawData.stratIndexes = stratIndexes;
-                depositData.stratIndexes = stratIndexes;
-            } else {
-                require(
+            require(
                     withdrawData.stratIndexes.length == allStrategies.length &&
                     depositData.stratIndexes.length == allStrategies.length,
                     "1TX"
                 );
-            }
         } else {
             require(!forceOneTxDoHardWork, "F1TX");
             
@@ -176,13 +173,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         _batchDoHardWorkReallocation(withdrawData, depositData, allStrategies);
 
         // update if DHW for index finished
-        if (_isBatchComplete()) {
-            // reset reallocation variables
-            reallocationIndex = 0;
-            reallocationTableHash = 0;
-
-            emit DoHardWorkCompleted(globalIndex);
-        }
+        _finishDhw(true);
     }
 
     function _batchDoHardWorkReallocation(
@@ -232,6 +223,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                 uint256 stratIndex = depositData.stratIndexes[i];
                 address stratAddress = allStrategies[stratIndex];
                 Strategy storage strategy = strategies[stratAddress];
+                _notRemoved(stratAddress);
                 require(strategy.isInDepositPhase, "SWNP");
 
                 // deposit
@@ -257,6 +249,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             uint256 stratIndex = withdrawData.stratIndexes[i];
             address stratAddress = allStrategies[stratIndex];
             Strategy storage strategy = strategies[stratAddress];
+            _notRemoved(stratAddress);
             require(!strategy.isInDepositPhase, "SWP");
 
             uint128 withdrawnReallocationRecieved;
@@ -389,7 +382,10 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             for (uint128 j = 0; j < allStrategies.length; j++) {
                 // if a strategy is withdrawing in reallocation get its spot price
                 if (withdrawData.reallocationProportions[i][j] > 0) {
-                    spotPrices[i].totalValue = _getStratValue(allStrategies[i]);
+                    // if strategy is removed treat it's value as 0
+                    if (!strategies[allStrategies[i]].isRemoved) {
+                        spotPrices[i].totalValue = _getStratValue(allStrategies[i]);
+                    }
 
                     spotPrices[i].totalShares = strategies[allStrategies[i]].totalShares;
 
@@ -408,7 +404,6 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
     }
 
     function _depositRedistributedAmount(
-        // uint256 stratIndex,
         uint128 redistributeSharesToWithdraw,
         uint128 withdrawnReallocationRecieved,
         uint128 optimizedWithdraw,
@@ -469,14 +464,16 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         withdrawalDoHardWorksLeft -= uint8(processedCount);
     }
 
-    function _verifyReallocationProportions(uint256[][] memory reallocationProportions) internal view {
-        require(reallocationTableHash == Hash.hashReallocationTable(reallocationProportions), "BRLC");
-    }
-
     function _hashReallocationProportions(uint256[][] memory reallocationProportions) internal {
         reallocationTableHash = Hash.hashReallocationTable(reallocationProportions);
         if (logReallocationTable) {
             emit ReallocationProportionsUpdatedWithTable(reallocationIndex, reallocationTableHash, reallocationProportions);
+        } else {
+            emit ReallocationProportionsUpdated(reallocationIndex, reallocationTableHash);
         }
+    }
+
+    function _hashReallocationStrategies(address[] memory strategies) internal {
+        reallocationStrategiesHash = Hash.hashStrategies(strategies);
     }
 }

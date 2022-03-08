@@ -9,7 +9,6 @@ import "./SpoolBase.sol";
 // libraries
 import "../external/@openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import "../libraries/Max/128Bit.sol";
-import "../libraries/Hash.sol";
 import "../libraries/Math.sol";
 
 // other imports
@@ -148,7 +147,6 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
      * Requirements:
      *
      * - the caller must be the controller
-     * - the reallocation shouldn't be pending
      * - strategy shouldn't be previously removed
      *
      * @param strat strategy being disabled
@@ -162,22 +160,15 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         external
         override
         onlyController
-        noPendingReallocation
         notRemoved(strat)
     {
-
-        // TODO: Add mid reallocation logic
-        Strategy storage strategy = strategies[strat];
-
-        // check if the strategy has already been processed in ongoing do hard work
-        if (strategy.index != globalIndex) {
-            doHardWorksLeft--;
-        } else if (!_isBatchComplete()) {
-            strategy.emergencyPending += strategy.batches[strategy.index].withdrawnRecieved;
-            strategy.batches[strategy.index].withdrawnRecieved = 0;
-
-            strategy.totalUnderlying[strategy.index].amount = 0;
+        if (isMidReallocation()) { // when reallocating
+            _disableStrategyWhenReallocating(strat);
+        } else { // no reallocation in progress
+            _disableStrategyNoReallocation(strat);
         }
+
+        Strategy storage strategy = strategies[strat];
 
         strategy.isRemoved = true;
 
@@ -188,6 +179,62 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         }
 
         _awaitingEmergencyWithdraw[strat] = true;
+    }
+
+    function _disableStrategyWhenReallocating(address strat) private {
+        Strategy storage strategy = strategies[strat];
+
+        if(strategy.index < globalIndex) {
+            // is in withdrawal phase
+            if (!strategy.isInDepositPhase) {
+                // decrease do hard work withdrawals left
+                if (withdrawalDoHardWorksLeft > 0) {
+                    withdrawalDoHardWorksLeft--;
+                }
+            } else {
+                // if user withdrawal was already performed, collect withdrawn amount to be emergency withdrawn
+                // NOTE: `strategy.index + 1` has to be used as the strategy index has not increased yet
+                _removeNondistributedWithdrawnRecieved(strategy, strategy.index + 1);
+            }
+
+            _decreaseDoHardWorksLeft(true);
+
+            // save waiting reallocation deposit to be emergency withdrawn
+            strategy.emergencyPending += strategy.pendingRedistributeDeposit;
+            strategy.pendingRedistributeDeposit = 0;
+        }
+    }
+
+    function _disableStrategyNoReallocation(address strat) private {
+        Strategy storage strategy = strategies[strat];
+
+        // check if the strategy has already been processed in ongoing do hard work
+        if (strategy.index < globalIndex) {
+            _decreaseDoHardWorksLeft(false);
+        } else if (!_isBatchComplete()) {
+            // if user withdrawal was already performed, collect withdrawn amount to be emergency withdrawn
+            _removeNondistributedWithdrawnRecieved(strategy, strategy.index);
+        }
+
+        // if reallocation is set to be processed, reset reallocation table to cancel it for set index
+        if (reallocationTableHash != 0) {
+            reallocationTableHash = 0;
+        }
+    }
+
+    function _decreaseDoHardWorksLeft(bool isMidReallocation) private {
+        if (doHardWorksLeft > 0) {
+            doHardWorksLeft--;
+            // check if this was last strategy, to complete the do hard work
+            _finishDhw(isMidReallocation);
+        }
+    }
+
+    function _removeNondistributedWithdrawnRecieved(Strategy storage strategy, uint256 index) private {
+        strategy.emergencyPending += strategy.batches[index].withdrawnRecieved;
+        strategy.batches[index].withdrawnRecieved = 0;
+
+        strategy.totalUnderlying[index].amount = 0;
     }
 
     /**
@@ -214,11 +261,15 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         onlyController
         onlyRemoved(strat)
     {
-        require(_awaitingEmergencyWithdraw[strat], "SEWP");
 
-        _emergencyWithdraw(strat, withdrawRecipient, data);
+        if (_awaitingEmergencyWithdraw[strat]) {
+            _emergencyWithdraw(strat, withdrawRecipient, data);
 
-        _awaitingEmergencyWithdraw[strat] = false;
+            _awaitingEmergencyWithdraw[strat] = false;
+        } else if (strategies[strat].emergencyPending > 0) {
+            IBaseStrategy(strat).underlying().transfer(withdrawRecipient, strategies[strat].emergencyPending);
+            strategies[strat].emergencyPending = 0;
+        }
     }
 
     /**

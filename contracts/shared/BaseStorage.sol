@@ -24,7 +24,7 @@ struct Strategy {
     mapping(uint256 => BatchReallocation) reallocationBatches;
     mapping(address => Vault) vaults;
     mapping(bytes32 => AdditionalStorage) additionalStorage; // future proof storage
-    uint256 emergencyPending; // NOTE: make sure to reset it to 0 after withdrawal
+    uint256 emergencyPending; // NOTE: make sure to reset it to 0 after emergency withdrawal
 }
 
 struct Pending {
@@ -125,7 +125,7 @@ struct StrategiesShared {
 abstract contract BaseStorage {
     // Spool variables
     // ----- DHW VARIABLES -----
-    bool public forceOneTxDoHardWork;
+    bool internal forceOneTxDoHardWork;
     uint24 public globalIndex;
     uint8 internal doHardWorksLeft;
     // ----- REALLOCATION VARIABLES -----
@@ -135,6 +135,7 @@ abstract contract BaseStorage {
     uint8 public withdrawalDoHardWorksLeft;
     uint24 public reallocationIndex;
     bytes32 internal reallocationTableHash;
+    bytes32 internal reallocationStrategiesHash;
     // -----------------------------------
 
     mapping(address => bool) public isDoHardWorker;

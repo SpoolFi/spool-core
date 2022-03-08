@@ -330,7 +330,7 @@ describe("Vault Reallocation", () => {
         it("doHardWork, vaults should exchange shares, without getting hit by the fee", async () => {
             const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
 
-            // const stratIndexes = getStrategyIndexes(strategies.strategyAddresses, strategies.strategyAddresses);
+            const stratIndexes = getStrategyIndexes(strategies.strategyAddresses, strategies.strategyAddresses);
             const slippages = Array.from(Array(strategies.strategyAddresses.length), () => []);
 
             const priceSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
@@ -346,12 +346,12 @@ describe("Vault Reallocation", () => {
                 reallocationProportions: context.reallocationProportions,
                 priceSlippages: priceSlippages,
                 rewardSlippages: rewardSlippages,
-                stratIndexes: [], // can be empty as it's one tx reallocation (array gets populated in the code)
+                stratIndexes: stratIndexes, // can be empty as it's one tx reallocation (array gets populated in the code)
                 slippages: slippages,
             };
 
             const depositData = {
-                stratIndexes: [], // can be empty as it's one tx reallocation (array gets populated in the code)
+                stratIndexes: stratIndexes, // can be empty as it's one tx reallocation (array gets populated in the code)
                 slippages: slippages,
             };
 

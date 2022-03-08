@@ -8,6 +8,9 @@ import "../shared/BaseStorage.sol";
 import "../shared/SpoolOwnable.sol";
 import "../shared/Constants.sol";
 
+// libraries
+import "../libraries/Hash.sol";
+
 // other imports
 import "../interfaces/IController.sol";
 
@@ -75,7 +78,7 @@ abstract contract SpoolBase is
     /**
      * @notice Returns whether spool is mid reallocation
      */
-    function isMidReallocation() external view override returns (bool _isMidReallocation) {
+    function isMidReallocation() public view override returns (bool _isMidReallocation) {
         if (reallocationIndex == globalIndex && !_isBatchComplete()) {
             _isMidReallocation = true;
         }
@@ -175,14 +178,19 @@ abstract contract SpoolBase is
         );
     }
 
-    /* ========== PRIVATE FUNCTIONS ========== */
+    function _finishDhw(bool isReallocation) internal {
+        if (_isBatchComplete()) {
+            // reset reallocation variables
+            if (isReallocation) {
+                reallocationIndex = 0;
+                reallocationTableHash = 0;
+            }
 
-    /**
-     * @notice Ensures that the caller is a valid vault
-     */
-    function _onlyVault() private view {
-        _isVault(msg.sender);
+            emit DoHardWorkCompleted(globalIndex);
+        }
     }
+
+    /* ========== PRIVATE FUNCTIONS ========== */
 
     /**
      * @notice Ensures that the caller is the controller
@@ -224,7 +232,7 @@ abstract contract SpoolBase is
         );
     }
 
-    function _verifyStrategies(address[] memory strategies) private view {
+    function _verifyStrategies(address[] memory strategies) internal view {
         controller.verifyStrategies(strategies);
     }
 
@@ -236,6 +244,14 @@ abstract contract SpoolBase is
             isDoHardWorker[msg.sender],
             "ODHW"
         );
+    }
+
+    function _verifyReallocationProportions(uint256[][] memory reallocationProportions) internal view {
+        require(reallocationTableHash == Hash.hashReallocationTable(reallocationProportions), "BRLC");
+    }
+
+    function _verifyReallocationStrategies(address[] memory strategies) internal view {
+        require(Hash.sameStrategies(strategies, reallocationStrategiesHash), "BRLCSTR");
     }
 
     /* ========== MODIFIERS ========== */
@@ -252,7 +268,7 @@ abstract contract SpoolBase is
      * @notice Throws if called by a non-valid vault
      */
     modifier onlyVault() {
-        _onlyVault();
+        _isVault(msg.sender);
         _;
     }
 
@@ -274,6 +290,11 @@ abstract contract SpoolBase is
 
     modifier verifyStrategies(address[] memory strategies) {
         _verifyStrategies(strategies);
+        _;
+    }
+
+    modifier verifyReallocationStrategies(address[] memory strategies) {
+        _verifyReallocationStrategies(strategies);
         _;
     }
 

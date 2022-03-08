@@ -214,6 +214,10 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         }
         
         Strategy storage strategy = strategies[self];
+        if (strategy.emergencyPending > 0) {
+            withdrawnAmount += strategy.emergencyPending;
+            strategy.emergencyPending = 0;
+        }
 
         // also withdraw all unprocessed deposit for a strategy
         if (strategy.pendingUser.deposit.get() > 0) {

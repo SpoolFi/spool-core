@@ -116,7 +116,14 @@ abstract contract ProcessStrategy is BaseStrategy {
                 // update reallocation batch
                 if (redistributeSharesToWithdraw > 0) {
                     BatchReallocation storage reallocationBatch = strategy.reallocationBatches[processingIndex];
-                    reallocationBatch.withdrawnReallocationRecieved = Math.getProportion128(processInfo.totalWithdrawRecieved, redistributeSharesToWithdraw, pendingSharesToWithdraw);
+
+                    uint128 withdrawnReallocationRecieved = 
+                        Math.getProportion128(processInfo.totalWithdrawRecieved, redistributeSharesToWithdraw, pendingSharesToWithdraw);
+                    reallocationBatch.withdrawnReallocationRecieved = withdrawnReallocationRecieved;
+
+                    // substract reallocation values from user values
+                    batch.withdrawnRecieved -= withdrawnReallocationRecieved;
+                    batch.withdrawnShares -= redistributeSharesToWithdraw;
                 }
             }
 

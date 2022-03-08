@@ -34,16 +34,30 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
         VaultData[] memory vaults,
         address[] memory strategies,
         uint256[][] memory reallocationProportions
-    ) external onlyAllocationProvider verifyStrategies(strategies) {
+    ) external onlyAllocationProvider {
         require(vaults.length > 0, "NOVRLC");
 
         uint24 activeGlobalIndex = getActiveGlobalIndex();
 
-        // Check reallocation proportions
+        // If reallocation was already initialized before,
+        // verify state and parameters before continuing
         if (reallocationIndex > 0) {
+            // If reallocation was started for index and table hash is 0,
+            // the reallocation was canceled. Prevent from setting it in same index again.
+            require(reallocationTableHash != 0, "RLCSTP");
+            // check if reallocation can still be set for same global index as before
             require(reallocationIndex == activeGlobalIndex, "RLCINP");
+            // verifies strategies agains current reallocation strategies hash
+            _verifyReallocationStrategies(strategies);
             _verifyReallocationProportions(reallocationProportions);
-        } else {
+        } else { // if new reallocation, init empty reallocation shares table
+            // verifies all system strategies using Controller contract
+            _verifyStrategies(strategies);
+            // hash and save strategies
+            // this strategies hash is then used to verify strategies during the reallocation
+            // if the strat is exploited and removed from the system, this hash is used to be consistent
+            // with reallocation table ordering as system strategies change.
+            _hashReallocationStrategies(strategies);
             reallocationIndex = activeGlobalIndex;
             reallocationProportions = new uint256[][](strategies.length);
 
@@ -91,8 +105,6 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
 
         // Hash reallocation proportions
         _hashReallocationProportions(reallocationProportions);
-
-        emit ReallocationProportionsUpdated(activeGlobalIndex, reallocationTableHash);
     }
 
     function _redistributeVaultStratWithdraw(

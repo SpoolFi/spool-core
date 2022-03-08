@@ -23,4 +23,6 @@ interface ISpoolBase {
         bytes32 reallocationTableHash,
         uint256[][] reallocationProportions
     );
+    
+    event DoHardWorkCompleted(uint256 indexed index);
 }

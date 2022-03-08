@@ -60,8 +60,6 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         // save to storage
         strategyPending.deposit = strategyPending.deposit.add(amount);
         vaultBatch.deposited += amount;
-
-        emit SpoolDeposit(msg.sender, strat);
     }
 
     /* ========== WITHDRAW ========== */
@@ -79,7 +77,6 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         external
         override
         onlyVault
-        notRemoved(strat)
     {
         Strategy storage strategy = strategies[strat];
         Pending storage strategyPending = _getStrategyPending(strategy, index);
@@ -93,8 +90,6 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         // save to storage
         strategyPending.sharesToWithdraw = strategyPending.sharesToWithdraw.add(sharesToWithdraw);
         vaultBatch.withdrawnShares += sharesToWithdraw;
-
-        emit SpoolWithdraw(msg.sender, strat);
     }
 
     /* ========== DEPOSIT/WITHDRAW SHARED ========== */
@@ -157,8 +152,6 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
 
         vault.shares = vaultShares;
 
-        emit SpoolRedeem(msg.sender, strat);
-
         return (vaultDepositReceived, vaultWithdrawnReceived);
     }
 
@@ -212,15 +205,21 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         // calculate total withdrawal amount 
         for (uint256 i = 0; i < withdrawStrats.length; i++) {
             Strategy storage strategy = strategies[withdrawStrats[i]];
-            BatchReallocation storage batch = strategy.reallocationBatches[index];
+            BatchReallocation storage reallocationBatch = strategy.reallocationBatches[index];
             Vault storage vault = strategy.vaults[msg.sender];
             
             // if we withdrawed from strategy, claim and spread across deposits
             uint256 vaultWithdrawnReallocationShares = vault.withdrawnReallocationShares;
-            if (vaultWithdrawnReallocationShares > 0 && batch.withdrawnReallocationShares > 0) {
-                totalVaultWithdrawnReceived += (batch.withdrawnReallocationRecieved * vaultWithdrawnReallocationShares) / batch.withdrawnReallocationShares;
+            if (vaultWithdrawnReallocationShares > 0) {
+                // if batch withdrawn shares is 0, reallocation was canceled as a strategy was removed
+                // if so, skip calculation and reset withdrawn reallcoation shares to 0
+                if (reallocationBatch.withdrawnReallocationShares > 0) {
+                    totalVaultWithdrawnReceived += 
+                        (reallocationBatch.withdrawnReallocationRecieved * vaultWithdrawnReallocationShares) / reallocationBatch.withdrawnReallocationShares;
 
-                vault.shares -= SafeCast.toUint128(vaultWithdrawnReallocationShares);
+                    vault.shares -= uint128(vaultWithdrawnReallocationShares);
+                }
+                
                 vault.withdrawnReallocationShares = 0;
             }
         }
@@ -230,22 +229,21 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         for (uint256 i = 0; i < depositStratsCount; i++) {
             Strategy storage depositStrategy = strategies[depositStrats[i]];
             Vault storage depositVault = depositStrategy.vaults[msg.sender];
-            BatchReallocation storage batch = depositStrategy.reallocationBatches[index];
-            if (batch.depositedReallocation > 0) {
-                // calculate reallication strat deposit amount
+            BatchReallocation storage reallocationBatch = depositStrategy.reallocationBatches[index];
+            if (reallocationBatch.depositedReallocation > 0) {
+                // calculate reallocation strat deposit amount
                 uint256 depositAmount;
                 if (i < lastDepositStratIndex) {
                     depositAmount = (totalVaultWithdrawnReceived * depositProps[i]) / FULL_PERCENT;
                     vaultWithdrawnReceivedLeft -= depositAmount;
-                } else { // if strat is last use deposit left
+                } else { // if strat is last, use deposit left
                     depositAmount = vaultWithdrawnReceivedLeft;
                 }
 
-                depositVault.shares += SafeCast.toUint128((batch.depositedReallocationSharesRecieved * depositAmount) / batch.depositedReallocation);
+                depositVault.shares += 
+                    SafeCast.toUint128((reallocationBatch.depositedReallocationSharesRecieved * depositAmount) / reallocationBatch.depositedReallocation);
             }
         }
-
-        emit SpoolRedeemReallocation(msg.sender);
     }
 
     /* ========== FAST WITHDRAW ========== */
@@ -313,8 +311,6 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
             removedShares[i] = sharesToWithdraw;
             vault.shares -= sharesToWithdraw;
         }
-
-        emit SpoolSharesRemoved(msg.sender);
         
         return removedShares;
     }
@@ -337,7 +333,7 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         external
         override
         onlyVault
-        verifyStrategies(reallocation.allStrategies)
+        verifyReallocationStrategies(reallocation.allStrategies)
         verifyVaultStrategies(vaultWithdraw.strategies, reallocation.vaultStrategiesBitwise, reallocation.allStrategies)
         returns(uint128[] memory)
     {
@@ -365,8 +361,6 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         }
 
         _hashReallocationProportions(reallocationProportions);
-
-        emit SpoolSharesRemovedReallocating(msg.sender);
         
         return removedShares;
     }

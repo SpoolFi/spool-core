@@ -510,14 +510,15 @@ contract Vault is VaultRestricted {
      *
      * @param vaultStrategies vault stratigies
      *
+     * @return totalShares vault total shares after redeem
      * @return user shares after redeem
      */
-    function redeemVaultAndUser(address[] memory vaultStrategies) external returns(uint128)
+    function redeemVaultAndUser(address[] memory vaultStrategies) external returns(uint128, uint128)
     {
         redeemVaultStrategies(vaultStrategies);
         _redeemUser();
 
-        return users[msg.sender].shares;
+        return (totalShares, users[msg.sender].shares);
     }
 
     /**
@@ -555,6 +556,7 @@ contract Vault is VaultRestricted {
         uint256 i
     )
         external
+        reallocationFinished
         verifyStrategies(vaultStrategies)
         hasStrategies(vaultStrategies)
         redeemVaultStrategiesModifier(vaultStrategies)
@@ -628,6 +630,18 @@ contract Vault is VaultRestricted {
 
     modifier hasStrategies(address[] memory vaultStrategies) {
         _hasStrategies(vaultStrategies);
+        _;
+    }
+
+    /**
+     * @notice Revert if reallocation is not finished for this vault
+     */
+    modifier reallocationFinished() {
+        require(
+            !_isVaultRedistributing() ||
+            getGlobalIndexFromVaultIndex(redistibutionIndex) <= spool.getCompletedGlobalIndex(),
+            "RNF"
+        );
         _;
     }
 }
