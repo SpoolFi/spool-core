@@ -19,6 +19,8 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
     using SafeERC20 for IERC20;
     using Bitwise for uint256;
 
+    /* ========== CONSTANTS ========== */
+
     /// @notice minimum shares size to avoid loss of share due to computation precision
     uint128 private constant MIN_SHARES = 10**8;
 
