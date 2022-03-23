@@ -18,7 +18,10 @@ import "./RewardDrip.sol";
 abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
     using SafeERC20 for IERC20;
     using Bitwise for uint256;
-    
+
+    /// @notice minimum shares size to avoid loss of share due to computation precision
+    uint128 private constant MIN_SHARES = 10**8;
+
     /* ========== STATE VARIABLES ========== */
 
     /// @notice Holds up to 2 global indexes vault last interacted at and havent been redeemed yet
@@ -125,7 +128,8 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         // calculate new deposit shares
         uint128 newShares = 0;
         if (_totalShares == 0 || totalUnderlyingAtIndex == 0) {
-            newShares = totalReceived;
+            // Enforce minimum shares size to avoid loss of share due to computation precision
+            newShares = (0 < totalReceived && totalReceived < MIN_SHARES) ? MIN_SHARES : totalReceived;
         } else {
             newShares = _getProportion128(totalReceived, _totalShares, totalUnderlyingAtIndex);
         }
