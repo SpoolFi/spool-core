@@ -121,7 +121,7 @@ contract RiskProviderRegistry is IRiskProviderRegistry, SpoolOwnable {
      * @param strategies list of strategies to set risk scores for
      * @param riskScores list of risk scores to set on each strategy
      */
-    function setRisks(address[] memory strategies, uint8[] memory riskScores) public {
+    function setRisks(address[] memory strategies, uint8[] memory riskScores) external {
         require(
             isProvider(msg.sender),
             "RiskProviderRegistry::setRisks: Insufficient Privileges"
@@ -147,7 +147,7 @@ contract RiskProviderRegistry is IRiskProviderRegistry, SpoolOwnable {
      * @param strategy strategy to set risk score for
      * @param riskScore risk score to set on the strategy
      */
-    function setRisk(address strategy, uint8 riskScore) public {
+    function setRisk(address strategy, uint8 riskScore) external {
         require(
             isProvider(msg.sender),
             "RiskProviderRegistry::setRisk: Insufficient Privileges"
