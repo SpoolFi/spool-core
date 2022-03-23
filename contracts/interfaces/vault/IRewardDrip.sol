@@ -21,6 +21,7 @@ interface IRewardDrip {
     /* ========== FUNCTIONS ========== */
 
     function getActiveRewards(address account) external;
+    function tokenBlacklist(IERC20 token) view external returns(bool);
 
     /* ========== EVENTS ========== */
     
