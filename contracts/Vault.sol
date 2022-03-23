@@ -333,6 +333,8 @@ contract Vault is VaultRestricted {
         claimAmount = user.owed;
         require(claimAmount > 0, "CA0");
 
+        user.owed = 0;
+
         // Calculate profit and take fees
         uint128 userWithdrawnDeposits = user.withdrawnDeposits;
         if (claimAmount > userWithdrawnDeposits) {
@@ -346,8 +348,6 @@ contract Vault is VaultRestricted {
         } else {
             user.withdrawnDeposits = userWithdrawnDeposits - claimAmount;
         }
-
-        user.owed = 0;
 
         _underlying().safeTransfer(msg.sender, claimAmount);
 
