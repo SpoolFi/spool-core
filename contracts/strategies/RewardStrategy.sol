@@ -26,9 +26,9 @@ abstract contract RewardStrategy is ProcessStrategy, SwapHelper {
     function _processFastWithdraw(uint128 shares, uint256[] memory slippages, SwapData[] calldata swapData) internal override virtual returns(uint128) {
         uint128 withdrawRewards = _processFastWithdrawalRewards(shares, swapData);
 
-        uint128 withdrawRecieved = _withdraw(shares, slippages);
+        uint128 withdrawReceived = _withdraw(shares, slippages);
 
-        return withdrawRecieved + withdrawRewards;
+        return withdrawReceived + withdrawRewards;
     }
 
     function _processRewards(SwapData[] calldata swapData) internal override virtual {

@@ -156,7 +156,7 @@ contract Vault is VaultRestricted {
      *
      * Requirements:
      *
-     * - vault must not be redistributing
+     * - vault must not be reallocating
      * - the provided strategies must be valid
      * - the caller must have a non-zero amount of shares to withdraw
      * - the caller must have enough shares to withdraw the specified share amount
@@ -205,7 +205,7 @@ contract Vault is VaultRestricted {
      *
      * Requirements:
      *
-     * - vault must not be redistributing
+     * - vault must not be reallocating
      * - the spool system must not be mid reallocation
      *   (started DHW and not finished, at index the reallocation was initiated)
      * - the provided strategies must be valid
@@ -487,8 +487,8 @@ contract Vault is VaultRestricted {
      */
     modifier reallocationFinished() {
         require(
-            !_isVaultRedistributing() ||
-            redistibutionIndex <= spool.getCompletedGlobalIndex(),
+            !_isVaultReallocating() ||
+            reallocationIndex <= spool.getCompletedGlobalIndex(),
             "RNF"
         );
         _;

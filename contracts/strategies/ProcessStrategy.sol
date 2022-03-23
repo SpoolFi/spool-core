@@ -8,8 +8,8 @@ import "../libraries/Max/128Bit.sol";
 import "../libraries/Math.sol";
 
 struct ProcessInfo {
-    uint128 totalWithdrawRecieved;
-    uint128 userDepositRecieved;
+    uint128 totalWithdrawReceived;
+    uint128 userDepositReceived;
 }
 
 abstract contract ProcessStrategy is BaseStrategy {
@@ -17,7 +17,7 @@ abstract contract ProcessStrategy is BaseStrategy {
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
-    function _process(uint256[] memory slippages, uint128 redistributeSharesToWithdraw) internal override virtual {
+    function _process(uint256[] memory slippages, uint128 reallocateSharesToWithdraw) internal override virtual {
         // PREPARE
         Strategy storage strategy = strategies[self];
         uint24 processingIndex = _getProcessingIndex();
@@ -28,12 +28,12 @@ abstract contract ProcessStrategy is BaseStrategy {
 
         // CALCULATE THE ACTION
 
-        // if withdrawing for redistributing, add shares to total withdraw shares
-        if (redistributeSharesToWithdraw > 0) {
-            pendingSharesToWithdraw += redistributeSharesToWithdraw;
+        // if withdrawing for reallocating, add shares to total withdraw shares
+        if (reallocateSharesToWithdraw > 0) {
+            pendingSharesToWithdraw += reallocateSharesToWithdraw;
         }
 
-        // total deposit recieved from users + compound reward (if there are any)
+        // total deposit received from users + compound reward (if there are any)
         uint128 totalPendingDeposit = userDeposit;
         
         // add compound reward (pendingDepositReward) to deposit
@@ -70,19 +70,19 @@ abstract contract ProcessStrategy is BaseStrategy {
         ProcessInfo memory processInfo;
         if (totalPendingDeposit > pendingWithdrawalAmount) { // DEPOSIT
             // uint128 amount = totalPendingDeposit - pendingWithdrawalAmount;
-            uint128 depositRecieved = _deposit(totalPendingDeposit - pendingWithdrawalAmount, slippages);
+            uint128 depositReceived = _deposit(totalPendingDeposit - pendingWithdrawalAmount, slippages);
 
-            processInfo.totalWithdrawRecieved = pendingWithdrawalAmount + withdrawalReward;
+            processInfo.totalWithdrawReceived = pendingWithdrawalAmount + withdrawalReward;
 
             // pendingWithdrawalAmount is optimized deposit: totalPendingDeposit - amount;
-            uint128 totalDepositRecieved = depositRecieved + pendingWithdrawalAmount;
+            uint128 totalDepositReceived = depositReceived + pendingWithdrawalAmount;
             
-            // calculate user deposit recieved, excluding compound rewards
-            processInfo.userDepositRecieved =  Math.getProportion128(totalDepositRecieved, userDeposit, totalPendingDeposit);
+            // calculate user deposit received, excluding compound rewards
+            processInfo.userDepositReceived =  Math.getProportion128(totalDepositReceived, userDeposit, totalPendingDeposit);
         } else if (totalPendingDeposit < pendingWithdrawalAmount) { // WITHDRAW
             // uint128 amount = pendingWithdrawalAmount - totalPendingDeposit;
 
-            uint128 withdrawRecieved = _withdraw(
+            uint128 withdrawReceived = _withdraw(
                 // calculate back the shares from actual withdraw amount
                 // NOTE: we can do unchecked calculation and casting as
                 //       the multiplier is always smaller than the divisor
@@ -95,11 +95,11 @@ abstract contract ProcessStrategy is BaseStrategy {
             );
 
             // optimized withdraw is total pending deposit: pendingWithdrawalAmount - amount = totalPendingDeposit;
-            processInfo.totalWithdrawRecieved = withdrawRecieved + totalPendingDeposit + withdrawalReward;
-            processInfo.userDepositRecieved = userDeposit;
+            processInfo.totalWithdrawReceived = withdrawReceived + totalPendingDeposit + withdrawalReward;
+            processInfo.userDepositReceived = userDeposit;
         } else {
-            processInfo.totalWithdrawRecieved = pendingWithdrawalAmount + withdrawalReward;
-            processInfo.userDepositRecieved = userDeposit;
+            processInfo.totalWithdrawReceived = pendingWithdrawalAmount + withdrawalReward;
+            processInfo.userDepositReceived = userDeposit;
         }
         
         // UPDATE STORAGE AFTER
@@ -108,32 +108,32 @@ abstract contract ProcessStrategy is BaseStrategy {
 
             // Update withdraw batch
             if (pendingSharesToWithdraw > 0) {
-                batch.withdrawnRecieved = processInfo.totalWithdrawRecieved;
+                batch.withdrawnReceived = processInfo.totalWithdrawReceived;
                 batch.withdrawnShares = pendingSharesToWithdraw;
                 
                 strategyTotalShares -= pendingSharesToWithdraw;
 
                 // update reallocation batch
-                if (redistributeSharesToWithdraw > 0) {
+                if (reallocateSharesToWithdraw > 0) {
                     BatchReallocation storage reallocationBatch = strategy.reallocationBatches[processingIndex];
 
-                    uint128 withdrawnReallocationRecieved = 
-                        Math.getProportion128(processInfo.totalWithdrawRecieved, redistributeSharesToWithdraw, pendingSharesToWithdraw);
-                    reallocationBatch.withdrawnReallocationRecieved = withdrawnReallocationRecieved;
+                    uint128 withdrawnReallocationReceived =
+                        Math.getProportion128(processInfo.totalWithdrawReceived, reallocateSharesToWithdraw, pendingSharesToWithdraw);
+                    reallocationBatch.withdrawnReallocationReceived = withdrawnReallocationReceived;
 
                     // substract reallocation values from user values
-                    batch.withdrawnRecieved -= withdrawnReallocationRecieved;
-                    batch.withdrawnShares -= redistributeSharesToWithdraw;
+                    batch.withdrawnReceived -= withdrawnReallocationReceived;
+                    batch.withdrawnShares -= reallocateSharesToWithdraw;
                 }
             }
 
             // Update deposit batch
             if (userDeposit > 0) {
-                uint128 newShares = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, processInfo.userDepositRecieved);
+                uint128 newShares = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, processInfo.userDepositReceived);
 
                 batch.deposited = userDeposit;
-                batch.depositedRecieved = processInfo.userDepositRecieved;
-                batch.depositedSharesRecieved = newShares;
+                batch.depositedReceived = processInfo.userDepositReceived;
+                batch.depositedSharesReceived = newShares;
                 strategyTotalShares += newShares;
             }
 
@@ -151,9 +151,9 @@ abstract contract ProcessStrategy is BaseStrategy {
     function _processDeposit(uint256[] memory slippages) internal override virtual {
         Strategy storage strategy = strategies[self];
         
-        uint128 depositOptimizedAmount = strategy.pendingRedistributeOptimizedDeposit;
+        uint128 depositOptimizedAmount = strategy.pendingReallocateOptimizedDeposit;
         uint128 optimizedSharesWithdrawn = strategy.optimizedSharesWithdrawn;
-        uint128 depositAmount = strategy.pendingRedistributeDeposit;
+        uint128 depositAmount = strategy.pendingReallocateDeposit;
 
         // if a strategy is not part of reallocation return
         if (
@@ -179,12 +179,12 @@ abstract contract ProcessStrategy is BaseStrategy {
 
             // update reallocation batch
             reallocationBatch.depositedReallocation = depositOptimizedAmount;
-            reallocationBatch.depositedReallocationSharesRecieved = newShares;
+            reallocationBatch.depositedReallocationSharesReceived = newShares;
 
             strategy.totalUnderlying[processingIndex].amount = stratTotalUnderlying;
 
             // reset
-            strategy.pendingRedistributeOptimizedDeposit = 0;
+            strategy.pendingReallocateOptimizedDeposit = 0;
         }
 
         // remove optimized withdraw shares
@@ -198,24 +198,24 @@ abstract contract ProcessStrategy is BaseStrategy {
         // get shares from actual deposit
         if (depositAmount > 0) {
             // deposit
-            uint128 depositRecieved = _deposit(depositAmount, slippages);
+            uint128 depositReceived = _deposit(depositAmount, slippages);
 
             // NOTE: might return it from _deposit (only certain strategies need it)
             uint128 stratTotalUnderlying = getStrategyBalance();
 
-            uint128 newShares = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, depositRecieved);
+            uint128 newShares = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, depositReceived);
 
             // add new shares
             strategyTotalShares += newShares;
 
             // update reallocation batch
-            reallocationBatch.depositedReallocation += depositRecieved;
-            reallocationBatch.depositedReallocationSharesRecieved += newShares;
+            reallocationBatch.depositedReallocation += depositReceived;
+            reallocationBatch.depositedReallocationSharesReceived += newShares;
 
             strategy.totalUnderlying[processingIndex].amount = stratTotalUnderlying;
 
             // reset
-            strategy.pendingRedistributeDeposit = 0;
+            strategy.pendingReallocateDeposit = 0;
         }
 
         // update share storage
@@ -245,6 +245,6 @@ abstract contract ProcessStrategy is BaseStrategy {
 
     /* ========== VIRTUAL FUNCTIONS ========== */
 
-    function _deposit(uint128 amount, uint256[] memory slippages) internal virtual returns(uint128 depositRecieved);
-    function _withdraw(uint128 shares, uint256[] memory slippages) internal virtual returns(uint128 withdrawRecieved);
+    function _deposit(uint128 amount, uint256[] memory slippages) internal virtual returns(uint128 depositReceived);
+    function _withdraw(uint128 shares, uint256[] memory slippages) internal virtual returns(uint128 withdrawReceived);
 }

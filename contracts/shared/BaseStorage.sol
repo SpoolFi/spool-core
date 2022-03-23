@@ -16,8 +16,8 @@ struct Strategy {
     // ----- REALLOCATION VARIABLES -----
     bool isInDepositPhase;
     uint128 optimizedSharesWithdrawn; // NOTE: Used to store amount of optimized shares, so they can be substracted at the end. Only for temporary use, should be reset to 0 in same transaction
-    uint128 pendingRedistributeDeposit; // NOTE: make sure to reset it to 0 after withdrawal
-    uint128 pendingRedistributeOptimizedDeposit; // NOTE: make sure to reset it to 0 after withdrawal
+    uint128 pendingReallocateDeposit; // NOTE: make sure to reset it to 0 after withdrawal
+    uint128 pendingReallocateOptimizedDeposit; // NOTE: make sure to reset it to 0 after withdrawal
     // ------------------------------------
     mapping(uint256 => TotalUnderlying) totalUnderlying; // total underlying amount at index
     mapping(uint256 => Batch) batches;
@@ -39,16 +39,16 @@ struct TotalUnderlying {
 
 struct Batch {
     uint128 deposited;
-    uint128 depositedRecieved;
-    uint128 depositedSharesRecieved;
+    uint128 depositedReceived;
+    uint128 depositedSharesReceived;
     uint128 withdrawnShares; 
-    uint128 withdrawnRecieved;
+    uint128 withdrawnReceived;
 }
 
 struct BatchReallocation {
-    uint128 depositedReallocation; //deposited amount recieved from reallocation
-    uint128 depositedReallocationSharesRecieved; // recieved shares from reallocation
-    uint128 withdrawnReallocationRecieved; // NOTE: used to know how much tokens was recieved for redistributing
+    uint128 depositedReallocation; //deposited amount received from reallocation
+    uint128 depositedReallocationSharesReceived; // received shares from reallocation
+    uint128 withdrawnReallocationReceived; // NOTE: used to know how much tokens was received for reallocating
     uint128 withdrawnReallocationShares; // amount of shares to withdraw for reallocation
 }
 

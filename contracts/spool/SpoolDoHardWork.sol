@@ -252,7 +252,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             _notRemoved(stratAddress);
             require(!strategy.isInDepositPhase, "SWP");
 
-            uint128 withdrawnReallocationRecieved;
+            uint128 withdrawnReallocationReceived;
             {
                 uint128 sharesToWithdraw = reallocation.totalSharesWithdrawn[stratIndex] - reallocation.optimizedShares[stratIndex];
 
@@ -263,13 +263,13 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                 );
                 
                 // withdraw reallocation / returns non-optimized withdrawn amount
-                withdrawnReallocationRecieved = _doHardWorkReallocation(stratAddress, withdrawData.slippages[stratIndex], processReallocationData);
+                withdrawnReallocationReceived = _doHardWorkReallocation(stratAddress, withdrawData.slippages[stratIndex], processReallocationData);
             }            
 
-            // redistribute withdrawn to other strategies
-            _depositRedistributedAmount(
+            // reallocate withdrawn to other strategies
+            _depositReallocatedAmount(
                 reallocation.totalSharesWithdrawn[stratIndex],
-                withdrawnReallocationRecieved,
+                withdrawnReallocationReceived,
                 reallocation.optimizedWithdraws[stratIndex],
                 allStrategies,
                 withdrawData.reallocationProportions[stratIndex]
@@ -295,9 +295,9 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         // Check if strategy wasn't exected in current index yet
         require(strategy.index < globalIndex, "SFIN");
 
-        uint128 withdrawnReallocationRecieved = _processReallocation(strat, slippages, processReallocationData);
+        uint128 withdrawnReallocationReceived = _processReallocation(strat, slippages, processReallocationData);
 
-        return withdrawnReallocationRecieved;
+        return withdrawnReallocationReceived;
     }
 
     /**
@@ -403,9 +403,9 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         return spotPrices;
     }
 
-    function _depositRedistributedAmount(
-        uint128 redistributeSharesToWithdraw,
-        uint128 withdrawnReallocationRecieved,
+    function _depositReallocatedAmount(
+        uint128 reallocateSharesToWithdraw,
+        uint128 withdrawnReallocationReceived,
         uint128 optimizedWithdraw,
         address[] memory _strategies,
         uint256[] memory stratReallocationShares
@@ -415,12 +415,12 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                 Strategy storage depositStrategy = strategies[_strategies[i]];
 
                 // add actual withdrawn deposit
-                depositStrategy.pendingRedistributeDeposit += 
-                    Math.getProportion128(withdrawnReallocationRecieved, stratReallocationShares[i], redistributeSharesToWithdraw);
+                depositStrategy.pendingReallocateDeposit +=
+                    Math.getProportion128(withdrawnReallocationReceived, stratReallocationShares[i], reallocateSharesToWithdraw);
 
                 // add optimized deposit
-                depositStrategy.pendingRedistributeOptimizedDeposit +=
-                    Math.getProportion128(optimizedWithdraw, stratReallocationShares[i], redistributeSharesToWithdraw);
+                depositStrategy.pendingReallocateOptimizedDeposit +=
+                    Math.getProportion128(optimizedWithdraw, stratReallocationShares[i], reallocateSharesToWithdraw);
             }
         }
     }
