@@ -14,8 +14,8 @@ struct StrategySetup {
     uint128 pendingDepositReward;
     // ----- REALLOCATION VARIABLES
     uint128 optimizedSharesWithdrawn;
-    uint128 pendingRedistributeDeposit;
-    uint128 pendingRedistributeOptimizedDeposit;
+    uint128 pendingReallocateDeposit;
+    uint128 pendingReallocateOptimizedDeposit;
 }
 
 contract TestStrategySetup is BaseStorage, Proxy {
@@ -38,8 +38,8 @@ contract TestStrategySetup is BaseStorage, Proxy {
         strategy.pendingUserNext = strategySetup.pendingUserNext;
         strategy.pendingDepositReward = strategySetup.pendingDepositReward;
         strategy.optimizedSharesWithdrawn = strategySetup.optimizedSharesWithdrawn;
-        strategy.pendingRedistributeDeposit = strategySetup.pendingRedistributeDeposit;
-        strategy.pendingRedistributeOptimizedDeposit = strategySetup.pendingRedistributeOptimizedDeposit;
+        strategy.pendingReallocateDeposit = strategySetup.pendingReallocateDeposit;
+        strategy.pendingReallocateOptimizedDeposit = strategySetup.pendingReallocateOptimizedDeposit;
     }
 
     function getStrategy() external view returns(StrategySetup memory) {
@@ -64,8 +64,8 @@ contract TestStrategySetup is BaseStorage, Proxy {
 
         strategySetup.pendingDepositReward = strategy.pendingDepositReward;
         strategySetup.optimizedSharesWithdrawn = strategy.optimizedSharesWithdrawn;
-        strategySetup.pendingRedistributeDeposit = strategy.pendingRedistributeDeposit;
-        strategySetup.pendingRedistributeOptimizedDeposit = strategy.pendingRedistributeOptimizedDeposit;
+        strategySetup.pendingReallocateDeposit = strategy.pendingReallocateDeposit;
+        strategySetup.pendingReallocateOptimizedDeposit = strategy.pendingReallocateOptimizedDeposit;
 
         return strategySetup;
     }

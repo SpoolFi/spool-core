@@ -80,7 +80,7 @@ abstract contract VaultRestricted is IVaultRestricted, VaultIndexActions {
 
         proportions = newVaultProportions;
 
-        redistibutionIndex = activeIndex;
+        reallocationIndex = activeIndex;
         _updateInteractedIndex(activeIndex);
     }
 

@@ -194,14 +194,14 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
             } else {
                 // if user withdrawal was already performed, collect withdrawn amount to be emergency withdrawn
                 // NOTE: `strategy.index + 1` has to be used as the strategy index has not increased yet
-                _removeNondistributedWithdrawnRecieved(strategy, strategy.index + 1);
+                _removeNondistributedWithdrawnReceived(strategy, strategy.index + 1);
             }
 
             _decreaseDoHardWorksLeft(true);
 
             // save waiting reallocation deposit to be emergency withdrawn
-            strategy.emergencyPending += strategy.pendingRedistributeDeposit;
-            strategy.pendingRedistributeDeposit = 0;
+            strategy.emergencyPending += strategy.pendingReallocateDeposit;
+            strategy.pendingReallocateDeposit = 0;
         }
     }
 
@@ -213,7 +213,7 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
             _decreaseDoHardWorksLeft(false);
         } else if (!_isBatchComplete()) {
             // if user withdrawal was already performed, collect withdrawn amount to be emergency withdrawn
-            _removeNondistributedWithdrawnRecieved(strategy, strategy.index);
+            _removeNondistributedWithdrawnReceived(strategy, strategy.index);
         }
 
         // if reallocation is set to be processed, reset reallocation table to cancel it for set index
@@ -230,9 +230,9 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         }
     }
 
-    function _removeNondistributedWithdrawnRecieved(Strategy storage strategy, uint256 index) private {
-        strategy.emergencyPending += strategy.batches[index].withdrawnRecieved;
-        strategy.batches[index].withdrawnRecieved = 0;
+    function _removeNondistributedWithdrawnReceived(Strategy storage strategy, uint256 index) private {
+        strategy.emergencyPending += strategy.batches[index].withdrawnReceived;
+        strategy.batches[index].withdrawnReceived = 0;
 
         strategy.totalUnderlying[index].amount = 0;
     }
@@ -323,7 +323,7 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
             )
         );
 
-        // return actual withdrawn reallocation underlying assets recieved
+        // return actual withdrawn reallocation underlying assets received
         return abi.decode(data, (uint128));
     }
 
