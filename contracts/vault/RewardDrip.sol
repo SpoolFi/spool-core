@@ -101,13 +101,13 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    function getRewards(IERC20[] memory tokens, address account) external nonReentrant {
+    function getRewards(IERC20[] memory tokens) external nonReentrant {
         for (uint256 i; i < tokens.length; i++) {
-            _getReward(tokens[i], account);
+            _getReward(tokens[i], msg.sender);
         }
     }
 
-    function getActiveRewards(address account) external override nonReentrant {
+    function getActiveRewards(address account) external override onlyController nonReentrant {
         uint256 _rewardTokensCount = rewardTokensCount;
         for (uint256 i; i < _rewardTokensCount; i++) {
             _getReward(rewardTokens[i], account);
@@ -344,6 +344,16 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         );
     }
 
+    /**
+    * @notice Ensures that the caller is the controller
+     */
+    function _onlyController() private view {
+        require(
+            msg.sender == address(controller),
+            "OCTRL"
+        );
+    }
+
     /* ========== MODIFIERS ========== */
 
     modifier updateReward(IERC20 token, address account) {
@@ -363,6 +373,14 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
 
     modifier onlyFinished(IERC20 token) {
         _onlyFinished(token);
+        _;
+    }
+
+    /**
+     * @notice Throws if called by anyone else other than the controller
+     */
+    modifier onlyController() {
+        _onlyController();
         _;
     }
 }
