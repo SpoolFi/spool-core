@@ -60,6 +60,7 @@ contract HarvestStrategy is ClaimFullSingleRewardStrategy {
         uint256 fTokenBefore = vault.balanceOf(address(this));
         vault.deposit(amount);
         uint256 fTokenNew = vault.balanceOf(address(this)) - fTokenBefore;
+        _resetAllowance(underlying, address(vault));
 
         // stake fTokens
         vault.approve(address(pool), fTokenNew);

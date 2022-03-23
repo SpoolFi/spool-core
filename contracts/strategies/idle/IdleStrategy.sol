@@ -55,6 +55,7 @@ contract IdleStrategy is MultipleRewardStrategy {
             true,
             address(this)
         );
+        _resetAllowance(underlying, address(idleToken));
 
         require(
             mintedIdleAmount >= slippage,

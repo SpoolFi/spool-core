@@ -360,6 +360,15 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         }
     }
 
+    /**
+     * @notice Reset allowance to zero if previously set to a higher value.
+     */
+    function _resetAllowance(IERC20 token, address spender) internal {
+        if (token.allowance(address(this), spender) > 0) {
+            token.safeApprove(spender, 0);
+        }
+    }
+
     /* ========== VIRTUAL FUNCTIONS ========== */
 
     function getStrategyBalance()

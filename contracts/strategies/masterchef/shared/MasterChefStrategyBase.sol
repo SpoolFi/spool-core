@@ -102,7 +102,7 @@ abstract contract MasterChefStrategyBase is RewardStrategy {
     function _deposit(uint128 amount, uint256[] memory) internal virtual override returns(uint128) {
         underlying.safeApprove(address(chef), amount);
         chef.deposit(pid, amount);
-
+        _resetAllowance(underlying, address(chef));
         return amount;
     }
 
