@@ -215,6 +215,7 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
     ) private {
         require(strategies.length == slippages.length, "FastWithdraw::_executeWithdraw: Strategies length should match slippages length");
         require(strategies.length == swapData.length, "FastWithdraw::_executeWithdraw: Strategies length should match swap data length");
+        require(!spool.isMidReallocation(), "FastWithdraw::_executeWithdraw: Cannot fast withdraw mid reallocation");
         VaultWithdraw storage vaultWithdraw = userVaultWithdraw[user][vault];
         
         uint256 totalWithdrawn = 0;

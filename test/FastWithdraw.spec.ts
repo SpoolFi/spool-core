@@ -292,7 +292,7 @@ describe("Vault Fast Withdraw", () => {
 
             expect(userVaultWithdraw.proportionateDeposit).to.equal(Zero);
         });
-
+        
         it("user 1 should not be able to fast withdraw if no fast withdraw shares", async () => {
             // ARRANGE
             const {
@@ -361,99 +361,6 @@ describe("Vault Fast Withdraw", () => {
             await expect(
                 vault.connect(accounts.user2).withdrawFast(vaultCreation.strategies, 0, true, fastWithdrawParams)
             ).to.be.revertedWith("NRED");
-        });
-
-        it("should fast withdraw user 2", async () => {
-            // ARRANGE
-            const { accounts, tokens, strategies, spool } = await loadFixture(deploymentFixture);
-
-            const slippages = Array.from(Array(vaultCreation.strategies.length), () => [1]);
-            const vaultStratIndex = getStrategyIndexes(vaultCreation.strategies, strategies.strategyAddresses);
-
-            const user2BalanceBefore = await tokens.USDC.balanceOf(accounts.user2.address);
-
-            const reallocation = {
-                vaultStrategiesBitwise: getBitwiseStrategies(vaultStratIndex),
-                depositProportions: "0",
-                allStrategies: strategies.strategyAddresses,
-            };
-
-            const wethPath = getRewardSwapPathV2Weth();
-            const swapData = Array.from(Array(vaultCreation.strategies.length), () => [
-                { slippage: 1, path: wethPath },
-            ]);
-
-            const fastWithdrawParams = {
-                doExecuteWithdraw: true,
-                slippages: slippages,
-                swapData: swapData,
-            };
-
-            // ACT
-            const tx = await vault
-                .connect(accounts.user2)
-                .withdrawFastWhileReallocating(
-                    vaultCreation.strategies,
-                    0,
-                    true,
-                    reallocation,
-                    context.reallocationProportions,
-                    fastWithdrawParams
-                );
-
-            await setReallocationProportions(tx, spool.spool, context);
-
-            // ASSERT
-            const user2BalanceAfter = await tokens.USDC.balanceOf(accounts.user2.address);
-
-            const vaultTotalShares = await vault.totalShares();
-
-            const user2 = await vault.users(accounts.user2.address);
-
-            expect(vaultTotalShares).to.equal(Zero);
-            expect(user2.shares).to.equal(Zero);
-            expect(user2BalanceAfter).to.be.gt(user2BalanceBefore);
-
-            expect(vaultTotalShares).to.equal(Zero);
-
-            expect(user2.activeDeposit).to.equal(Zero);
-        });
-
-        it("should execute doHardWork after reallocation", async () => {
-            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
-
-            const stratIndexes = getStrategyIndexes(strategies.strategyAddresses, strategies.strategyAddresses);
-            const slippages = Array.from(Array(strategies.strategyAddresses.length), () => [0, 0]);
-
-            const priceSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
-                return { min: 0, max: MaxUint128 };
-            });
-
-            const wethPath = getRewardSwapPathV2Weth();
-            const rewardSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
-                return { doClaim: false, swapData: [{ slippage: 1, path: wethPath }] };
-            });
-
-            const withdrawData = {
-                reallocationProportions: context.reallocationProportions,
-                priceSlippages: priceSlippages,
-                rewardSlippages: rewardSlippages,
-                stratIndexes: stratIndexes,
-                slippages: slippages,
-            };
-
-            const depositData = {
-                stratIndexes: stratIndexes,
-                slippages: slippages,
-            };
-
-            const tx1 = await spool.spool
-                .connect(accounts.doHardWorker)
-                .callStatic.batchDoHardWorkReallocation(withdrawData, depositData, strategies.strategyAddresses, true);
-
-            const tx = await spool.spool
-                .connect(accounts.doHardWorker)
-                .batchDoHardWorkReallocation(withdrawData, depositData, strategies.strategyAddresses, true);
         });
     });
 });
