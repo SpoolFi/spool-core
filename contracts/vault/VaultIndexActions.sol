@@ -14,65 +14,34 @@ import "./RewardDrip.sol";
  * Index actions include:
  * - Redeem vault: claiming vault shares and withdrawn amount when DHW is complete
  * - Redeem user: claiming user deposit shares and/or withdrawn amount after vault claim has been processed
- * - Vault index: Incrementing vault index and mapping it to the global index
  */
 abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
     using SafeERC20 for IERC20;
     using Bitwise for uint256;
-
-    /* ========== CONSTANTS ========== */
-
-    /// @notice number of vault indexes that can be stored in one word 
-    /// @dev Vault index has 24 bits so we can fit 10 indexes in a word (256 / 24)
-    uint256 internal constant VAULT_INDEXES_PER_WORD = 10;
     
     /* ========== STATE VARIABLES ========== */
 
-    /// @notice Holds up to 2 vault indexes vault last interacted at and havend been claimed yet
-    /// @dev Hecond index can only be the next index of the first one
+    /// @notice Holds up to 2 global indexes vault last interacted at and havent been redeemed yet
+    /// @dev Second index can only be the next index of the first one
+    /// Second index is used if the do-hard-work is executed in 2 transactions and actions are executed in between
     LastIndexInteracted public lastIndexInteracted;
 
-    /// @notice Maps vault index to deposits and withdrawals for this index
+    /// @notice Maps all vault actions to the corresponding global index
     mapping(uint256 => IndexAction) public vaultIndexAction;
     
-    /// @notice Maps user actions to the vault index
+    /// @notice Maps user actions to the corresponding global index
     mapping(address => mapping(uint256 => IndexAction)) public userIndexAction;
 
-    /// @notice Holds up to 2 vault indexes users last interacted with, and havend been claimed yet
+    /// @notice Holds up to 2 global indexes users last interacted with, and havent been redeemed yet
     mapping(address => LastIndexInteracted) public userLastInteractions;
 
-    /// @notice Vault index to global index mapping
-    mapping(uint256 => uint256) public vaultIndexToGlobalIndex;
-
-    /// @notice Vault index to deposit and withdraw vault redeem 
+    /// @notice Global index to deposit and withdraw vault redeem
     mapping(uint256 => Redeem) public redeems;
-
-    /* ========== INITIALIZE ========== */
-
-    /**
-     * @notice Sets initial state of the vault.
-     * @dev Called only once by vault factory after deploying a vault proxy.
-     *      All values have been sanitized by the controller contract, meaning
-     *      that no additional checks need to be applied here.
-     */
-    function initialize(
-        VaultInitializable memory vaultInitializable
-    ) external override initializer {
-        _initializeBase(vaultInitializable);
-
-        vaultIndex = 1;
-    }
 
     // =========== VIEW FUNCTIONS ============ //
 
-    function getGlobalIndexFromVaultIndex(uint256 _vaultIndex) public view returns(uint24 globalIndex) {
-        (uint256 vaultIndexKey, uint256 vaultIndexPosition) = _getVaultIndexKeyAndPosition(_vaultIndex);
-        uint256 indexes = vaultIndexToGlobalIndex[vaultIndexKey];
-        globalIndex = indexes.get24BitUintByIndexCast(vaultIndexPosition);
-    }
-
-    function _isVaultRedistributingAtVaultIndex(uint256 _vaultIndex) internal view returns (bool isRedistributing) {
-        if (_vaultIndex == redistibutionIndex) {
+    function _isVaultRedistributingAtIndex(uint256 index) internal view returns (bool isRedistributing) {
+        if (index == redistibutionIndex) {
             isRedistributing = true;
         }
     }
@@ -96,18 +65,18 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
     function _redeemVaultStrategies(address[] memory vaultStrategies) internal {
         LastIndexInteracted memory _lastIndexInteracted = lastIndexInteracted;
         if (_lastIndexInteracted.index1 > 0) {
-            uint256 globalIndex1 = getGlobalIndexFromVaultIndex(_lastIndexInteracted.index1);
+            uint256 globalIndex1 = _lastIndexInteracted.index1;
             uint256 completedGlobalIndex = spool.getCompletedGlobalIndex();
             if (globalIndex1 <= completedGlobalIndex) {
                 // redeem interacted index 1
-                _redeemStrategiesIndex(_lastIndexInteracted.index1, globalIndex1, vaultStrategies);
+                _redeemStrategiesIndex(globalIndex1, vaultStrategies);
                 _lastIndexInteracted.index1 = 0;
 
                 if (_lastIndexInteracted.index2 > 0) {
-                    uint256 globalIndex2 = getGlobalIndexFromVaultIndex(_lastIndexInteracted.index2);
+                    uint256 globalIndex2 = _lastIndexInteracted.index2;
                     if (globalIndex2 <= completedGlobalIndex) {
                         // redeem interacted index 2
-                        _redeemStrategiesIndex(_lastIndexInteracted.index2, globalIndex2, vaultStrategies);
+                        _redeemStrategiesIndex(globalIndex2, vaultStrategies);
                     } else {
                         _lastIndexInteracted.index1 = _lastIndexInteracted.index2;
                     }
@@ -121,14 +90,14 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
     }
 
     // NOTE: causes additional gas for first interaction after DHW index has been completed
-    function _redeemStrategiesIndex(uint256 _vaultIndex, uint256 globalIndex, address[] memory vaultStrategies) private {
+    function _redeemStrategiesIndex(uint256 globalIndex, address[] memory vaultStrategies) private {
         uint128 _totalShares = totalShares;
         uint128 totalReceived = 0;
         uint128 totalWithdrawn = 0;
         uint128 totalUnderlyingAtIndex = 0;
         
         // if vault was redistributing at index claim reallocation deposit
-        bool isRedistributing = _isVaultRedistributingAtVaultIndex(_vaultIndex);
+        bool isRedistributing = _isVaultRedistributingAtIndex(globalIndex);
         if (isRedistributing) {
             spool.redeemReallocation(vaultStrategies, depositProportions, globalIndex);
             // Reset reallocation index to 0
@@ -151,7 +120,7 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         }
 
         // substract withdrawn shares
-        _totalShares -= vaultIndexAction[_vaultIndex].withdrawShares;
+        _totalShares -= vaultIndexAction[globalIndex].withdrawShares;
 
         // calculate new deposit shares
         uint128 newShares = 0;
@@ -164,9 +133,9 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         // add new deposit shares
         totalShares = _totalShares + newShares;
 
-        redeems[_vaultIndex] = Redeem(newShares, totalWithdrawn);
+        redeems[globalIndex] = Redeem(newShares, totalWithdrawn);
 
-        emit VaultRedeem(_vaultIndex);
+        emit VaultRedeem(globalIndex);
     }
 
     // =========== USER REDEEM ============ //
@@ -256,83 +225,38 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         emit UserRedeem(msg.sender, index);
     }
 
-    // =========== VAULT INDEX ============ //
+    // =========== INDEX FUNCTIONS ============ //
 
     /**
-     * @dev Saves vault last interacted index
+     * @dev Saves vault last interacted global index
      */
-    function _updateInteractedIndex() internal {
-        _updateLastIndexInteracted(lastIndexInteracted);
+    function _updateInteractedIndex(uint24 globalIndex) internal {
+        _updateLastIndexInteracted(lastIndexInteracted, globalIndex);
     }
 
     /**
-     * @dev Saves last user interacted index
+     * @dev Saves last user interacted global index
      */
-    function _updateUserInteractedIndex() internal {
-        _updateLastIndexInteracted(userLastInteractions[msg.sender]);
+    function _updateUserInteractedIndex(uint24 globalIndex) internal {
+        _updateLastIndexInteracted(userLastInteractions[msg.sender], globalIndex);
     }
 
-    function _updateLastIndexInteracted(LastIndexInteracted storage lit) private {
+    function _updateLastIndexInteracted(LastIndexInteracted storage lit, uint24 globalIndex) private {
         if (lit.index1 > 0) {
-            if (lit.index1 < vaultIndex) {
-                lit.index2 = vaultIndex;
+            if (lit.index1 < globalIndex) {
+                lit.index2 = globalIndex;
             }
         } else {
-            lit.index1 = vaultIndex;
+            lit.index1 = globalIndex;
         }
 
     }
 
     /**
-     * @dev Gets active global index and increments vault index if first interaction in the index
+     * @dev Gets current active global index from spool
      */
-    function _getAndSetActiveGlobalIndex() internal returns(uint256 activeGlobalIndex, uint24 _vaultIndex) {
-        activeGlobalIndex = spool.getActiveGlobalIndex();
-        _vaultIndex = _setActiveGlobalIndex(activeGlobalIndex);
-    }
-
-    function _setActiveGlobalIndex(uint256 activeGlobalIndex) internal returns(uint24 _vaultIndex) {
-        _vaultIndex = vaultIndex;
-        uint256 currentVaultGlobalIndex = getGlobalIndexFromVaultIndex(_vaultIndex);
-
-        if (currentVaultGlobalIndex == 0) {
-            _setGlobalIndex(activeGlobalIndex, _vaultIndex);
-        } else if (currentVaultGlobalIndex != activeGlobalIndex) {
-            _vaultIndex++;
-            vaultIndex = _vaultIndex;
-            _setGlobalIndex(activeGlobalIndex, _vaultIndex);
-        }
-
-    }
-
-    function _getLazyVaultIndex() internal returns(uint24 _vaultIndex) {
-        _vaultIndex = vaultIndex;
-        uint256 activeGlobalIndex = spool.getActiveGlobalIndex();
-        uint256 currentVaultGlobalIndex = getGlobalIndexFromVaultIndex(_vaultIndex);
-
-        if (currentVaultGlobalIndex != 0 && currentVaultGlobalIndex != activeGlobalIndex) {
-            _vaultIndex++;
-            vaultIndex = _vaultIndex;
-        }
-    }
-
-    function _setGlobalIndex(uint256 activeGlobalIndex, uint256 _vaultIndex) internal {
-        (uint256 vaultIndexKey, uint256 vaultIndexPosition) = _getVaultIndexKeyAndPosition(_vaultIndex);
-        uint256 indexes = vaultIndexToGlobalIndex[vaultIndexKey];
-        vaultIndexToGlobalIndex[vaultIndexKey] = indexes.set24BitUintByIndex(vaultIndexPosition, activeGlobalIndex);
-    }
-
-    /**
-     * @notice Calculates vault mapping index key and word position that map to global index.
-     * @dev Mapping key is determined by dividing vault index by it's bit size.
-     *      Word position is determined by applying modulo operator on vault index by bit size.
-     */
-    function _getVaultIndexKeyAndPosition(uint256 _vaultIndex) private pure returns(uint256, uint256) {
-        uint256 vaultIndexKey = _vaultIndex / VAULT_INDEXES_PER_WORD;
-
-        uint256 vaultIndexPosition = _vaultIndex % VAULT_INDEXES_PER_WORD;
-
-        return (vaultIndexKey, vaultIndexPosition);
+    function _getActiveGlobalIndex() internal view returns(uint24) {
+        return spool.getActiveGlobalIndex();
     }
 
     /* ========== PRIVATE FUNCTIONS ========== */

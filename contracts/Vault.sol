@@ -91,24 +91,23 @@ contract Vault is VaultRestricted {
         hasStrategies(vaultStrategies)
         redeemVaultStrategiesModifier(vaultStrategies)
         redeemUserModifier
-        processLazyModifier(vaultStrategies)
         updateRewards
     {
         require(amount > 0, "NDP");
 
         // get next possible index to deposit
-        (uint256 activeGlobalIndex, uint256 _vaultIndex) = _getAndSetActiveGlobalIndex();
+        uint24 activeGlobalIndex = _getActiveGlobalIndex();
 
         // Mark user deposited amount for active index
-        vaultIndexAction[_vaultIndex].depositAmount += amount;
-        userIndexAction[msg.sender][_vaultIndex].depositAmount += amount;
+        vaultIndexAction[activeGlobalIndex].depositAmount += amount;
+        userIndexAction[msg.sender][activeGlobalIndex].depositAmount += amount;
 
         // Mark vault strategies to deposit at index
         _distributeInStrats(vaultStrategies, amount, activeGlobalIndex);
 
-        // mark that vault and user have interacted at this vault index
-        _updateInteractedIndex();
-        _updateUserInteractedIndex();
+        // mark that vault and user have interacted at this global index
+        _updateInteractedIndex(activeGlobalIndex);
+        _updateUserInteractedIndex(activeGlobalIndex);
 
         // transfer user deposit to Spool
         _transferDepositToSpool(amount, transferFromVault);
@@ -181,25 +180,18 @@ contract Vault is VaultRestricted {
         sharesToWithdraw = _withdrawShares(sharesToWithdraw, withdrawAll);
 
         // get next possible index to withdraw
-        (uint256 activeGlobalIndex, uint256 _vaultIndex) = _getAndSetActiveGlobalIndex();
+        uint24 activeGlobalIndex = _getActiveGlobalIndex();
 
-        // Reduce the user's shares by the withdrawn share amount
-        userIndexAction[msg.sender][_vaultIndex].withdrawShares += sharesToWithdraw;
-
-        // add lazy withdrawn shares to the withdraw
-        uint128 totalSharesToWithdraw = sharesToWithdraw + lazyWithdrawnShares;
-        vaultIndexAction[_vaultIndex].withdrawShares += totalSharesToWithdraw;
+        // mark user withdrawn shares amount for active index
+        userIndexAction[msg.sender][activeGlobalIndex].withdrawShares += sharesToWithdraw;
+        vaultIndexAction[activeGlobalIndex].withdrawShares += sharesToWithdraw;
 
         // mark strategies in the spool contract to be withdrawn at next possible index
-        _withdrawFromStrats(vaultStrategies, totalSharesToWithdraw, activeGlobalIndex);
+        _withdrawFromStrats(vaultStrategies, sharesToWithdraw, activeGlobalIndex);
 
-        if (totalSharesToWithdraw > sharesToWithdraw) {
-            lazyWithdrawnShares = 0;
-        }
-
-        // mark that vault and user interacted at index
-        _updateInteractedIndex();
-        _updateUserInteractedIndex();
+        // mark that vault and user interacted at this global index
+        _updateInteractedIndex(activeGlobalIndex);
+        _updateUserInteractedIndex(activeGlobalIndex);
     }
 
     /* ========== FAST WITHDRAW ========== */
@@ -291,73 +283,6 @@ contract Vault is VaultRestricted {
         }
 
         return proportionateDeposit;
-    }
-
-    /* ========== LAZY WITHDRAW ========== */
-
-    /**
-     * @notice Withdraw from the vault, without notifying the central Spool contract
-     *
-     * @dev
-     * Next user executing deposit or withdraw with a vault, will pick up this withdrawn
-     * value and notify Spool of the intended withdrawal.
-     * This function makes it possible to withdraw while vault is waiting for reallocation to
-     * complete, as normal withdrawing is disabeled at that time.
-     * Cheaper than normal withdrawal as it doesn't loop over strategies and change strategy
-     * storage.
-     *
-     * @param sharesToWithdraw shares amount to withdraw
-     * @param withdrawAll if all shares should be removed
-     */
-    function withdrawLazy(uint128 sharesToWithdraw, bool withdrawAll)
-        external
-        redeemUserModifier
-    {
-        sharesToWithdraw = _withdrawShares(sharesToWithdraw, withdrawAll);
-
-        uint256 _vaultIndex = _getLazyVaultIndex();
-
-        userIndexAction[msg.sender][_vaultIndex].withdrawShares += sharesToWithdraw;
-        lazyWithdrawnShares += sharesToWithdraw;
-
-        _updateUserInteractedIndex();
-    }
-
-    /**
-     * @notice Process shares withdrawn in a lazy way
-     * @dev
-     * Requirements:
-     *
-     * - the provided strategies must be valid
-     *
-     * @param vaultStrategies strategies of this vault
-     */
-    function processLazy(address[] memory vaultStrategies)
-        external
-        verifyStrategies(vaultStrategies)
-        redeemVaultStrategiesModifier(vaultStrategies)
-    {
-        _processLazy(vaultStrategies);
-    }
-
-    function _processLazy(address[] memory vaultStrategies) private {
-        if (lazyWithdrawnShares > 0) {
-            _processLazyWithdrawals(vaultStrategies);
-            _updateInteractedIndex();
-        }
-    }
-
-    function _processLazyWithdrawals(address[] memory vaultStrategies)
-        private
-    {
-        (uint256 activeGlobalIndex, uint256 _vaultIndex) = _getAndSetActiveGlobalIndex();
-
-        uint128 _lazyWithdrawnShares = lazyWithdrawnShares;
-        lazyWithdrawnShares = 0;
-
-        vaultIndexAction[_vaultIndex].withdrawShares += _lazyWithdrawnShares;
-
-        _withdrawFromStrats(vaultStrategies, _lazyWithdrawnShares, activeGlobalIndex);
     }
 
     function _withdrawFromStrats(address[] memory vaultStrategies, uint128 totalSharesToWithdraw, uint256 activeGlobalIndex) private {
@@ -468,10 +393,9 @@ contract Vault is VaultRestricted {
     }
 
     /**
-     * @notice Redeem user deposit and withdrawals
+     * @notice Redeem user deposits and withdrawals
      *
-     * @dev
-     * Can only redeem user if vault has redeemed for the desired vault index
+     * @dev Can only redeem user up to last index vault has redeemed
      */
     function redeemUser()
         external
@@ -553,11 +477,6 @@ contract Vault is VaultRestricted {
 
     /* ========== MODIFIERS ========== */
 
-    modifier processLazyModifier(address[] memory vaultStrategies) {
-        _processLazy(vaultStrategies);
-        _;
-    }
-
     modifier hasStrategies(address[] memory vaultStrategies) {
         _hasStrategies(vaultStrategies);
         _;
@@ -569,7 +488,7 @@ contract Vault is VaultRestricted {
     modifier reallocationFinished() {
         require(
             !_isVaultRedistributing() ||
-            getGlobalIndexFromVaultIndex(redistibutionIndex) <= spool.getCompletedGlobalIndex(),
+            redistibutionIndex <= spool.getCompletedGlobalIndex(),
             "RNF"
         );
         _;
