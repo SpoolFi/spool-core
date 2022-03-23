@@ -177,7 +177,11 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         }
     }
 
-    function notifyRewardAmount(IERC20 token, uint256 reward) external onlyVaultOwnerOrSpoolOwner {
+    function notifyRewardAmount(IERC20 token, uint256 reward, uint32 rewardsDuration)
+    external
+    onlyVaultOwnerOrSpoolOwner
+    {
+        rewardConfiguration[token].rewardsDuration = rewardsDuration;
         _notifyRewardAmount(token, reward);
     }
 
@@ -193,10 +197,14 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         );
 
         token.safeTransferFrom(msg.sender, address(this), reward);
+        uint32 newPeriodFinish = uint32(block.timestamp) + config.rewardsDuration;
 
         if (block.timestamp >= config.periodFinish) {
             config.rewardRate = SafeCast.toUint192((reward * REWARD_ACCURACY) / config.rewardsDuration);
         } else {
+            // if extending or adding additional rewards,
+            // cannot set new finish time to be less than previously configured
+            require(config.periodFinish <= newPeriodFinish, "PFS");
             uint256 remaining = config.periodFinish - block.timestamp;
             uint256 leftover = remaining * config.rewardRate;
             uint192 newRewardRate = SafeCast.toUint192((reward * REWARD_ACCURACY + leftover) / config.rewardsDuration);
@@ -210,7 +218,7 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         }
 
         config.lastUpdateTime = uint32(block.timestamp);
-        config.periodFinish = uint32(block.timestamp) + config.rewardsDuration;
+        config.periodFinish = newPeriodFinish;
     }
 
     // End rewards emission earlier
@@ -220,14 +228,6 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         updateReward(token, address(0))
     {
         rewardConfiguration[token].periodFinish = timestamp;
-    }
-
-    function setRewardsDuration(IERC20 token, uint32 _rewardsDuration)
-        external
-        onlyVaultOwnerOrSpoolOwner
-        onlyFinished(token)
-    {
-        rewardConfiguration[token].rewardsDuration = _rewardsDuration;
     }
 
     /**
