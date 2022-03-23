@@ -37,4 +37,5 @@ interface IController {
     event VaultCreated(address vault);
     event StrategyAdded(address strategy);
     event StrategyRemoved(address strategy);
+    event VaultInvalid(address vault);
 }
