@@ -17,8 +17,8 @@ export type StrategySetupStructBN = {
     pendingUserNext: PendingStructBN;
     pendingDepositReward: BigNumber;
     optimizedSharesWithdrawn: BigNumber;
-    pendingRedistributeDeposit: BigNumber;
-    pendingRedistributeOptimizedDeposit: BigNumber;
+    pendingReallocateDeposit: BigNumber;
+    pendingReallocateOptimizedDeposit: BigNumber;
 };
 
 export async function setStrategyState(strat: IBaseStrategy, setup: StrategySetupStructBN) {
@@ -46,8 +46,8 @@ export function copyStrategyDetails(details: StrategySetupStructOutput | Strateg
         },
         pendingDepositReward: details.pendingDepositReward,
         optimizedSharesWithdrawn: details.optimizedSharesWithdrawn,
-        pendingRedistributeDeposit: details.pendingRedistributeDeposit,
-        pendingRedistributeOptimizedDeposit: details.pendingRedistributeOptimizedDeposit,
+        pendingReallocateDeposit: details.pendingReallocateDeposit,
+        pendingReallocateOptimizedDeposit: details.pendingReallocateOptimizedDeposit,
     }
 }
 
@@ -65,7 +65,7 @@ export function getStrategySetupObject(): StrategySetupStructBN {
         },
         pendingDepositReward: Zero,
         optimizedSharesWithdrawn: Zero,
-        pendingRedistributeDeposit: Zero,
-        pendingRedistributeOptimizedDeposit: Zero
+        pendingReallocateDeposit: Zero,
+        pendingReallocateOptimizedDeposit: Zero
     }
 }

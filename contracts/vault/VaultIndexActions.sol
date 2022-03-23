@@ -45,15 +45,15 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
 
     // =========== VIEW FUNCTIONS ============ //
 
-    function _isVaultRedistributingAtIndex(uint256 index) internal view returns (bool isRedistributing) {
-        if (index == redistibutionIndex) {
-            isRedistributing = true;
+    function _isVaultReallocatingAtIndex(uint256 index) internal view returns (bool isReallocating) {
+        if (index == reallocationIndex) {
+            isReallocating = true;
         }
     }
 
-    function _isVaultRedistributing() internal view returns (bool isRedistributing) {
-        if (redistibutionIndex > 0) {
-            isRedistributing = true;
+    function _isVaultReallocating() internal view returns (bool isReallocating) {
+        if (reallocationIndex > 0) {
+            isReallocating = true;
         }
     }
 
@@ -101,12 +101,12 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         uint128 totalWithdrawn = 0;
         uint128 totalUnderlyingAtIndex = 0;
         
-        // if vault was redistributing at index claim reallocation deposit
-        bool isRedistributing = _isVaultRedistributingAtIndex(globalIndex);
-        if (isRedistributing) {
+        // if vault was reallocating at index claim reallocation deposit
+        bool isReallocating = _isVaultReallocatingAtIndex(globalIndex);
+        if (isReallocating) {
             spool.redeemReallocation(vaultStrategies, depositProportions, globalIndex);
             // Reset reallocation index to 0
-            redistibutionIndex = 0;
+            reallocationIndex = 0;
         }
 
         // go over strategies and redeem deposited shares and withdrawn amount
@@ -268,7 +268,7 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
     /* ========== PRIVATE FUNCTIONS ========== */
 
     function _noReallocation() private view {
-        require(!_isVaultRedistributing(), "NRED");
+        require(!_isVaultReallocating(), "NRED");
     }
 
     /* ========== MODIFIERS ========== */
