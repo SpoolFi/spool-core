@@ -3,10 +3,10 @@
 pragma solidity 0.8.11;
 
 import "../interfaces/vault/IRewardDrip.sol";
-import "./ReentrancyGuard.sol";
 import "./VaultBase.sol";
 
 import "../external/@openzeppelin/utils/SafeCast.sol";
+import "../external/@openzeppelin/security/ReentrancyGuard.sol";
 import "../libraries/Math.sol";
 
 /**
