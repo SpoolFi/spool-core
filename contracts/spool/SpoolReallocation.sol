@@ -183,16 +183,4 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
             vaultStrategies[i] = strategies[stratIndex];
         }
     }
-
-    /* ========== MODIFIERS ========== */
-
-    modifier verifyVaultStrategies(
-        address[] memory vaultStrategies,
-        uint256 vaultStrategiesBitwise,
-        address[] memory allStrategies
-    ) {
-        address[] memory _vaultStrategies = _buildVaultStrategiesArray(vaultStrategiesBitwise, uint8(vaultStrategies.length), allStrategies);
-        require(Hash.sameStrategies(vaultStrategies, _vaultStrategies), "BSTRS");
-        _;
-    }
 }
