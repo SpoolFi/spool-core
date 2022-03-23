@@ -76,8 +76,8 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
     /// @notice Number of vault incentivized tokens
     uint8 public rewardTokensCount;
     
-    /// @notice Data if vault and at what index vault is redistributing
-    uint24 public redistibutionIndex;
+    /// @notice Data if vault and at what index vault is reallocating
+    uint24 public reallocationIndex;
 
     /// @notice User vault state values
     mapping(address => User) public users;

@@ -77,7 +77,7 @@ abstract contract SwapHelper {
         if (action == SwapAction.UNI_V2_DIRECT) { // V2 Direct
             address[] memory path = new address[](2);
             return _swapV2(from, to, amount, swapData.slippage, path);
-            
+
         } else if (action == SwapAction.UNI_V2_WETH) { // V2 WETH
 
             address[] memory path = new address[](3);
@@ -145,9 +145,9 @@ abstract contract SwapHelper {
             });
 
         // Executes the swap.
-        uint recieved = uniswapRouter.exactInput(params);
+        uint received = uniswapRouter.exactInput(params);
 
-        return recieved;
+        return received;
     }
 
     function _swapDirectV3(

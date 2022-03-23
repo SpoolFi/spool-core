@@ -86,7 +86,7 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
                     uint256 withdrawStratIndex = vaults[i].strategiesBitwise.get8BitUintByIndex(j);
 
                     (uint128 newSharesWithdrawn) = 
-                        _redistributeVaultStratWithdraw(
+                        _reallocateVaultStratWithdraw(
                             vaults[i].vault,
                             strategies[withdrawStratIndex],
                             withdrawProportions[j],
@@ -107,7 +107,7 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
         _hashReallocationProportions(reallocationProportions);
     }
 
-    function _redistributeVaultStratWithdraw(
+    function _reallocateVaultStratWithdraw(
         address vaultAddress,
         address strat, 
         uint256 vaultProportion,

@@ -135,15 +135,15 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
 
         // Make action if deposit in vault batch was performed
         if (vaultBatchDeposited > 0 && batch.deposited > 0) {
-            vaultDepositReceived = Math.getProportion128(batch.depositedRecieved, vaultBatchDeposited, batch.deposited);
-            vaultShares += Math.getProportion128(batch.depositedSharesRecieved, vaultBatchDeposited, batch.deposited);
+            vaultDepositReceived = Math.getProportion128(batch.depositedReceived, vaultBatchDeposited, batch.deposited);
+            vaultShares += Math.getProportion128(batch.depositedSharesReceived, vaultBatchDeposited, batch.deposited);
 
             vaultBatch.deposited = 0;
         }
 
         // Make action if withdraw in vault batch was performed
         if (vaultBatchWithdrawnShares > 0 && batch.withdrawnShares > 0) {
-            vaultWithdrawnReceived = Math.getProportion128(batch.withdrawnRecieved, vaultBatchWithdrawnShares, batch.withdrawnShares);
+            vaultWithdrawnReceived = Math.getProportion128(batch.withdrawnReceived, vaultBatchWithdrawnShares, batch.withdrawnShares);
 
             vaultShares -= vaultBatchWithdrawnShares;
 
@@ -215,7 +215,7 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
                 // if so, skip calculation and reset withdrawn reallcoation shares to 0
                 if (reallocationBatch.withdrawnReallocationShares > 0) {
                     totalVaultWithdrawnReceived += 
-                        (reallocationBatch.withdrawnReallocationRecieved * vaultWithdrawnReallocationShares) / reallocationBatch.withdrawnReallocationShares;
+                        (reallocationBatch.withdrawnReallocationReceived * vaultWithdrawnReallocationShares) / reallocationBatch.withdrawnReallocationShares;
 
                     vault.shares -= uint128(vaultWithdrawnReallocationShares);
                 }
@@ -241,7 +241,7 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
                 }
 
                 depositVault.shares += 
-                    SafeCast.toUint128((reallocationBatch.depositedReallocationSharesRecieved * depositAmount) / reallocationBatch.depositedReallocation);
+                    SafeCast.toUint128((reallocationBatch.depositedReallocationSharesReceived * depositAmount) / reallocationBatch.depositedReallocation);
             }
         }
     }

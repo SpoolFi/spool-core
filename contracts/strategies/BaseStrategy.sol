@@ -140,9 +140,9 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
 
         _process(slippages, processReallocationData.sharesToWithdraw);
 
-        uint128 withdrawnReallocationRecieved = _updateReallocationWithdraw(processReallocationData);
+        uint128 withdrawnReallocationReceived = _updateReallocationWithdraw(processReallocationData);
 
-        return withdrawnReallocationRecieved;
+        return withdrawnReallocationReceived;
     }
 
     function _updateReallocationWithdraw(ProcessReallocationData calldata processReallocationData) internal virtual returns(uint128) {
@@ -151,13 +151,13 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         BatchReallocation storage batch = strategy.reallocationBatches[stratIndex];
 
         // save actual withdrawn amount, without optimized one 
-        uint128 withdrawnReallocationRecieved = batch.withdrawnReallocationRecieved;
+        uint128 withdrawnReallocationReceived = batch.withdrawnReallocationReceived;
 
         strategy.optimizedSharesWithdrawn += processReallocationData.optimizedShares;
-        batch.withdrawnReallocationRecieved += processReallocationData.optimizedWithdrawnAmount;
+        batch.withdrawnReallocationReceived += processReallocationData.optimizedWithdrawnAmount;
         batch.withdrawnReallocationShares = processReallocationData.optimizedShares + processReallocationData.sharesToWithdraw;
 
-        return withdrawnReallocationRecieved;
+        return withdrawnReallocationReceived;
     }
 
     function processDeposit(uint256[] calldata slippages)
@@ -239,9 +239,9 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         // transfer the withdrawn amount
         // reset total underlying to 0
         if (strategy.index == globalIndex && doHardWorksLeft > 0) {
-            uint256 withdrawnRecieved = strategy.batches[strategy.index].withdrawnRecieved;
-            withdrawnAmount += withdrawnRecieved;
-            strategy.batches[strategy.index].withdrawnRecieved = 0;
+            uint256 withdrawnReceived = strategy.batches[strategy.index].withdrawnReceived;
+            withdrawnAmount += withdrawnReceived;
+            strategy.batches[strategy.index].withdrawnReceived = 0;
 
             strategy.totalUnderlying[strategy.index].amount = 0;
         }
@@ -371,7 +371,7 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
 
     function _processRewards(SwapData[] calldata) internal virtual;
     function _emergencyWithdraw(address recipient, uint256[] calldata data) internal virtual;
-    function _process(uint256[] memory, uint128 redistributeSharesToWithdraw) internal virtual;
+    function _process(uint256[] memory, uint128 reallocateSharesToWithdraw) internal virtual;
     function _processDeposit(uint256[] memory) internal virtual;
     function _getStrategyUnderlyingWithRewards() internal view virtual returns(uint128);
     function _processFastWithdraw(uint128, uint256[] memory, SwapData[] calldata) internal virtual returns(uint128);

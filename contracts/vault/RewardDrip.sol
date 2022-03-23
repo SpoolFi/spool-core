@@ -202,7 +202,7 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         if (block.timestamp >= config.periodFinish) {
             config.rewardRate = SafeCast.toUint192((reward * REWARD_ACCURACY) / config.rewardsDuration);
         } else {
-            // if extending or adding additional rewards,
+            // If extending or adding additional rewards,
             // cannot set new finish time to be less than previously configured
             require(config.periodFinish <= newPeriodFinish, "PFS");
             uint256 remaining = config.periodFinish - block.timestamp;
