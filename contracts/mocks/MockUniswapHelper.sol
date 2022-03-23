@@ -36,24 +36,28 @@ contract MockUniswapHelper {
         // slice the rest of the byte and use it as path
         // bytes memory bytesPath = swapData.path[1:];
 
+        uint256 result;
+
         if (action == SwapAction.UNI_V2_DIRECT) { // V2 Direct
             address[] memory path = new address[](2);
-            return _swap(from, to, amount, swapData.slippage, path);
-
+            result = _swap(from, to, amount, swapData.slippage, path);
         } else if (action == SwapAction.UNI_V2_WETH) { // V2 WETH
-
             address[] memory path = new address[](3);
             path[1] = WETH;
-            return _swap(from, to, amount, swapData.slippage, path);
-
+            result = _swap(from, to, amount, swapData.slippage, path);
         } else if (action == SwapAction.UNI_V2) { // V2 Custom
             revert("SwapHelper::_approveAndSwap: Custom V2 not supported");
             // address[] memory path = _getV2Path(swapDetails.path);
             // return _swap(from, to, amount, swapData.slippage, path);
-
         } else {
             revert("SwapHelper::_approveAndSwap: No action");
         }
+
+        if (from.allowance(address(this), address(uniswapRouter)) > 0) {
+            from.safeApprove(address(uniswapRouter), 0);
+        }
+
+        return result;
     }
 
     function _swap(

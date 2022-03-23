@@ -54,11 +54,11 @@ abstract contract CurveStrategyBase is ProcessStrategy {
         uint256 lpBefore = lpToken.balanceOf(address(this));
         _curveDeposit(amount, slippage);
         uint256 newLp = lpToken.balanceOf(address(this)) - lpBefore;
+        _resetAllowance(underlying, address(pool));
 
         strategies[self].lpTokens += newLp;
 
         _handleDeposit(newLp);
-
         return _lpToCoin(newLp);
     }
 
