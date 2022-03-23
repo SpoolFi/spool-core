@@ -79,12 +79,10 @@ describe("VaultUpdate", () => {
 
         const vaultFee = await vault.vaultFee();
         const vaultOwner = await vault.vaultOwner();
-        const vaultIndex = await vault.vaultIndex();
 
         expect(vaultOwner).to.equal(accounts.rewardNotifier.address); // Vault Creator
 
         expect(vaultFee).to.equal(vaultCreation.vaultFee); // Vault Creator  20%
-        expect(vaultIndex).to.equal(1);
     });
 
     describe("Commence vault update tests", () => {
@@ -137,9 +135,9 @@ describe("VaultUpdate", () => {
 
             let vaultLitAfter = await vault.lastIndexInteracted();
             let userLitAfter = await vault.userLastInteractions(accounts.user0.address);
-            let vaultIndex = await vault.vaultIndex();
-            expect(vaultLitAfter.index1).to.equal(vaultIndex);
-            expect(userLitAfter.index1).to.equal(vaultIndex);
+            let activeGlobalIndex = await spool.spool.getActiveGlobalIndex();;
+            expect(vaultLitAfter.index1).to.equal(activeGlobalIndex);
+            expect(userLitAfter.index1).to.equal(activeGlobalIndex);
             expect(vaultLitAfter.index2).to.equal(0);
             expect(userLitAfter.index2).to.equal(0);
 
@@ -155,8 +153,8 @@ describe("VaultUpdate", () => {
             await tokens.USDC.connect(accounts.user0).approve(vault.address, ethers.utils.parseUnits("100", 6));
             vaultLitBefore = await vault.lastIndexInteracted();
             userLitBefore = await vault.userLastInteractions(accounts.user0.address);
-            expect(vaultLitBefore.index1).to.equal(vaultIndex);
-            expect(userLitBefore.index1).to.equal(vaultIndex);
+            expect(vaultLitBefore.index1).to.equal(activeGlobalIndex);
+            expect(userLitBefore.index1).to.equal(activeGlobalIndex);
             expect(vaultLitBefore.index2).to.equal(0);
             expect(userLitBefore.index2).to.equal(0);
             await vault
@@ -165,10 +163,10 @@ describe("VaultUpdate", () => {
 
             vaultLitAfter = await vault.lastIndexInteracted();
             userLitAfter = await vault.userLastInteractions(accounts.user0.address);
-            expect(vaultLitAfter.index1).to.equal(vaultIndex);
-            expect(userLitAfter.index1).to.equal(vaultIndex);
-            expect(vaultLitAfter.index2).to.equal(vaultIndex + 1);
-            expect(userLitAfter.index2).to.equal(vaultIndex + 1);
+            expect(vaultLitAfter.index1).to.equal(activeGlobalIndex);
+            expect(userLitAfter.index1).to.equal(activeGlobalIndex);
+            expect(vaultLitAfter.index2).to.equal(activeGlobalIndex + 1);
+            expect(userLitAfter.index2).to.equal(activeGlobalIndex + 1);
 
             console.log("Should complete DHW for index x...");
             await spool.spool
@@ -196,6 +194,7 @@ describe("VaultUpdate", () => {
             expect(vaultLitAfter.index2).to.equal(0);
             expect(userLitAfter.index2).to.equal(0);
         });
+        
         it("Should perform DHW again and then withdraw", async () => {
             await spool.spool
                 .connect(accounts.doHardWorker)
@@ -205,10 +204,10 @@ describe("VaultUpdate", () => {
 
             const vaultLitAfter = await vault.lastIndexInteracted();
             const userLitAfter = await vault.userLastInteractions(accounts.user0.address);
-            let vaultIndex = await vault.vaultIndex();
+            let activeGlobalIndex = await spool.spool.getActiveGlobalIndex();;
 
-            expect(vaultLitAfter.index1).to.equal(vaultIndex);
-            expect(userLitAfter.index1).to.equal(vaultIndex);
+            expect(vaultLitAfter.index1).to.equal(activeGlobalIndex);
+            expect(userLitAfter.index1).to.equal(activeGlobalIndex);
             expect(vaultLitAfter.index2).to.equal(0);
             expect(userLitAfter.index2).to.equal(0);
         });

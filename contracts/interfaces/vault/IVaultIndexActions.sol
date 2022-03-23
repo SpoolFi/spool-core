@@ -2,12 +2,7 @@
 
 pragma solidity 0.8.11;
 
-import "./IVaultDetails.sol";
-
 interface IVaultIndexActions {
-    /* ========== FUNCTIONS ========== */
-
-    function initialize(VaultInitializable calldata vaultInitializable) external;
 
     /* ========== STRUCTS ========== */
 
@@ -28,6 +23,6 @@ interface IVaultIndexActions {
 
     /* ========== EVENTS ========== */
 
-    event VaultRedeem(uint indexed vaultIndex);
-    event UserRedeem(address indexed member, uint indexed vaultIndex);
+    event VaultRedeem(uint indexed globalIndex);
+    event UserRedeem(address indexed member, uint indexed globalIndex);
 }
