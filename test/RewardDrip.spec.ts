@@ -26,6 +26,7 @@ describe("RewardDrip", () => {
     let vaultOwner: SignerWithAddress;
     let user1: SignerWithAddress;
     let user2: SignerWithAddress;
+    let controller: SignerWithAddress;
 
     before(async () => {
         [
@@ -34,6 +35,7 @@ describe("RewardDrip", () => {
             vaultOwner,
             user1,
             user2,
+            controller
         ] = await ethers.getSigners();
 
         mockSpoolOwner = await deployMockContract(spoolDao, ISpoolOwner__factory.abi);
@@ -44,7 +46,7 @@ describe("RewardDrip", () => {
     beforeEach("Deploy reward drip and reward token", async () => {
         rewardDrip = await (new MockRewardDrip__factory).connect(deployer).deploy(
             ADDRESS_ONE,
-            ADDRESS_ONE,
+            controller.address,
             ADDRESS_ONE,
             ADDRESS_ONE,
             mockSpoolOwner.address,
@@ -164,6 +166,19 @@ describe("RewardDrip", () => {
             );
         });
 
+        it("getActiveRewards should fail if not invoked by controller", async () => {
+            // ARRANGE
+            const depositAmount = getMillionUnits(18);
+            await rewardDrip.connect(user1).deposit(depositAmount);
+            await increase(rewardDuration * 2);
+
+            // ACT
+            const action = rewardDrip.getActiveRewards(user1.address);
+
+            // ASSERT
+            await expect(action).to.be.revertedWith("OCTRL");
+        });
+
         it("Deposit one user, should claim rewards proportionally", async () => {
             // ARRANGE
             const depositAmount = getMillionUnits(18);
@@ -172,8 +187,8 @@ describe("RewardDrip", () => {
             await increase(rewardDuration * 2);
 
             // ACT
-            await rewardDrip.getActiveRewards(user1.address);
-            
+            await rewardDrip.connect(controller).getActiveRewards(user1.address);
+
             // ASSERT
             const user1balanceAfter = await rewardToken.balanceOf(user1.address)
             const user1balanceGain = user1balanceAfter.sub(user1balanceBefore);
@@ -192,9 +207,9 @@ describe("RewardDrip", () => {
             await increase(rewardDuration * 2);
 
             // ACT
-            await rewardDrip.getActiveRewards(user1.address);
-            await rewardDrip.getActiveRewards(user2.address);
-            
+            await rewardDrip.connect(controller).getActiveRewards(user1.address);
+            await rewardDrip.connect(controller).getActiveRewards(user2.address);
+
             // ASSERT
             const user1balanceAfter = await rewardToken.balanceOf(user1.address)
             const user1balanceGain = user1balanceAfter.sub(user1balanceBefore);
@@ -209,7 +224,7 @@ describe("RewardDrip", () => {
             const rewardToken2 = (await (new MockToken__factory()).connect(deployer).deploy("RWD2", "RWD2", 18));
             await rewardToken2.connect(vaultOwner).approve(rewardDrip.address, constants.MaxUint256);
             const reward2Amount = getMillionUnits(3);
-            
+
             await addToken(
                 rewardDrip,
                 rewardToken2,
@@ -231,9 +246,9 @@ describe("RewardDrip", () => {
             await increase(rewardDuration * 2);
 
             // ACT
-            await rewardDrip.getActiveRewards(user1.address);
-            await rewardDrip.getActiveRewards(user2.address);
-            
+            await rewardDrip.connect(controller).getActiveRewards(user1.address);
+            await rewardDrip.connect(controller).getActiveRewards(user2.address);
+
             // ASSERT
             const user1balance1After = await rewardToken.balanceOf(user1.address)
             const user1balance2After = await rewardToken2.balanceOf(user1.address)
@@ -260,7 +275,7 @@ describe("RewardDrip", () => {
             const deposit1Amount = getMillionUnits(18);
             await rewardDrip.connect(user1).deposit(deposit1Amount);
             const user1balanceBefore = await rewardToken.balanceOf(user1.address)
-            
+
             await increase(rewardDuration);
 
             await addToken(
@@ -280,9 +295,9 @@ describe("RewardDrip", () => {
             await increase(rewardDuration);
 
             // ACT
-            await rewardDrip.getActiveRewards(user1.address);
-            await rewardDrip.getActiveRewards(user2.address);
-            
+            await rewardDrip.connect(controller).getActiveRewards(user1.address);
+            await rewardDrip.connect(controller).getActiveRewards(user2.address);
+
             // ASSERT
             const user1balanceAfter = await rewardToken.balanceOf(user1.address)
             const user1balanceGain = user1balanceAfter.sub(user1balanceBefore);
@@ -329,11 +344,11 @@ describe("RewardDrip", () => {
 
             const rewardCountBefore = await rewardDrip.rewardTokensCount();
             await increase(rewardDuration);
-           
+
             // ACT
             await rewardDrip.connect(vaultOwner).removeReward(rewardToken.address);
-            await rewardDrip.getActiveRewards(user1.address);
-            await rewardDrip.getRewards([rewardToken.address], user1.address);
+            await rewardDrip.connect(controller).getActiveRewards(user1.address);
+            await rewardDrip.connect(user1).getRewards([rewardToken.address]);
 
             // ASSERT
             const rewardCountAfter = await rewardDrip.rewardTokensCount();
