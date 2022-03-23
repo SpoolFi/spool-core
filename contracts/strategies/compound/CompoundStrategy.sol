@@ -85,7 +85,7 @@ contract CompoundStrategy is ClaimFullSingleRewardStrategy {
             "CompoundStrategy::_deposit: Compound Minting Error"
         );
         uint256 cTokenBalanceNew = cToken.balanceOf(address(this)) - cTokenBalancebefore;
-
+        _resetAllowance(underlying, address(cToken));
 
         return SafeCast.toUint128(_getcTokenValue(cTokenBalanceNew));
     }

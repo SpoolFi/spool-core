@@ -46,6 +46,7 @@ contract YearnStrategy is NoRewardStrategy {
         uint256 yearnTokenBefore = vault.balanceOf(address(this));
         vault.deposit(amount, address(this));
         uint256 yearnTokenNew = vault.balanceOf(address(this)) - yearnTokenBefore;
+        _resetAllowance(underlying, address(vault));
 
         require(
             yearnTokenNew >= slippage,

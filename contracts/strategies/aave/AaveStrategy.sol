@@ -79,7 +79,7 @@ contract AaveStrategy is RewardStrategy, SwapHelperMainnet {
             address(this),
             0
         );
-
+        _resetAllowance(underlying, address(lendingPool));
         return amount;
     }
 

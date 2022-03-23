@@ -64,8 +64,8 @@ contract Curve3poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy3Coin
 
     function _handleDeposit(uint256 lp) internal override {
         lpToken.safeApprove(address(liquidityGauge), lp);
-
         liquidityGauge.deposit(lp);
+        _resetAllowance(lpToken, address(liquidityGauge));
     }
 
     function _handleWithdrawal(uint256 lp) internal override {

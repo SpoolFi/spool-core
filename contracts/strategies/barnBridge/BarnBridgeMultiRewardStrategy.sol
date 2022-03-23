@@ -96,6 +96,7 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
 
         underlying.safeApprove(provider, amount);
         yield.buyTokens(amount, slippage, block.timestamp);
+        _resetAllowance(underlying, provider);
 
         uint256 bbAmount = yield.balanceOf(address(this));
         
