@@ -71,8 +71,11 @@ contract ConvexBoosterContractHelper is IStrategyContractHelper {
 
     function deposit(uint256 lp) external override onlySpool {
         lpToken.safeApprove(address(booster), lp);
-
         booster.deposit(pid, lp, true);
+
+        if (lpToken.allowance(address(this), address(booster)) > 0) {
+            lpToken.safeApprove(address(booster), 0);
+        }
     }
 
     function withdraw(uint256 lp) external override onlySpool {

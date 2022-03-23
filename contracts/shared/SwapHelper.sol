@@ -73,31 +73,23 @@ abstract contract SwapHelper {
 
         // get swap action from first byte
         SwapAction action = SwapAction(swapData.path.toUint8(0));
+        uint256 result;
 
         if (action == SwapAction.UNI_V2_DIRECT) { // V2 Direct
             address[] memory path = new address[](2);
-            return _swapV2(from, to, amount, swapData.slippage, path);
-
+            result = _swapV2(from, to, amount, swapData.slippage, path);
         } else if (action == SwapAction.UNI_V2_WETH) { // V2 WETH
-
             address[] memory path = new address[](3);
             path[1] = WETH;
-            return _swapV2(from, to, amount, swapData.slippage, path);
-
+            result = _swapV2(from, to, amount, swapData.slippage, path);
         } else if (action == SwapAction.UNI_V2) { // V2 Custom
-
             address[] memory path = _getV2Path(swapData.path);
-            return _swapV2(from, to, amount, swapData.slippage, path);
-
+            result = _swapV2(from, to, amount, swapData.slippage, path);
         } else if (action == SwapAction.UNI_V3_DIRECT) { // V3 Direct
-
-            return _swapDirectV3(from, to, amount, swapData.slippage, swapData.path);
-
+            result = _swapDirectV3(from, to, amount, swapData.slippage, swapData.path);
         } else if (action == SwapAction.UNI_V3_WETH) { // V3 WETH
-
             bytes memory wethPath = _getV3WethPath(swapData.path);
-            return _swapV3(from, to, amount, swapData.slippage, wethPath);
-
+            result = _swapV3(from, to, amount, swapData.slippage, wethPath);
         } else if (action == SwapAction.UNI_V3) { // V3 Custom
             require(swapData.path.length > MIN_V3_PATH, "SwapHelper::_approveAndSwap: Path too short");
             uint256 actualpathSize = swapData.path.length - ACTION_SIZE;
@@ -105,10 +97,15 @@ abstract contract SwapHelper {
                 actualpathSize <= MAX_V3_PATH,
                 "SwapHelper::_approveAndSwap: Bad V3 path");
 
-            return _swapV3(from, to, amount, swapData.slippage, swapData.path[ACTION_SIZE:]);
+            result = _swapV3(from, to, amount, swapData.slippage, swapData.path[ACTION_SIZE:]);
         } else {
             revert("SwapHelper::_approveAndSwap: No action");
         }
+
+        if (from.allowance(address(this), address(uniswapRouter)) > 0) {
+            from.safeApprove(address(uniswapRouter), 0);
+        }
+        return result;
     }
 
     function _swapV2(
