@@ -23,6 +23,11 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
     using SafeERC20 for IERC20;
     using Max128Bit for uint128;
 
+    /* ========== CONSTANTS ========== */
+
+    /// @notice minimum shares size to avoid loss of share due to computation precision
+    uint128 private constant MIN_SHARES = 10**8;
+
     /* ========== STATE VARIABLES ========== */
 
     /// @notice The total slippage slots the strategy supports, used for validation of provided slippage
@@ -336,7 +341,8 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         }
         
         if (strategyTotalShares == 0 || oldUnderlying == 0) {
-            newShares = depositAmount;
+            // Enforce minimum shares size to avoid loss of share due to computation precision
+            newShares = (0 < depositAmount && depositAmount < MIN_SHARES) ? MIN_SHARES : depositAmount;
         } else {
             newShares = Math.getProportion128(depositAmount, strategyTotalShares, oldUnderlying);
         }
@@ -347,7 +353,8 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      */
     function _getNewShares(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal pure returns(uint128 newShares){
         if (strategyTotalShares == 0 || stratTotalUnderlying == 0) {
-            newShares = depositAmount;
+            // Enforce minimum shares size to avoid loss of share due to computation precision
+            newShares = (0 < depositAmount && depositAmount < MIN_SHARES) ? MIN_SHARES : depositAmount;
         } else {
             newShares = Math.getProportion128(depositAmount, strategyTotalShares, stratTotalUnderlying);
         }
