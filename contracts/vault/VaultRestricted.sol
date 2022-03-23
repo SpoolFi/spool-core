@@ -66,7 +66,7 @@ abstract contract VaultRestricted is IVaultRestricted, VaultIndexActions {
         address[] memory vaultStrategies,
         uint256 newVaultProportions,
         uint256 finishedIndex,
-        uint256 activeIndex
+        uint24 activeIndex
     ) 
         external 
         override
@@ -80,10 +80,8 @@ abstract contract VaultRestricted is IVaultRestricted, VaultIndexActions {
 
         proportions = newVaultProportions;
 
-        uint24 _vaultIndex = _setActiveGlobalIndex(activeIndex);
-
-        redistibutionIndex = _vaultIndex;
-        _updateInteractedIndex();
+        redistibutionIndex = activeIndex;
+        _updateInteractedIndex(activeIndex);
     }
 
     /**

@@ -79,13 +79,6 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
     /// @notice Data if vault and at what index vault is redistributing
     uint24 public redistibutionIndex;
 
-    /// @notice Total unprocessed withdrawn shares, waiting to be processed on next vault interaction
-    uint128 public lazyWithdrawnShares;
-
-    /// @notice Current vault index index, that maps to global index
-    /// @dev Every action stored in vault is mapped to the vault index
-    uint24 public vaultIndex;
-
     /// @notice User vault state values
     mapping(address => User) public users;
 
@@ -124,13 +117,16 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
     /* ========== INITIALIZE ========== */
 
     /**
-     * @notice Initializes vault specific state varibles at proxy creation.
+     * @notice Initializes state of the vault at proxy creation.
+     * @dev Called only once by vault factory after deploying a vault proxy.
+     *      All values have been sanitized by the controller contract, meaning
+     *      that no additional checks need to be applied here.
      *
      * @param vaultInitializable initial vault specific variables
      */
-    function _initializeBase(
+    function initialize(
         VaultInitializable memory vaultInitializable
-    ) internal {
+    ) external override initializer {
         vaultOwner = vaultInitializable.owner;
         vaultFee = vaultInitializable.fee;
         name = vaultInitializable.name;

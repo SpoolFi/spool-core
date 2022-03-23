@@ -2,7 +2,13 @@
 
 pragma solidity 0.8.11;
 
+import "./IVaultDetails.sol";
+
 interface IVaultBase {
+    /* ========== FUNCTIONS ========== */
+
+    function initialize(VaultInitializable calldata vaultInitializable) external;
+
     /* ========== STRUCTS ========== */
 
     struct User {
