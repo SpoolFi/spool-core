@@ -103,7 +103,7 @@ describe("Vault", () => {
 
             await vault.connect(accounts.user0).deposit(vaultCreation.strategies, TEN_UNITS_E8, true);
 
-            const depositIndex = await vault.vaultIndex();
+            const depositIndex = await spool.spool.getActiveGlobalIndex();
             const userIndexAction = await vault.userIndexAction(accounts.user0.address, depositIndex);
             const vaultIndexAction = await vault.vaultIndexAction(depositIndex);
 
@@ -127,7 +127,7 @@ describe("Vault", () => {
 
             await vault.connect(accounts.user1).deposit(vaultCreation.strategies, user2DepositAmount, false);
 
-            const depositIndex = await vault.vaultIndex();
+            const depositIndex = await spool.spool.getActiveGlobalIndex();
 
             const user2IndexAction = await vault.userIndexAction(accounts.user1.address, depositIndex);
             const vaultIndexAction = await vault.vaultIndexAction(depositIndex);
@@ -146,7 +146,7 @@ describe("Vault", () => {
 
             await vault.connect(accounts.user1).deposit(vaultCreation.strategies, user2DepositAmount, false);
 
-            const depositIndex = await vault.vaultIndex();
+            const depositIndex = await spool.spool.getActiveGlobalIndex();
 
             const user2IndexAction = await vault.userIndexAction(accounts.user1.address, depositIndex);
             const vaultIndexAction = await vault.vaultIndexAction(depositIndex);
@@ -223,7 +223,7 @@ describe("Vault", () => {
             const user0 = await vault.users(accounts.user0.address);
             const user1 = await vault.users(accounts.user1.address);
 
-            await vault.connect(accounts.user0).withdrawLazy(user0.shares, false);
+            await vault.connect(accounts.user0).withdraw(vaultCreation.strategies, user0.shares, false);
             await vault.connect(accounts.user1).withdraw(vaultCreation.strategies, user1.shares, false);
             const user0SharesAfter = (await vault.users(accounts.user0.address)).shares;
             const user1SharesAfter = (await vault.users(accounts.user1.address)).shares;
