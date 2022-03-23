@@ -20,24 +20,4 @@ interface ISpoolExternal {
     function redeemReallocation(address[] calldata vaultStrategies, uint256 depositProportions, uint256 index) external;
 
     function removeShares(address[] calldata vaultStrategies, uint256 vaultProportion) external returns(uint128[] memory);
-
-    function removeSharesDuringVaultReallocation(
-        VaultWithdraw calldata vaultWithdraw,
-        FastWithdrawalReallocation calldata reallocation,
-        uint256[][] calldata reallocationProportions
-    ) external returns(uint128[] memory);
-
-    /* ========== STRUCTS ========== */
-
-    // holds helper values to remove shares while vault is reallocating
-    struct FastWithdrawalReallocation {
-        uint256 vaultStrategiesBitwise;
-        address[] allStrategies;
-        uint256 depositProportions;
-    }
-
-    struct VaultWithdraw {
-        address[] strategies;
-        uint256 withdrawnProportion;
-    }
 }

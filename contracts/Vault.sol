@@ -4,9 +4,6 @@ pragma solidity 0.8.11;
 
 import "./vault/VaultRestricted.sol";
 
-import "./interfaces/ISwapData.sol";
-import "./interfaces/spool/ISpoolExternal.sol";
-
 /**
  * @notice Implementation of the {IVault} interface.
  *
@@ -259,74 +256,7 @@ contract Vault is VaultRestricted {
             fastWithdrawParams
         );
     }
-
-    /**
-     * @notice Allows a user to withdraw their deposited funds right away,
-     * while vault is reallocating.
-     * 
-     * @dev
-     * Shares belonging to the user and are sent to FaswWithdraw contract
-     * where a withdraw can be executed.
-     *
-     * Requirements:
-     *
-     * - the provided strategies must be valid
-     * - the spool system must not be mid reallocation 
-     *   (started DHW and not finished, at index the reallocation was initiated)
-     * - vault must be redistributing
-     *
-     * @param vaultStrategies strategies of this vault
-     * @param sharesToWithdraw shares amount to withdraw
-     * @param withdrawAll if all shares should be removed
-     * @param reallocation holds helper values to remove vault strategy shares while vault is reallocating
-     * @param fastWithdrawParams extra parameters to perform fast withdraw
-     */
-    function withdrawFastWhileReallocating(
-        address[] memory vaultStrategies,
-        uint128 sharesToWithdraw,
-        bool withdrawAll,
-        ISpool.FastWithdrawalReallocation memory reallocation,
-        uint256[][] memory reallocationProportions,
-        FastWithdrawParams memory fastWithdrawParams
-    )
-        external
-        noMidReallocation
-        verifyStrategies(vaultStrategies)
-        redeemVaultStrategiesModifier(vaultStrategies)
-        redeemUserModifier
-        updateRewards
-    {
-        require(_isVaultRedistributing(), "RDS");
-
-        sharesToWithdraw = _withdrawShares(sharesToWithdraw, withdrawAll);
-
-        uint256 vaultShareProportion = _getVaultShareProportion(sharesToWithdraw);
-
-        reallocation.depositProportions = depositProportions;
-
-        ISpoolExternal.VaultWithdraw memory vaultWithdraw = 
-            ISpoolExternal.VaultWithdraw(vaultStrategies, vaultShareProportion); 
-
-        uint128[] memory strategyRemovedShares = 
-            spool.removeSharesDuringVaultReallocation(
-                vaultWithdraw,
-                reallocation,
-                reallocationProportions
-            );
-
-        uint256 proportionateDeposit = _getUserProportionateDeposit(sharesToWithdraw);
-        totalShares -= sharesToWithdraw;
-
-        // transfer removed shares to fast withdraw contract
-        fastWithdraw.transferShares(
-            vaultStrategies,
-            strategyRemovedShares,
-            proportionateDeposit,
-            msg.sender,
-            fastWithdrawParams
-        );
-    }
-
+    
     /**
      * @notice Calculates user proportionate deposit when withdrawing and updated user deposit storage
      * @dev Checks user index action to see if user already has some withdrawn shares

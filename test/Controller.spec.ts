@@ -449,4 +449,5 @@ describe("Controller", () => {
             expect(await spool.controller.isEmergencyWithdrawer(accounts.user0.address)).to.be.true;
         });
     });
+    // TODO getRewards tests
 });
