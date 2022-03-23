@@ -116,6 +116,38 @@ describe("RewardDrip", () => {
             expect(await rewardDrip.rewardTokens(1)).to.eq(rewardToken2.address);
             expect(await rewardToken2.balanceOf(rewardDrip.address)).to.eq(rewardAmount);
         });
+
+        it("Should not add previously force-removed token", async () => {
+            // ARRANGE
+            const rewardAmount = getMillionUnits(18);
+            const rewardDuration = SECS_DAY * 10; // 10 days
+            await rewardToken.mint(vaultOwner.address, rewardAmount);
+
+            // ACT
+            await rewardDrip.connect(vaultOwner).addToken(
+                rewardToken.address,
+                rewardDuration,
+                rewardAmount
+            );
+
+            await rewardDrip.connect(spoolDao).forceRemoveReward(rewardToken.address);
+            const addToken = rewardDrip.connect(vaultOwner).addToken(
+                rewardToken.address,
+                rewardDuration,
+                rewardAmount
+            );
+
+            // ASSERT
+            await expect(addToken).to.be.revertedWith("TOBL");
+            const tokenBlacklist = await rewardDrip.tokenBlacklist(rewardToken.address);
+            expect(tokenBlacklist).to.be.equal(true);
+            const rewardConfig = await rewardDrip.rewardConfiguration(rewardToken.address);
+            expect(rewardConfig.rewardRate).to.be.equal(0);
+            expect(rewardConfig.lastUpdateTime).to.be.equal(0);
+            expect(rewardConfig.periodFinish).to.be.equal(0);
+            expect(rewardConfig.rewardPerTokenStored).to.be.equal(0);
+            expect(rewardConfig.rewardsDuration).to.be.equal(0);
+        });
     });
 
     describe("Rewards Drip Emitting Rewards", () => {

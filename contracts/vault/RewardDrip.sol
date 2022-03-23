@@ -36,6 +36,9 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
     /// @notice Vault reward token incentive configuration
     mapping(IERC20 => RewardConfiguration) public rewardConfiguration;
 
+    /// @notice Blacklisted force-removed tokens
+    mapping(IERC20 => bool) public override tokenBlacklist;
+
     /* ========== VIEWS ========== */
 
     function lastTimeRewardApplicable(IERC20 token)
@@ -152,6 +155,8 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         uint256 reward
     ) external onlyVaultOwnerOrSpoolOwner exceptUnderlying(token) {
         RewardConfiguration storage config = rewardConfiguration[token];
+
+        require(!tokenBlacklist[token], "TOBL");
         require(
             rewardsDuration != 0 &&
             config.lastUpdateTime == 0,
@@ -256,6 +261,7 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
      * @param token Token address to remove
      */
     function forceRemoveReward(IERC20 token) external onlyOwner {
+        tokenBlacklist[token] = true;
         _removeReward(token);
 
         delete rewardConfiguration[token];
