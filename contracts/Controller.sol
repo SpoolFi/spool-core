@@ -327,11 +327,13 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
      * @param vaults vaults for which to claim rewards for
      */
     function getRewards(IVault[] calldata vaults) external {
+        IVault vault;
         for (uint256 i = 0; i < vaults.length; i++) {
-            require(
-                validVault[address(vaults[i])],
-                "Controller::getRewards: Invalid vault specified"
-            );
+            vault = vaults[i];
+            if (!validVault[address(vault)]) {
+                emit VaultInvalid(address(vault));
+                continue;
+            }
             vaults[i].getActiveRewards(msg.sender);
         }
     }
