@@ -9,6 +9,7 @@ import "./shared/Constants.sol";
 
 // libraries
 import "./external/@openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import "./external/@openzeppelin/security/Pausable.sol";
 import "./libraries/Hash.sol";
 
 // other imports
@@ -18,7 +19,6 @@ import "./interfaces/IBaseStrategy.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/vault/IVaultDetails.sol";
 import "./vault/VaultNonUpgradableProxy.sol";
-import "./external/@openzeppelin/security/Pausable.sol";
 
 /**
  * @notice Implementation of the {IController} interface.

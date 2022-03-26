@@ -7,7 +7,7 @@ import "../interfaces/IController.sol";
 abstract contract SpoolPausable {
     /* ========== STATE VARIABLES ========== */
 
-    /// @notice The controller contract that is consulted for a strategy's and vault's validity
+    /// @notice The controller contract that is consulted for system's validity
     IController public immutable controller;
 
     constructor(IController _controller) {
