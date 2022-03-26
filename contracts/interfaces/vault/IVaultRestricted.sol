@@ -13,4 +13,8 @@ interface IVaultRestricted {
     ) external returns (uint256[] memory, uint256);
 
     function payFees(uint256 profit) external returns (uint256 feesPaid);
+
+    /* ========== EVENTS ========== */
+
+    event Reallocate(uint24 indexed index, uint256 newProportions);
 }
