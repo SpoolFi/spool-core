@@ -13,6 +13,7 @@ import "../libraries/Hash.sol";
 
 // other imports
 import "../interfaces/IController.sol";
+import "../shared/SpoolPausable.sol";
 
 /**
  * @notice Implementation of the {ISpoolBase} interface.
@@ -27,13 +28,11 @@ abstract contract SpoolBase is
     ISpoolBase,
     BaseStorage,
     SpoolOwnable,
+    SpoolPausable,
     BaseConstants
 {
 
     /* ========== STATE VARIABLES ========== */
-
-    /// @notice The controller contract that is consulted for a strategy's and vault's validity
-    IController internal immutable controller;
 
     /// @notice The fast withdraw contract that is used to quickly remove shares
     address internal immutable fastWithdraw;
@@ -60,14 +59,13 @@ abstract contract SpoolBase is
         address _fastWithdraw
     ) 
         SpoolOwnable(_spoolOwner)
+        SpoolPausable(_controller)
     {
         require(
-            _controller != IController(address(0)) &&
             _fastWithdraw != address(0),
-            "BaseSpool::constructor: Controller or FastWithdraw address cannot be 0"
+            "BaseSpool::constructor: FastWithdraw address cannot be 0"
         );
 
-        controller = _controller;
         fastWithdraw = _fastWithdraw;
         
         globalIndex = 1;

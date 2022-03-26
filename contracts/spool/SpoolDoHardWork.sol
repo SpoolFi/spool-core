@@ -55,6 +55,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
      * - provided strategies must be valid
      * - reallocation is not pending for current index
      * - at least one sttrategy must be processed
+     * - the system should not be paused
      */
     function batchDoHardWork(
         uint256[] memory stratIndexes,
@@ -63,6 +64,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         address[] memory allStrategies
     ) 
         external
+        systemNotPaused
         onlyDoHardWorker
         verifyStrategies(allStrategies)
     {
@@ -135,13 +137,14 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
      * - provided strategies must be valid
      * - reallocation is pending for current index
      * - at least one strategy must be processed
+     * - the system should not be paused
      */
     function batchDoHardWorkReallocation(
         ReallocationWithdrawData memory withdrawData,
         ReallocationData memory depositData,
         address[] memory allStrategies,
         bool isOneTransaction
-    ) external onlyDoHardWorker verifyReallocationStrategies(allStrategies) {
+    ) external systemNotPaused onlyDoHardWorker verifyReallocationStrategies(allStrategies) {
         if (_isBatchComplete()) {
             globalIndex++;
             

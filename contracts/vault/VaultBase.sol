@@ -20,6 +20,7 @@ import "../interfaces/ISpool.sol";
 import "../interfaces/IController.sol";
 import "../interfaces/IFastWithdraw.sol";
 import "../interfaces/IFeeHandler.sol";
+import "../shared/SpoolPausable.sol";
 
 /**
  * @notice Implementation of the {IVaultBase} interface.
@@ -27,7 +28,7 @@ import "../interfaces/IFeeHandler.sol";
  * @dev
  * Vault base holds vault state variables and provides some of the common vault functions.
  */
-abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseConstants {
+abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, SpoolPausable, BaseConstants {
     using Bitwise for uint256;
     using SafeERC20 for IERC20;
 
@@ -35,9 +36,6 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
 
     /// @notice The central Spool contract
     ISpool internal immutable spool;
-
-    /// @notice The funds transfer contract, transfers user deposit to spool
-    IController internal immutable controller;
 
     /// @notice The fast withdraw contract
     IFastWithdraw internal immutable fastWithdraw;
@@ -102,14 +100,13 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
         IFastWithdraw _fastWithdraw,
         IFeeHandler _feeHandler
     )
+    SpoolPausable(_controller)
     {
         require(address(_spool) != address(0), "VaultBase::constructor: Spool address cannot be 0");
-        require(address(_controller) != address(0), "VaultBase::constructor: Funds Transfer address cannot be 0");
         require(address(_fastWithdraw) != address(0), "VaultBase::constructor: FastWithdraw address cannot be 0");
         require(address(_feeHandler) != address(0), "VaultBase::constructor: Fee Handler address cannot be 0");
 
         spool = _spool;
-        controller = _controller;
         fastWithdraw = _fastWithdraw;
         feeHandler = _feeHandler;
     }

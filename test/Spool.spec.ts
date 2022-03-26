@@ -83,7 +83,7 @@ describe("Spool", () => {
                     ethers.constants.AddressZero,
                     "0x0000000000000000000000000000000000000001"
                 )
-            ).to.be.revertedWith("BaseSpool::constructor: Controller or FastWithdraw address cannot be 0");
+            ).to.be.revertedWith("SpoolPausable::constructor: Controller contract address cannot be 0");
         });
     });
 

@@ -80,6 +80,7 @@ contract Vault is VaultRestricted {
      * - the provided strategies must be valid
      * - the caller must have pre-approved the contract for the token amount deposited
      * - the caller cannot deposit zero value
+     * - the system should not be paused
      *
      * @param vaultStrategies strategies of this vault (verified internally)
      * @param amount amount to deposit
@@ -162,6 +163,7 @@ contract Vault is VaultRestricted {
      * - the provided strategies must be valid
      * - the caller must have a non-zero amount of shares to withdraw
      * - the caller must have enough shares to withdraw the specified share amount
+     * - the system should not be paused
      *
      * @param vaultStrategies strategies of this vault (verified internally)
      * @param sharesToWithdraw shares amount to withdraw
@@ -214,6 +216,7 @@ contract Vault is VaultRestricted {
      *   (started DHW and not finished, at index the reallocation was initiated)
      * - the provided strategies must be valid
      * - the sistem must not be in the middle of the reallocation
+     * - the system should not be paused
      *
      * @param vaultStrategies strategies of this vault
      * @param sharesToWithdraw shares amount to withdraw
@@ -313,6 +316,7 @@ contract Vault is VaultRestricted {
      *
      * - if `doRedeemVault` is true, the provided strategies must be valid
      * - the caller must have a non-zero debt owed
+     * - the system should not be paused (if doRedeemVault)
      *
      * @param doRedeemVault flag, to execute redeem for the vault (synchronize deposit/withdrawals with the system)
      * @param vaultStrategies vault stratigies
