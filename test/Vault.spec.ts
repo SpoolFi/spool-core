@@ -292,5 +292,20 @@ describe("Vault", () => {
             expect(user0BalanceAfter.gt(user0BalanceBefore)).to.be.true;
             expect(user1BalanceAfter.gt(user1BalanceBefore)).to.be.true;
         });
+
+        it("Should fail if controller paused", async () => {
+            const { accounts, tokens, spool } = await loadFixture(deploymentFixture);
+            await spool.controller.pause();
+
+            const user2DepositAmount = TEN_UNITS_E8.div(BigNumber.from("2"));
+            await tokens.USDC.transfer(accounts.user1.address, user2DepositAmount);
+            await tokens.USDC.connect(accounts.user1).approve(spool.controller.address, user2DepositAmount);
+
+            const deposit = vault.connect(accounts.user1)
+                .deposit(vaultCreation.strategies, user2DepositAmount, false);
+
+            await expect(deposit).to.revertedWith("Pausable: paused");
+            await spool.controller.unpause();
+        });
     });
 });

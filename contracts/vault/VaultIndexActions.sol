@@ -64,10 +64,11 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
      * 
      * @dev
      * This is only possible if all vault strategy DHWs have been executed, otherwise it's reverted.
-     *
+     * If the system is paused, function will revert - impacts vault functions deposit, withdraw, fastWithdraw,
+     * claim, reallocate.
      * @param vaultStrategies strategies of this vault (verified internally)
      */
-    function _redeemVaultStrategies(address[] memory vaultStrategies) internal {
+    function _redeemVaultStrategies(address[] memory vaultStrategies) internal systemNotPaused {
         LastIndexInteracted memory _lastIndexInteracted = lastIndexInteracted;
         if (_lastIndexInteracted.index1 > 0) {
             uint256 globalIndex1 = _lastIndexInteracted.index1;

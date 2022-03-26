@@ -9,6 +9,7 @@ import "./shared/Constants.sol";
 
 // libraries
 import "./external/@openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import "./external/@openzeppelin/security/Pausable.sol";
 import "./libraries/Hash.sol";
 
 // other imports
@@ -31,7 +32,7 @@ import "./vault/VaultNonUpgradableProxy.sol";
  * The contract can be thought of as the central point of contract
  * for assessing the validity of data in the system (i.e. supported strategy, vault etc.).
  */
-contract Controller is IController, SpoolOwnable, BaseConstants {
+contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
     using SafeERC20 for IERC20;
 
     /* ========== CONSTANTS ========== */
@@ -86,6 +87,12 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
     /// @notice Whether the address is the emergency withdrawer
     mapping(address => bool) public isEmergencyWithdrawer;
 
+    /// @notice Whether the address is the pauser
+    mapping(address => bool) public isPauser;
+
+    /// @notice Whether the address is the unpauser
+    mapping(address => bool) public isUnpauser;
+
     /**
      * @notice Sets the contract initial values.
      *
@@ -123,6 +130,11 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
     }
 
     /* ========== VIEWS ========== */
+
+    /**
+    * @dev Throws if controller is paused.
+     */
+    function checkPaused() external view whenNotPaused {}
 
     /**
      * @notice Returns all strategy contract addresses.
@@ -163,6 +175,20 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
     }
 
     /* ========== MUTATIVE FUNCTIONS ========== */
+
+    /**
+    * @notice Stops the controller.
+     */
+    function pause() onlyPauser external {
+        _pause();
+    }
+
+    /**
+     * @notice Resumes the controller.
+     */
+    function unpause() onlyUnpauser external {
+        _unpause();
+    }
 
     /**
      * @notice Allows the creation of a new vault.
@@ -681,6 +707,32 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
     }
 
     /**
+    * @notice Add or remove the pauser role
+     *
+     * @dev
+     * Requirements:
+     *
+     * - the caller must be the contract owner (Spool DAO)
+     */
+    function setPauser(address user, bool _set) external onlyOwner {
+        isPauser[user] = _set;
+        emit PauserUpdated(user, _set);
+    }
+
+    /**
+     * @notice Add or remove the unpauser role
+     *
+     * @dev
+     * Requirements:
+     *
+     * - the caller must be the contract owner (Spool DAO)
+     */
+    function setUnpauser(address user, bool _set) external onlyOwner {
+        isUnpauser[user] = _set;
+        emit UnpauserUpdated(user, _set);
+    }
+
+    /**
      * @notice Set the emergency withdraw recipient
      *
      * @dev
@@ -743,6 +795,26 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
         );
     }
 
+    /**
+    * @notice Ensures that the caller is the pauser
+     */
+    function _onlyPauser() private view {
+        require(
+            isPauser[msg.sender] || isSpoolOwner(),
+            "Controller::_onlyPauser: Can only be invoked by pauser"
+        );
+    }
+
+    /**
+     * @notice Ensures that the caller is the unpauser
+     */
+    function _onlyUnpauser() private view {
+        require(
+            isUnpauser[msg.sender] || isSpoolOwner(),
+            "Controller::_onlyUnpauser: Can only be invoked by unpauser"
+        );
+    }
+
     /* ========== MODIFIERS ========== */
 
     /**
@@ -766,6 +838,22 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
      */
     modifier validStrategiesOrEmpty(address[] memory allStrategies) {
         _validStrategiesOrEmpty(allStrategies);
+        _;
+    }
+
+    /**
+     * @notice Throws if the calling user is not pauser
+     */
+    modifier onlyPauser() {
+        _onlyPauser();
+        _;
+    }
+
+    /**
+     * @notice Throws if the calling user is not unpauser
+     */
+    modifier onlyUnpauser() {
+        _onlyUnpauser();
         _;
     }
 }

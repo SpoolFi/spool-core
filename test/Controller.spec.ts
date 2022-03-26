@@ -449,5 +449,63 @@ describe("Controller", () => {
             expect(await spool.controller.isEmergencyWithdrawer(accounts.user0.address)).to.be.true;
         });
     });
+
+    describe("Pausable controller tests", async () => {
+        it("Should fail trying to update pauser address from non-owner account", async () => {
+            await expect(
+                spool.controller.connect(accounts.user0).setPauser(accounts.user0.address, true)
+            ).to.be.revertedWith("SpoolOwnable::onlyOwner: Caller is not the Spool owner");
+        });
+        it("Should fail trying to update unpauser address from non-owner account", async () => {
+            await expect(
+                spool.controller.connect(accounts.user0).setUnpauser(accounts.user0.address, true)
+            ).to.be.revertedWith("SpoolOwnable::onlyOwner: Caller is not the Spool owner");
+        });
+        it("Should correctly update pauser address", async () => {
+            await spool.controller.setPauser(accounts.user0.address, true);
+            expect(await spool.controller.isPauser(accounts.user0.address)).to.be.true;
+        });
+        it("Should correctly update unpauser address", async () => {
+            await spool.controller.setUnpauser(accounts.user0.address, true);
+            expect(await spool.controller.isUnpauser(accounts.user0.address)).to.be.true;
+        });
+        it("Should pause", async () => {
+            await spool.controller.setPauser(accounts.user0.address, true);
+            await spool.controller.connect(accounts.user0).pause();
+            const checkPaused = spool.controller.checkPaused();
+            await expect(checkPaused).to.be.revertedWith("Pausable: paused");
+        });
+        it("Should pause by spool owner", async () => {
+            await spool.controller.connect(accounts.administrator).pause();
+            const checkPaused = spool.controller.checkPaused();
+            await expect(checkPaused).to.be.revertedWith("Pausable: paused");
+        });
+        it("Should unpause", async () => {
+            await spool.controller.setUnpauser(accounts.user0.address, true);
+            await spool.controller.setPauser(accounts.user0.address, true);
+            await spool.controller.connect(accounts.user0).pause();
+            await spool.controller.connect(accounts.user0).unpause();
+            const checkPaused = spool.controller.checkPaused();
+            await expect(checkPaused).not.to.be.revertedWith("Pausable: paused");
+        });
+        it("Should unpause by spool owner", async () => {
+            await spool.controller.connect(accounts.administrator).pause();
+            await spool.controller.connect(accounts.administrator).unpause();
+            const checkPaused = spool.controller.checkPaused();
+            await expect(checkPaused).not.to.be.revertedWith("Pausable: paused");
+        });
+        it("Should fail trying to pause from non-approved account", async () => {
+            await spool.controller.setPauser(accounts.user0.address, false);
+            await expect(
+                spool.controller.connect(accounts.user0).pause()
+            ).to.be.revertedWith("Controller::_onlyPauser: Can only be invoked by pauser");
+        });
+        it("Should fail trying to unpause from non-approved account", async () => {
+            await spool.controller.setUnpauser(accounts.user0.address, false);
+            await expect(
+                spool.controller.connect(accounts.user0).unpause()
+            ).to.be.revertedWith("Controller::_onlyUnpauser: Can only be invoked by unpauser");
+        });
+    });
     // TODO getRewards tests
 });
