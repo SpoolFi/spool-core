@@ -229,7 +229,13 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         onlyOwner
         updateReward(token, address(0))
     {
-        rewardConfiguration[token].periodFinish = timestamp;
+        if (rewardConfiguration[token].lastUpdateTime > timestamp) {
+            rewardConfiguration[token].periodFinish = rewardConfiguration[token].lastUpdateTime;
+        } else {
+            rewardConfiguration[token].periodFinish = timestamp;
+        }
+
+        emit PeriodFinishUpdated(token, rewardConfiguration[token].periodFinish);
     }
 
     /**
