@@ -153,12 +153,17 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
      * @param tokens token addresses for which fees have been collected in
      */
     function collectEcosystemFees(IERC20[] calldata tokens) external {
+        require(
+            ecosystemFeeCollector == msg.sender,
+            "FeeHandler::collectEcosystemFees: Caller not ecosystem fee collector."
+        );
+
         for (uint256 i = 0; i < tokens.length; i++) {
             uint128 amount = platformCollectedFees[tokens[i]].ecosystem;
             if (amount > 1) {
                 amount--;
                 platformCollectedFees[tokens[i]].ecosystem = 1;
-                tokens[i].safeTransfer(ecosystemFeeCollector, amount);
+                tokens[i].safeTransfer(msg.sender, amount);
 
                 emit EcosystemFeeCollected(tokens[i], amount);
             }
@@ -172,14 +177,19 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
      * see NOTE in {collectFees} for more details on internal logic.
      *
      * @param tokens token addresses for which fees have been collected in
-     */    
+     */
     function collectTreasuryFees(IERC20[] calldata tokens) external {
+        require(
+            treasuryFeeCollector == msg.sender,
+            "FeeHandler::collectTreasuryFees: Caller not treasury fee collector."
+        );
+
         for (uint256 i = 0; i < tokens.length; i++) {
             uint128 amount = platformCollectedFees[tokens[i]].treasury;
             if (amount > 1) {
                 amount--;
                 platformCollectedFees[tokens[i]].treasury = 1;
-                tokens[i].safeTransfer(treasuryFeeCollector, amount);
+                tokens[i].safeTransfer(msg.sender, amount);
 
                 emit TreasuryFeeCollected(tokens[i], amount);
             }
