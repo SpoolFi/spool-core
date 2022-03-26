@@ -64,6 +64,8 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
             for (uint256 i = 0; i < strategies.length; i++) {
                 reallocationProportions[i] = new uint256[](strategies.length);
             }
+
+            emit StartReallocation(reallocationIndex);
         }
 
         // loop over vaults

@@ -22,4 +22,11 @@ interface IVaultBase {
     /* ========== EVENTS ========== */
 
     event Claimed(address indexed member, uint256 claimAmount);
+    event Deposit(address indexed member, uint256 indexed index, uint256 amount);
+    event Withdraw(address indexed member, uint256 indexed index, uint256 shares);
+    event WithdrawFast(address indexed member, uint256 shares);
+    event StrategyRemoved(uint256 i, address strategy);
+    event TransferVaultOwner(address owner);
+    event LowerVaultFee(uint16 fee);
+    event UpdateName(string name);
 }
