@@ -29,11 +29,15 @@ interface IController {
         uint256 amount
     ) external;
 
+    function checkPaused() external view;
+
     /* ========== EVENTS ========== */
 
     event EmergencyWithdrawStrategy(address indexed strategy);
     event EmergencyRecipientUpdated(address indexed recipient);
     event EmergencyWithdrawerUpdated(address indexed withdrawer, bool set);
+    event PauserUpdated(address indexed user, bool set);
+    event UnpauserUpdated(address indexed user, bool set);
     event VaultCreated(address indexed vault, address underlying, address[] strategies, uint256[] proportions,
         uint16 vaultFee, address riskProvider, int8 riskTolerance);
     event StrategyAdded(address strategy);

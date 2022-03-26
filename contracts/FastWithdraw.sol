@@ -9,6 +9,7 @@ import "./interfaces/IFastWithdraw.sol";
 import "./interfaces/IController.sol";
 import "./interfaces/ISpool.sol";
 import "./interfaces/IVault.sol";
+import "./shared/SpoolPausable.sol";
 
 /**
 * @param  proportionateDeposit used to know how much fees to pay
@@ -29,13 +30,11 @@ struct VaultWithdraw {
  * The vault maps strategy shares to users, so the user can claim them any at time.
  * Performance fee is still paid to the vault where the shares where initially taken from.
  */
-contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
+contract FastWithdraw is IFastWithdraw, ReentrancyGuard, SpoolPausable {
     using SafeERC20 for IERC20;
 
     /* ========== STATE VARIABLES ========== */
 
-    /// @notice controller contract
-    IController public immutable controller;
     /// @notice fee handler contracts, to manage the risk provider fees
     address public immutable feeHandler;
     /// @notice The Spool implementation
@@ -56,15 +55,15 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
         IController _controller,
         address _feeHandler,
         ISpool _spool
-    ) {
+    )
+    SpoolPausable(_controller)
+    {
         require(
-            _controller != IController(address(0)) &&
             _feeHandler != address(0) &&
             _spool != ISpool(address(0)),
-            "FastWithdraw::constructor: Controller, Fee Handler or FastWithdraw address cannot be 0"
+            "FastWithdraw::constructor: Fee Handler or FastWithdraw address cannot be 0"
         );
 
-        controller = _controller;
         feeHandler = _feeHandler;
         spool = _spool;
     }
@@ -153,6 +152,7 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard {
         SwapData[][] calldata swapData
     )
         external
+        systemNotPaused
         nonReentrant
     {
         _onlyVault(address(vault));
