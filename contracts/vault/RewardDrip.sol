@@ -79,7 +79,7 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         uint256 userShares = users[account].instantDeposit;
 
         if (userShares == 0)
-            return 0;
+            return config.rewards[account];
         
         uint256 userRewardPerTokenPaid = config.userRewardPerTokenPaid[account];
 
