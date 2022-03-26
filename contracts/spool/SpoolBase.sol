@@ -122,10 +122,12 @@ abstract contract SpoolBase is
 
     function setAllocationProvider(address user, bool _isAllocationProvider) external onlyOwner {
         isAllocationProvider[user] = _isAllocationProvider;
+        emit SetAllocationProvider(user, _isAllocationProvider);
     }
 
     function setDoHardWorker(address user, bool _isDoHardWorker) external onlyOwner {
         isDoHardWorker[user] = _isDoHardWorker;
+        emit SetIsDoHardWorker(user, _isDoHardWorker);
     }
 
     /**

@@ -114,6 +114,8 @@ contract Vault is VaultRestricted {
 
         // store user deposit amount
         _addInstantDeposit(amount);
+
+        emit Deposit(msg.sender, activeGlobalIndex, amount);
     }
     
     /**
@@ -192,6 +194,8 @@ contract Vault is VaultRestricted {
         // mark that vault and user interacted at this global index
         _updateInteractedIndex(activeGlobalIndex);
         _updateUserInteractedIndex(activeGlobalIndex);
+
+        emit Withdraw(msg.sender, activeGlobalIndex, sharesToWithdraw);
     }
 
     /* ========== FAST WITHDRAW ========== */
@@ -247,6 +251,8 @@ contract Vault is VaultRestricted {
             msg.sender,
             fastWithdrawParams
         );
+
+        emit WithdrawFast(msg.sender, sharesToWithdraw);
     }
     
     /**
@@ -467,6 +473,7 @@ contract Vault is VaultRestricted {
         }
 
         _updateStrategiesHash(newStrategies);
+        emit StrategyRemoved(i, vaultStrategies[i]);
     }
 
     /* ========== PRIVATE FUNCTIONS ========== */
