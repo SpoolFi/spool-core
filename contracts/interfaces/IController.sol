@@ -34,8 +34,10 @@ interface IController {
     event EmergencyWithdrawStrategy(address indexed strategy);
     event EmergencyRecipientUpdated(address indexed recipient);
     event EmergencyWithdrawerUpdated(address indexed withdrawer, bool set);
-    event VaultCreated(address vault);
+    event VaultCreated(address indexed vault, address underlying, address[] strategies, uint256[] proportions,
+        uint16 vaultFee, address riskProvider, int8 riskTolerance);
     event StrategyAdded(address strategy);
     event StrategyRemoved(address strategy);
     event VaultInvalid(address vault);
+    event DisableStrategy(address strategy);
 }

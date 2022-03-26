@@ -201,6 +201,7 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
 
         if (block.timestamp >= config.periodFinish) {
             config.rewardRate = SafeCast.toUint192((reward * REWARD_ACCURACY) / config.rewardsDuration);
+            emit RewardAdded(token, reward, config.rewardsDuration);
         } else {
             // If extending or adding additional rewards,
             // cannot set new finish time to be less than previously configured
@@ -215,6 +216,7 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
             );
 
             config.rewardRate = newRewardRate;
+            emit RewardExtended(token, reward, leftover, config.rewardsDuration, newPeriodFinish);
         }
 
         config.lastUpdateTime = uint32(block.timestamp);
@@ -227,11 +229,7 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
         onlyOwner
         updateReward(token, address(0))
     {
-        if (rewardConfiguration[token].lastUpdateTime > timestamp) {
-            rewardConfiguration[token].periodFinish = rewardConfiguration[token].lastUpdateTime;
-        } else {
-            rewardConfiguration[token].periodFinish = timestamp;
-        }
+        rewardConfiguration[token].periodFinish = timestamp;
     }
 
     /**
@@ -328,6 +326,7 @@ abstract contract RewardDrip is IRewardDrip, ReentrancyGuard, VaultBase {
 
                 delete rewardTokens[_rewardTokensCount - 1];
                 rewardTokensCount--;
+                emit RewardRemoved(token);
 
                 break;
             }

@@ -16,6 +16,7 @@ import "./interfaces/ISpool.sol";
 import "./interfaces/IRiskProviderRegistry.sol";
 import "./interfaces/IBaseStrategy.sol";
 import "./interfaces/IVault.sol";
+import "./interfaces/vault/IVaultDetails.sol";
 import "./vault/VaultNonUpgradableProxy.sol";
 
 /**
@@ -261,7 +262,19 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
         validVault[vault] = true;
         totalVaults++;
 
-        emit VaultCreated(vault);
+        _emitVaultCreated(vault, details);
+    }
+
+    function _emitVaultCreated(address vault, VaultDetails calldata details) private {
+        emit VaultCreated(
+            vault,
+            details.underlying,
+            details.strategies,
+            details.proportions,
+            details.vaultFee,
+            details.riskProvider,
+            details.riskTolerance
+        );
     }
 
     /**
@@ -651,6 +664,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants {
         );
 
         spool.runDisableStrategy(strategy);
+        emit DisableStrategy(strategy);
     }
 
     /**

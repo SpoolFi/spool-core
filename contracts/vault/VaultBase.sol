@@ -167,6 +167,7 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
      */
     function transferVaultOwner(address _vaultOwner) external onlyVaultOwnerOrSpoolOwner {
         vaultOwner = _vaultOwner;
+        emit TransferVaultOwner(_vaultOwner);
     }
 
     /**
@@ -187,6 +188,7 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
         );
 
         vaultFee = _vaultFee;
+        emit LowerVaultFee(_vaultFee);
     }
 
     /**
@@ -200,6 +202,7 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, BaseCon
      */
     function updateName(string memory _name) external onlyOwner {
         name = _name;
+        emit UpdateName(_name);
     }
 
     // =========== DEPOSIT HELPERS ============ //
