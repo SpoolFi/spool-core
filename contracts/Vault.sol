@@ -182,7 +182,7 @@ contract Vault is VaultRestricted {
         updateRewards
     {
         sharesToWithdraw = _withdrawShares(sharesToWithdraw, withdrawAll);
-
+        
         // get next possible index to withdraw
         uint24 activeGlobalIndex = _getActiveGlobalIndex();
 
@@ -256,6 +256,50 @@ contract Vault is VaultRestricted {
         );
 
         emit WithdrawFast(msg.sender, sharesToWithdraw);
+    }
+
+    /**
+     * @dev Updates storage according to shares withdrawn.
+     *      If `withdrawAll` is true, all shares are removed from the users
+     */
+    function _withdrawShares(uint128 sharesToWithdraw, bool withdrawAll) private returns(uint128) {
+        User storage user = users[msg.sender];
+        uint128 userShares = user.shares;
+
+        uint128 userActiveInstantDeposit = user.instantDeposit;
+
+        // substract not pricessed instant deposit
+        // this way we don't consider it when calculating amount of it withdrawn
+        LastIndexInteracted memory userIndexInteracted = userLastInteractions[msg.sender];
+        if (userIndexInteracted.index1 > 0) {
+            userActiveInstantDeposit -= userIndexAction[msg.sender][userIndexInteracted.index1].depositAmount;
+
+            if (userIndexInteracted.index2 > 0) {
+                userActiveInstantDeposit -= userIndexAction[msg.sender][userIndexInteracted.index2].depositAmount;
+            }
+        }
+        
+        if (withdrawAll || userShares == sharesToWithdraw) {
+            sharesToWithdraw = userShares;
+            user.shares = 0;
+            totalInstantDeposit -= userActiveInstantDeposit;
+            user.instantDeposit -= userActiveInstantDeposit;
+        } else {
+            require(
+                userShares >= sharesToWithdraw &&
+                sharesToWithdraw > 0, 
+                "WSH"
+            );
+
+            uint128 instantDepositWithdrawn = _getProportion128(userActiveInstantDeposit, sharesToWithdraw, userShares);
+
+            totalInstantDeposit -= instantDepositWithdrawn;
+            user.instantDeposit -= instantDepositWithdrawn;
+
+            user.shares = userShares - sharesToWithdraw;
+        }
+        
+        return sharesToWithdraw;
     }
 
     /**
