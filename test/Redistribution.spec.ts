@@ -13,7 +13,7 @@ import {
     reset,
     TestContext,
     customConstants,
-    setReallocationProportions,
+    setReallocationTable,
 } from "./shared/utilities";
 import {Vault} from "../build/types/Vault";
 
@@ -29,7 +29,7 @@ describe("Vault Reallocation", () => {
         let vault: Vault;
         let vaultCreation: VaultDetailsStruct;
         const context: TestContext = {
-            reallocationProportions: []
+            reallocationTable: []
         }
 
         before(async () => {
@@ -100,7 +100,7 @@ describe("Vault Reallocation", () => {
                 .connect(accounts.allocationProvider)
                 .reallocateVaults(vaults, strategies.strategyAddresses, empty2dArray);
 
-            await setReallocationProportions(tx, spool.spool, context);
+            await setReallocationTable(tx, spool.spool, context);
 
             const bitwiseProportions = await vault.proportions();
             let proportions = getProportionsFromBitwise(bitwiseProportions, vaultCreation.strategies.length);
@@ -144,7 +144,7 @@ describe("Vault Reallocation", () => {
             });
 
             const withdrawData = {
-                reallocationProportions: context.reallocationProportions,
+                reallocationTable: context.reallocationTable,
                 priceSlippages: priceSlippages,
                 rewardSlippages: rewardSlippages,
                 stratIndexes: stratIndexes,
@@ -210,7 +210,7 @@ describe("Vault Reallocation", () => {
         let vault1Creation: VaultDetailsStruct;
         let depositPerStrat: BigNumber;
         const context: TestContext = {
-            reallocationProportions: []
+            reallocationTable: []
         }
 
         before(async () => {
@@ -324,7 +324,7 @@ describe("Vault Reallocation", () => {
                 .connect(accounts.allocationProvider)
                 .reallocateVaults(vaults, strategies.strategyAddresses, empty2dArray);
 
-            await setReallocationProportions(tx, spool.spool, context);
+            await setReallocationTable(tx, spool.spool, context);
         });
 
         it("doHardWork, vaults should exchange shares, without getting hit by the fee", async () => {
@@ -343,7 +343,7 @@ describe("Vault Reallocation", () => {
 
 
             const withdrawData = {
-                reallocationProportions: context.reallocationProportions,
+                reallocationTable: context.reallocationTable,
                 priceSlippages: priceSlippages,
                 rewardSlippages: rewardSlippages,
                 stratIndexes: stratIndexes, // can be empty as it's one tx reallocation (array gets populated in the code)

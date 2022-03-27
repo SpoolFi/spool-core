@@ -299,7 +299,7 @@ async function SpoolFixture(accounts: AccountsFixture): Promise<SpoolFixture> {
 
     await spool.setDoHardWorker(accounts.doHardWorker.address, true);
     await spool.setAllocationProvider(accounts.allocationProvider.address, true);
-    await spool.setLogReallocationProportions(true);
+    await spool.setLogReallocationTable(true);
 
 
     // after setup transfer ownership of contracts to spool owner

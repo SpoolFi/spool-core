@@ -13,15 +13,15 @@ interface ISpoolBase {
 
     /* ========== EVENTS ========== */
 
-    event ReallocationProportionsUpdated(
+    event ReallocationTableUpdated(
         uint24 indexed index,
         bytes32 reallocationTableHash
     );
 
-    event ReallocationProportionsUpdatedWithTable(
+    event ReallocationTableUpdatedWithTable(
         uint24 indexed index,
         bytes32 reallocationTableHash,
-        uint256[][] reallocationProportions
+        uint256[][] reallocationTable
     );
     
     event DoHardWorkCompleted(uint24 indexed index);

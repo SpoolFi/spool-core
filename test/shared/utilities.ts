@@ -181,14 +181,14 @@ export function getProportionsFromBitwise(bitwiseProportions: BigNumber, length:
 
 // Parse reallocation from the event
 
-type ReallocationProportionsUpdatedWithTableEvent = {
+type ReallocationTableUpdatedWithTableEvent = {
     index: BigNumber;
     reallocationTableHash: string;
-    reallocationProportions: BigNumber[][];
+    reallocationTable: BigNumber[][];
 }
 
-export function getReallocationProportionsFromEvent(logs: Log[], contract: BaseContract) {
-    return getLogByName(logs, "ReallocationProportionsUpdatedWithTable", contract) as any as ReallocationProportionsUpdatedWithTableEvent;
+export function getReallocationTableFromEvent(logs: Log[], contract: BaseContract) {
+    return getLogByName(logs, "ReallocationTableUpdatedWithTable", contract) as any as ReallocationTableUpdatedWithTableEvent;
 }
 
 function getLogByName(logs: Log[], topicName: string, contract: BaseContract) {
@@ -207,18 +207,18 @@ function getLogByName(logs: Log[], topicName: string, contract: BaseContract) {
 }
 
 export type TestContext = {
-    reallocationProportions: BigNumber[][];
+    reallocationTable: BigNumber[][];
 }
 
-export async function setReallocationProportions(tx: ContractTransaction, spool: BaseContract, context: TestContext) {
+export async function setReallocationTable(tx: ContractTransaction, spool: BaseContract, context: TestContext) {
     const receipt = await tx.wait();
 
-    const reallocationEvent = getReallocationProportionsFromEvent(
+    const reallocationEvent = getReallocationTableFromEvent(
         receipt.logs,
         spool
     );
 
-    context.reallocationProportions = reallocationEvent.reallocationProportions;
+    context.reallocationTable = reallocationEvent.reallocationTable;
 }
 
 // Reward swap data utils
