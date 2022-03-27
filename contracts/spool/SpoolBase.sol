@@ -116,6 +116,42 @@ abstract contract SpoolBase is
         }
     }
 
+    function _getRevertMsg(bytes memory _returnData) internal pure returns (string memory) {
+        // if the _res length is less than 68, then the transaction failed silently (without a revert message)
+        if (_returnData.length < 68) return "SILENT";
+        assembly {
+        // slice the sig hash
+            _returnData := add(_returnData, 0x04)
+        }
+        return abi.decode(_returnData, (string)); // all that remains is the revert string
+    }
+
+    /* ========== DELEGATECALL HELPERS ========== */
+
+    /**
+     * @notice this function allows static-calling an arbitrary write function from Spool, off-chain, and returning the result. The general purpose is for the calculation of
+     * rewards in an implementation contract, where the reward calculation contains state changes that can't be easily gathered without calling from the Spool contract.
+     * The require statement ensure that this comes from a static call off-chain, which can substitute an arbitrary address. 
+     * The 'one' address is used. The zero address could be used, but due to the prevalence of zero address checks, the internal calls would likely fail.
+     * It has the same level of security as finding any arbitrary address, including address zero.
+     */
+    function relay(address implementation, bytes memory payload) external returns(bytes memory) {
+        require(msg.sender == address(1));
+        return _relay(implementation, payload);
+    }
+
+    /**
+     * @notice Relays the particular action to the strategy via delegatecall.
+     */
+    function _relay(address strategy, bytes memory payload)
+        internal
+        returns (bytes memory)
+    {
+        (bool success, bytes memory data) = strategy.delegatecall(payload);
+        if (!success) revert(_getRevertMsg(data));
+        return data;
+    }
+
     /* ========== CONFIGURATION ========== */
 
     function setAllocationProvider(address user, bool _isAllocationProvider) external onlyOwner {
