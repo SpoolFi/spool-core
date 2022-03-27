@@ -193,7 +193,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                 "BWI"
             );
             
-            _verifyReallocationProportions(withdrawData.reallocationProportions);
+            _verifyReallocationTable(withdrawData.reallocationTable);
 
             PriceData[] memory spotPrices = _getPriceData(withdrawData, allStrategies);
 
@@ -275,7 +275,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                 withdrawnReallocationReceived,
                 reallocation.optimizedWithdraws[stratIndex],
                 allStrategies,
-                withdrawData.reallocationProportions[stratIndex]
+                withdrawData.reallocationTable[stratIndex]
             );
 
             _updatePending(stratAddress);
@@ -327,16 +327,16 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         ReallocationWithdrawData memory withdrawData,
         PriceData[] memory priceData
     ) private pure returns (ReallocationShares memory) {
-        uint128[] memory optimizedWithdraws = new uint128[](withdrawData.reallocationProportions.length);
-        uint128[] memory optimizedShares = new uint128[](withdrawData.reallocationProportions.length);
-        uint128[] memory totalShares = new uint128[](withdrawData.reallocationProportions.length);
+        uint128[] memory optimizedWithdraws = new uint128[](withdrawData.reallocationTable.length);
+        uint128[] memory optimizedShares = new uint128[](withdrawData.reallocationTable.length);
+        uint128[] memory totalShares = new uint128[](withdrawData.reallocationTable.length);
         
-        for (uint128 i = 0; i < withdrawData.reallocationProportions.length; i++) {
-            for (uint128 j = i + 1; j < withdrawData.reallocationProportions.length; j++) {
+        for (uint128 i = 0; i < withdrawData.reallocationTable.length; i++) {
+            for (uint128 j = i + 1; j < withdrawData.reallocationTable.length; j++) {
                 // if both strategies are depositing to eachother, optimize
-                if (withdrawData.reallocationProportions[i][j] > 0 && withdrawData.reallocationProportions[j][i] > 0) {
-                    uint128 amountI = uint128(withdrawData.reallocationProportions[i][j] * priceData[i].totalValue / priceData[i].totalShares);
-                    uint128 amountJ = uint128(withdrawData.reallocationProportions[j][i] * priceData[j].totalValue / priceData[j].totalShares);
+                if (withdrawData.reallocationTable[i][j] > 0 && withdrawData.reallocationTable[j][i] > 0) {
+                    uint128 amountI = uint128(withdrawData.reallocationTable[i][j] * priceData[i].totalValue / priceData[i].totalShares);
+                    uint128 amountJ = uint128(withdrawData.reallocationTable[j][i] * priceData[j].totalValue / priceData[j].totalShares);
 
                     uint128 optimizedAmount;
                     
@@ -351,8 +351,8 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                 }
 
                 unchecked {
-                    totalShares[i] += uint128(withdrawData.reallocationProportions[i][j]);
-                    totalShares[j] += uint128(withdrawData.reallocationProportions[j][i]);
+                    totalShares[i] += uint128(withdrawData.reallocationTable[i][j]);
+                    totalShares[j] += uint128(withdrawData.reallocationTable[j][i]);
                 }
             }
 
@@ -384,7 +384,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             
             for (uint128 j = 0; j < allStrategies.length; j++) {
                 // if a strategy is withdrawing in reallocation get its spot price
-                if (withdrawData.reallocationProportions[i][j] > 0) {
+                if (withdrawData.reallocationTable[i][j] > 0) {
                     // if strategy is removed treat it's value as 0
                     if (!strategies[allStrategies[i]].isRemoved) {
                         spotPrices[i].totalValue = _getStratValue(allStrategies[i]);
@@ -467,12 +467,12 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         withdrawalDoHardWorksLeft -= uint8(processedCount);
     }
 
-    function _hashReallocationProportions(uint256[][] memory reallocationProportions) internal {
-        reallocationTableHash = Hash.hashReallocationTable(reallocationProportions);
+    function _hashReallocationTable(uint256[][] memory reallocationTable) internal {
+        reallocationTableHash = Hash.hashReallocationTable(reallocationTable);
         if (logReallocationTable) {
-            emit ReallocationProportionsUpdatedWithTable(reallocationIndex, reallocationTableHash, reallocationProportions);
+            emit ReallocationTableUpdatedWithTable(reallocationIndex, reallocationTableHash, reallocationTable);
         } else {
-            emit ReallocationProportionsUpdated(reallocationIndex, reallocationTableHash);
+            emit ReallocationTableUpdated(reallocationIndex, reallocationTableHash);
         }
     }
 

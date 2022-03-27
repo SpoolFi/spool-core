@@ -42,13 +42,13 @@ contract RiskProviderRegistry is IRiskProviderRegistry, SpoolOwnable {
      * @notice Initialize contract, set spool owner
      *
      * @param _feeHandler to manage the risk provider fees
-     * @param _spoolOwnable the spool owner contract
+     * @param _spoolOwner the spool owner contract
      */
     constructor(
         IFeeHandler _feeHandler,
-        ISpoolOwner _spoolOwnable
+        ISpoolOwner _spoolOwner
     )
-        SpoolOwnable(_spoolOwnable)
+        SpoolOwnable(_spoolOwner)
     {
         require(address(_feeHandler) != address(0), "RiskProviderRegistry::constructor: Fee Handler address cannot be 0");
         feeHandler = _feeHandler;

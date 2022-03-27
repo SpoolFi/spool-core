@@ -175,7 +175,7 @@ abstract contract SpoolBase is
      * @notice Set the flag to log reallocation proportions on change.
      * NOTE: Used for offchain execution to get the new reallocation table.
      */
-    function setLogReallocationProportions(bool doLog) external onlyOwner {
+    function setLogReallocationTable(bool doLog) external onlyOwner {
         logReallocationTable = doLog;
     }
 
@@ -282,8 +282,8 @@ abstract contract SpoolBase is
         );
     }
 
-    function _verifyReallocationProportions(uint256[][] memory reallocationProportions) internal view {
-        require(reallocationTableHash == Hash.hashReallocationTable(reallocationProportions), "BRLC");
+    function _verifyReallocationTable(uint256[][] memory reallocationTable) internal view {
+        require(reallocationTableHash == Hash.hashReallocationTable(reallocationTable), "BRLC");
     }
 
     function _verifyReallocationStrategies(address[] memory strategies) internal view {

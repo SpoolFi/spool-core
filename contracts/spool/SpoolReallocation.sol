@@ -33,7 +33,7 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
     function reallocateVaults(
         VaultData[] memory vaults,
         address[] memory strategies,
-        uint256[][] memory reallocationProportions
+        uint256[][] memory reallocationTable
     ) external onlyAllocationProvider {
         require(vaults.length > 0, "NOVRLC");
 
@@ -49,7 +49,7 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
             require(reallocationIndex == activeGlobalIndex, "RLCINP");
             // verifies strategies agains current reallocation strategies hash
             _verifyReallocationStrategies(strategies);
-            _verifyReallocationProportions(reallocationProportions);
+            _verifyReallocationTable(reallocationTable);
         } else { // if new reallocation, init empty reallocation shares table
             // verifies all system strategies using Controller contract
             _verifyStrategies(strategies);
@@ -59,10 +59,10 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
             // with reallocation table ordering as system strategies change.
             _hashReallocationStrategies(strategies);
             reallocationIndex = activeGlobalIndex;
-            reallocationProportions = new uint256[][](strategies.length);
+            reallocationTable = new uint256[][](strategies.length);
 
             for (uint256 i = 0; i < strategies.length; i++) {
-                reallocationProportions[i] = new uint256[](strategies.length);
+                reallocationTable[i] = new uint256[](strategies.length);
             }
 
             emit StartReallocation(reallocationIndex);
@@ -99,14 +99,14 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
                         newSharesWithdrawn,
                         vaults[i],
                         depositProportions,
-                        reallocationProportions[withdrawStratIndex]
+                        reallocationTable[withdrawStratIndex]
                     );
                 }
             }
         }        
 
         // Hash reallocation proportions
-        _hashReallocationProportions(reallocationProportions);
+        _hashReallocationTable(reallocationTable);
     }
 
     function _reallocateVaultStratWithdraw(
@@ -150,7 +150,7 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
         uint128 sharesWithdrawn,
         VaultData memory vaultData,
         uint256 depositProportions,
-        uint256[] memory stratReallocationProportions
+        uint256[] memory stratReallocationTable
     ) private pure {
         // sharesToDeposit = sharesWithdrawn * deposit_strat%
         uint128 sharesWithdrawnleft = sharesWithdrawn;
@@ -161,14 +161,14 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
             if (stratDepositProportion > 0) {
                 uint256 globalStratIndex = vaultData.strategiesBitwise.get8BitUintByIndex(i);
                 uint128 withdrawnSharesForStrat = Math.getProportion128(sharesWithdrawn, stratDepositProportion, FULL_PERCENT);
-                stratReallocationProportions[globalStratIndex] += withdrawnSharesForStrat;
+                stratReallocationTable[globalStratIndex] += withdrawnSharesForStrat;
                 sharesWithdrawnleft -= withdrawnSharesForStrat;
                 lastDepositedIndex = i;
             }
         }
 
         // add shares left from rounding error to last deposit strat
-        stratReallocationProportions[lastDepositedIndex] += sharesWithdrawnleft;
+        stratReallocationTable[lastDepositedIndex] += sharesWithdrawnleft;
     }
 
     /* ========== SHARED ========== */
