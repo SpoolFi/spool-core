@@ -106,6 +106,20 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         return abi.decode(data, (uint128));
     }
 
+    /**
+     * @notice Returns pending rewards for a strategy
+     */
+    function getPendingRewards(address strat, address reward) external view returns(uint256) {
+        return strategies[strat].pendingRewards[reward];
+    }
+
+    /**
+     * @notice Returns strat address in shared strategies mapping for index
+     */
+    function getStratSharedAddress(bytes32 sharedKey, uint256 index) external view returns(address) {
+        return strategiesShared[sharedKey].stratAddresses[index];
+    }
+
     /* ========== MUTATIVE EXTERNAL FUNCTIONS ========== */
 
     /**
@@ -409,17 +423,5 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
             strategy,
             abi.encodeWithSelector(IBaseStrategy.disable.selector)
         );
-    }
-
-    /**
-     * @notice Relays the particular action to the strategy via delegatecall.
-     */
-    function _relay(address strategy, bytes memory payload)
-        internal
-        returns (bytes memory)
-    {
-        (bool success, bytes memory data) = strategy.delegatecall(payload);
-        if (!success) revert(abi.decode(data, (string)));
-        return data;
     }
 }

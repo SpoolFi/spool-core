@@ -118,7 +118,7 @@ contract Vault is VaultRestricted {
 
         emit Deposit(msg.sender, activeGlobalIndex, amount);
     }
-    
+
     /**
      * @notice Distributes a deposit to the various strategies based on the allocations of the vault.
      */
@@ -205,7 +205,7 @@ contract Vault is VaultRestricted {
     /**
      * @notice Allows a user to withdraw their deposited funds right away.
      *
-     * @dev 
+     * @dev
      * Shares belonging to the user and are sent to FaswWithdraw contract
      * where a withdraw can be executed.
      *
@@ -241,7 +241,7 @@ contract Vault is VaultRestricted {
 
         uint256 vaultShareProportion = _getVaultShareProportion(sharesToWithdraw);
         totalShares -= sharesToWithdraw;
-        
+
         uint128[] memory strategyRemovedShares = spool.removeShares(vaultStrategies, vaultShareProportion);
 
         uint256 proportionateDeposit = _getUserProportionateDeposit(sharesToWithdraw);
@@ -257,7 +257,7 @@ contract Vault is VaultRestricted {
 
         emit WithdrawFast(msg.sender, sharesToWithdraw);
     }
-    
+
     /**
      * @notice Calculates user proportionate deposit when withdrawing and updated user deposit storage
      * @dev Checks user index action to see if user already has some withdrawn shares
@@ -374,16 +374,52 @@ contract Vault is VaultRestricted {
      * - the provided strategies must be valid
      *
      * @param vaultStrategies vault stratigies
-     *
-     * @return totalShares vault total shares after redeem
-     * @return user shares after redeem
      */
-    function redeemVaultAndUser(address[] memory vaultStrategies) external returns(uint128, uint128)
-    {
-        redeemVaultStrategies(vaultStrategies);
-        _redeemUser();
+    function redeemVaultAndUser(address[] memory vaultStrategies)
+        external
+        verifyStrategies(vaultStrategies)
+        redeemVaultStrategiesModifier(vaultStrategies)
+        redeemUserModifier
+    {}
 
-        return (totalShares, users[msg.sender].shares);
+    /**
+     * @notice Redeem vault and user and return the user state
+     * @dev This function should be called as static and act as view
+     *
+     * Requirements:
+     *
+     * - the provided strategies must be valid
+     *
+     * @param vaultStrategies vault stratigies
+     *
+     * @return user state after reedeem
+     */
+    function getUpdatedUser(address[] memory vaultStrategies)
+        external
+        verifyStrategies(vaultStrategies)
+        redeemVaultStrategiesModifier(vaultStrategies)
+        redeemUserModifier
+        returns(uint256, uint256, uint256, uint256, uint256)
+    {
+        User memory user = users[msg.sender];
+
+        uint256 totalUnderlying = 0;
+        for (uint256 i; i < vaultStrategies.length; i++) {
+            totalUnderlying += spool.getUnderlying(vaultStrategies[i]);
+        }
+
+        uint256 userTotalUnderlying;
+        if (totalShares > 0 && user.shares > 0) {
+            userTotalUnderlying = (totalUnderlying * user.shares) / totalShares;
+        }
+
+        return (
+            user.shares,
+            user.activeDeposit, // amount of user deposited underlying token
+            user.owed, // underlying token claimable amount
+            user.withdrawnDeposits, // underlying token withdrawn amount
+            userTotalUnderlying
+        );
     }
 
     /**
@@ -393,13 +429,36 @@ contract Vault is VaultRestricted {
      *
      * - the provided strategies must be valid
      *
-     * @param vaultStrategies vault stratigies
+     * @param vaultStrategies vault strategies
      */
     function redeemVaultStrategies(address[] memory vaultStrategies)
-        public
+        external
         verifyStrategies(vaultStrategies)
+        redeemVaultStrategiesModifier(vaultStrategies)
+    {}
+
+    /**
+     * @notice Redeem vault strategy deposits and withdrawals after do hard work.
+     *
+     * Requirements:
+     *
+     * - the provided strategies must be valid
+     *
+     * @param vaultStrategies vault strategies
+     * @return totalUnderlying total vault underlying
+     * @return totalShares underlying and shares after redeem
+     */
+    function getUpdatedVault(address[] memory vaultStrategies)
+        external
+        verifyStrategies(vaultStrategies)
+        redeemVaultStrategiesModifier(vaultStrategies)
+        returns(uint256, uint256)
     {
-        _redeemVaultStrategies(vaultStrategies);
+        uint256 totalUnderlying = 0;
+        for (uint256 i; i < vaultStrategies.length; i++) {
+            totalUnderlying += spool.getUnderlying(vaultStrategies[i]);
+        }
+        return (totalUnderlying, totalShares);
     }
 
     /**
@@ -432,9 +491,9 @@ contract Vault is VaultRestricted {
         );
 
         uint256 lastElement = vaultStrategies.length - 1;
-        
+
         address[] memory newStrategies = new address[](lastElement);
-        
+
         if (lastElement > 0) {
             for (uint256 j; j < lastElement; j++) {
                 newStrategies[j] = vaultStrategies[j];
@@ -456,7 +515,7 @@ contract Vault is VaultRestricted {
                 }
 
                 uint256 newProportions = _proportions;
-                
+
                 uint256 lastNewElement = lastElement - 1;
                 uint256 newProportionsLeft = FULL_PERCENT;
                 for (uint256 j; j < lastNewElement; j++) {
