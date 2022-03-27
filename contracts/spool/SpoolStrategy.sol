@@ -410,16 +410,4 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
             abi.encodeWithSelector(IBaseStrategy.disable.selector)
         );
     }
-
-    /**
-     * @notice Relays the particular action to the strategy via delegatecall.
-     */
-    function _relay(address strategy, bytes memory payload)
-        internal
-        returns (bytes memory)
-    {
-        (bool success, bytes memory data) = strategy.delegatecall(payload);
-        if (!success) revert(_getRevertMsg(data));
-        return data;
-    }
 }
