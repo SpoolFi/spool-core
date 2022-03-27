@@ -79,7 +79,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
      * @dev It performs certain pre-conditional validations to ensure the contract
      * has been initialized properly, such as that addresses are valid.
      *
-     * @param _spoolOwnable the spool owner contract that owns this contract
+     * @param _spoolOwner the spool owner contract that owns this contract
      * @param _controller responsible for creating new vaults
      * @param _riskProviderRegistry responsible for handling risk providers
      * @param _ecosystemFee fee to ecosystem
@@ -88,7 +88,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
      * @param _treasuryFeeCollector address of treasury fee collector
      */
     constructor(
-        ISpoolOwner _spoolOwnable,
+        ISpoolOwner _spoolOwner,
         IController _controller,
         address _riskProviderRegistry,
         uint16 _ecosystemFee,
@@ -96,7 +96,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
         address _ecosystemFeeCollector,
         address _treasuryFeeCollector
     )
-        SpoolOwnable(_spoolOwnable)
+        SpoolOwnable(_spoolOwner)
     {
         require(address(_controller) != address(0), "FeeHandler::constructor: Controller address cannot be 0");
         require(_riskProviderRegistry != address(0), "FeeHandler::constructor: Risk Provider Registry address cannot be 0");
@@ -177,7 +177,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
      * see NOTE in {collectFees} for more details on internal logic.
      *
      * @param tokens token addresses for which fees have been collected in
-     */
+     */    
     function collectTreasuryFees(IERC20[] calldata tokens) external {
         require(
             treasuryFeeCollector == msg.sender,

@@ -102,18 +102,18 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
      * Ownership of the contract beyond deployment should be transferred to
      * the Spool DAO to avoid centralization of control.
      * 
-     * @param _spoolOwnable the spool owner contract that owns this contract
+     * @param _spoolOwner the spool owner contract that owns this contract
      * @param _riskRegistry the risk provider registry contract
      * @param _spool the spool contract
      * @param _vaultImplementation vault implementation contract address
      */
     constructor(
-        ISpoolOwner _spoolOwnable,
+        ISpoolOwner _spoolOwner,
         IRiskProviderRegistry _riskRegistry,
         ISpool _spool,
         address _vaultImplementation
     ) 
-        SpoolOwnable(_spoolOwnable)
+        SpoolOwnable(_spoolOwner)
     {
         require(
             _riskRegistry != IRiskProviderRegistry(address(0)) &&
