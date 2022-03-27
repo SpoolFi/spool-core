@@ -41,4 +41,34 @@ contract MockRewardDrip is RewardDrip, IVaultImmutable {
     function withdraw(uint128 amount, bool withdrawAll) external updateRewards {
         _withdrawShares(amount, withdrawAll);
     }
+    
+    // do same actions as vault implementation
+    function _withdrawShares(uint128 sharesToWithdraw, bool withdrawAll) private returns(uint128) {
+        User storage user = users[msg.sender];
+        uint128 userShares = user.shares;
+
+        uint128 userActiveInstantDeposit = user.instantDeposit;
+        
+        if (withdrawAll || userShares == sharesToWithdraw) {
+            sharesToWithdraw = userShares;
+            user.shares = 0;
+            totalInstantDeposit -= userActiveInstantDeposit;
+            user.instantDeposit -= userActiveInstantDeposit;
+        } else {
+            require(
+                userShares >= sharesToWithdraw &&
+                sharesToWithdraw > 0, 
+                "WSH"
+            );
+
+            uint128 instantDepositWithdrawn = _getProportion128(userActiveInstantDeposit, sharesToWithdraw, userShares);
+
+            totalInstantDeposit -= instantDepositWithdrawn;
+            user.instantDeposit -= instantDepositWithdrawn;
+
+            user.shares = userShares - sharesToWithdraw;
+        }
+        
+        return sharesToWithdraw;
+    }
 }

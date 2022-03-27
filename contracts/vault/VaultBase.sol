@@ -240,37 +240,6 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, SpoolPa
     /* ========== WITHDRAW HELPERS ========== */
 
     /**
-     * @dev Updates storage according to shares withdrawn.
-     *      If `withdrawAll` is true, all shares are removed from the users
-     */
-    function _withdrawShares(uint128 sharesToWithdraw, bool withdrawAll) internal returns(uint128) {
-        User storage user = users[msg.sender];
-        uint128 userShares = user.shares;
-        
-        if (withdrawAll || userShares == sharesToWithdraw) {
-            sharesToWithdraw = userShares;
-            user.shares = 0;
-            totalInstantDeposit -= user.instantDeposit;
-            user.instantDeposit = 0;
-        } else {
-            require(
-                userShares >= sharesToWithdraw &&
-                sharesToWithdraw > 0, 
-                "WSH"
-            );
-
-            uint128 instantDepositWithdrawn = _getProportion128(user.instantDeposit, sharesToWithdraw, userShares);
-
-            totalInstantDeposit -= instantDepositWithdrawn;
-            user.instantDeposit -= instantDepositWithdrawn;
-
-            user.shares = userShares - sharesToWithdraw;
-        }
-        
-        return sharesToWithdraw;
-    }
-
-    /**
      * @notice Calculates proportions of shares relative to the total shares
      * @dev Value has accuracy of `ACCURACY` which is 10^30
      *
