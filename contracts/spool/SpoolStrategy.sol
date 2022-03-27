@@ -419,7 +419,7 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         returns (bytes memory)
     {
         (bool success, bytes memory data) = strategy.delegatecall(payload);
-        if (!success) revert(abi.decode(data, (string)));
+        if (!success) revert(_getRevertMsg(data));
         return data;
     }
 }

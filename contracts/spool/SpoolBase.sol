@@ -116,6 +116,16 @@ abstract contract SpoolBase is
         }
     }
 
+    function _getRevertMsg(bytes memory _returnData) internal pure returns (string memory) {
+        // if the _res length is less than 68, then the transaction failed silently (without a revert message)
+        if (_returnData.length < 68) return "SILENT";
+        assembly {
+        // slice the sig hash
+            _returnData := add(_returnData, 0x04)
+        }
+        return abi.decode(_returnData, (string)); // all that remains is the revert string
+    }
+
     /* ========== CONFIGURATION ========== */
 
     function setAllocationProvider(address user, bool _isAllocationProvider) external onlyOwner {
