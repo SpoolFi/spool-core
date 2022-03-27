@@ -73,7 +73,7 @@ struct VaultData {
 }
 
 struct ReallocationWithdrawData {
-    uint256[][] reallocationProportions;
+    uint256[][] reallocationTable;
     StratUnderlyingSlippage[] priceSlippages;
     RewardSlippages[] rewardSlippages;
     uint256[] stratIndexes;

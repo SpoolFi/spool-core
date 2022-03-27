@@ -7,7 +7,7 @@ import {FastWithdrawParamsStruct} from "../build/types/FastWithdraw";
 import {
     VaultDetailsStruct,
     createVault,
-    setReallocationProportions,
+    setReallocationTable,
     getStrategyIndexes,
     getBitwiseStrategies,
     getBitwiseProportions,
@@ -32,7 +32,7 @@ describe("Vault Fast Withdraw", () => {
     let vaultCreation: VaultDetailsStruct;
 
     const context: TestContext = {
-        reallocationProportions: [],
+        reallocationTable: [],
     };
 
     before(async () => {
@@ -334,7 +334,7 @@ describe("Vault Fast Withdraw", () => {
                 .connect(accounts.allocationProvider)
                 .reallocateVaults(vaults, strategies.strategyAddresses, empty2dArray);
 
-            await setReallocationProportions(tx, spool.spool, context);
+            await setReallocationTable(tx, spool.spool, context);
         });
 
         it("user 2 should not be able to normal fast withdraw when reallocation is in progress", async () => {
