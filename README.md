@@ -41,3 +41,14 @@ To run full coverage you have to run tests on forked mainned
 To run only local net coverage run:
 
 - `npm run coverage-local`
+
+## Licensing
+
+The primary license for Spool is the Business Source License 1.1 (`BUSL-1.1`), see [`LICENSE`](./LICENSE).
+
+### Exceptions
+
+- All files in `contracts/external/` are licensed under the license they were originally published with (as indicated in their SPDX headers)
+- All files in `contracts/mocks/` are licensed under `MIT`.
+- All files in `test` remain unlicensed.
+- 
