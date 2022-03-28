@@ -1,27 +1,15 @@
-import { IInitializableAdminUpgradeabilityProxy__factory } from "../../build/types/factories/IInitializableAdminUpgradeabilityProxy__factory";
-import { IStakedTokenV2Rev3__factory } from "../../build/types/factories/IStakedTokenV2Rev3__factory";
 import { ILendingPool__factory } from "../../build/types/factories/ILendingPool__factory";
 import { ILendingPoolAddressesProvider__factory } from "../../build/types/factories/ILendingPoolAddressesProvider__factory";
 import { IAaveIncentivesController__factory} from "../../build/types/factories/IAaveIncentivesController__factory";
 
-import { IComp__factory } from "../../build/types/factories/IComp__factory";
-import { ICERC20Delegate__factory } from "../../build/types/factories/ICERC20Delegate__factory";
-import { ICERC20Delegator__factory } from "../../build/types/factories/ICERC20Delegator__factory";
-import { IUnitroller__factory } from "../../build/types/factories/IUnitroller__factory";
 import { IComptroller__factory } from "../../build/types/factories/IComptroller__factory";
 
 import { IBooster__factory } from "../../build/types/factories/IBooster__factory";
 
-import { ICRV__factory } from "../../build/types/factories/ICRV__factory";
-
-import { IFARM__factory } from "../../build/types/factories/IFARM__factory";
 import { IHarvestPool__factory } from "../../build/types/factories/IHarvestPool__factory";
 import { IVault__factory } from "../../build/types/factories/IVault__factory";
 
-import { IIdleDAI__factory } from "../../build/types/factories/IIdleDAI__factory";
-
 import { IMasterChef__factory } from "../../build/types/factories/IMasterChef__factory";
-import { ISUSHI__factory } from "../../build/types/factories/ISUSHI__factory";
 
 import { IUniswapV2Factory__factory } from "../../build/types/factories/IUniswapV2Factory__factory";
 import { IUniswapV2Router02__factory } from "../../build/types/factories/IUniswapV2Router02__factory";
@@ -29,12 +17,11 @@ import { IUniswapV2Router02__factory } from "../../build/types/factories/IUniswa
 import { IDAI__factory } from "../../build/types/factories/IDAI__factory";
 import { IUSDT__factory } from "../../build/types/factories/IUSDT__factory";
 import { IWETH__factory } from "../../build/types/factories/IWETH__factory";
-import { IUSDC__factory } from "../../build/types/factories/IUSDC__factory";
-import { IFiatTokenProxy__factory } from "../../build/types/factories/IFiatTokenProxy__factory";
 
 import { IYearnTokenVault__factory } from "../../build/types/factories/IYearnTokenVault__factory";
 
 import {BINANCE_WALLET} from "./utilities";
+import { IUSDC__factory } from "../../build/types";
 
 export type Contract = {
     address: string;
@@ -192,24 +179,15 @@ export const mainnet = function mainnet(): Mainnet {
 
     let aave = {
         stkAAVE: {
-            delegator: {
-                address: "0x4da27a545c0c5b758a6ba100e3a049001de870f5",
-                ABI: IInitializableAdminUpgradeabilityProxy__factory.abi,
-            },
-            implementation: {address: "0xe42f02713aec989132c1755117f768dbea523d2f", ABI: IStakedTokenV2Rev3__factory.abi},
+            delegator: { address: "0x4da27a545c0c5b758a6ba100e3a049001de870f5", ABI: null },
+            implementation: {address: "0xe42f02713aec989132c1755117f768dbea523d2f", ABI: null },
         },
         IncentiveController: {
-            delegator: {
-                address: "0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5",
-                ABI: IInitializableAdminUpgradeabilityProxy__factory.abi,
-            },
+            delegator: { address: "0xd784927Ff2f95ba542BfC824c8a8a98F3495f6b5", ABI: null },
             implementation: {address: "0x83d055d382f25e6793099713505c68a5c7535a35", ABI: IAaveIncentivesController__factory.abi},
         },
         LendingPool: {
-            delegator: {
-                address: "0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9",
-                ABI: IInitializableAdminUpgradeabilityProxy__factory.abi,
-            },
+            delegator: { address: "0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9", ABI: null },
             implementation: {address: "0xc6845a5c768bf8d7681249f8927877efda425baf", ABI: ILendingPool__factory.abi},
         },
         LendingPoolAddressesProvider: {
@@ -249,19 +227,19 @@ export const mainnet = function mainnet(): Mainnet {
     };
 
     let compound = {
-        COMP: {address: "0xc00e94cb662c3520282e6f5717214004a7f26888", ABI: IComp__factory.abi},
+        COMP: {address: "0xc00e94cb662c3520282e6f5717214004a7f26888", ABI: null},
         COMPtroller: {
-            delegator: {address: "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B", ABI: IUnitroller__factory.abi},
+            delegator: {address: "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B", ABI: null},
             implementation: {address: "0xbafe01ff935c7305907c33bf824352ee5979b526", ABI: IComptroller__factory.abi},
         },
         cDAI: {
-            delegator: {address: "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643", ABI: ICERC20Delegate__factory.abi},
-            implementation: {address: "0xa035b9e130f2b1aedc733eefb1c67ba4c503491f", ABI: ICERC20Delegator__factory.abi},
+            delegator: {address: "0x5d3a536e4d6dbd6114cc1ead35777bab948e3643", ABI: null},
+            implementation: {address: "0xa035b9e130f2b1aedc733eefb1c67ba4c503491f", ABI: null},
         },
-        cUSDC: {address: "0x39aa39c021dfbae8fac545936693ac917d5e7563", ABI: ICERC20Delegator__factory.abi},
+        cUSDC: {address: "0x39aa39c021dfbae8fac545936693ac917d5e7563", ABI: null},
         cUSDT: {
-            delegator: {address: "0xf650c3d88d12db855b8bf7d11be6c55a4e07dcc9", ABI: ICERC20Delegate__factory.abi},
-            implementation: {address: "0xa035b9e130f2b1aedc733eefb1c67ba4c503491f", ABI: ICERC20Delegator__factory.abi},
+            delegator: {address: "0xf650c3d88d12db855b8bf7d11be6c55a4e07dcc9", ABI: null},
+            implementation: {address: "0xa035b9e130f2b1aedc733eefb1c67ba4c503491f", ABI: null},
         }
     } as Compound;
 
@@ -273,7 +251,7 @@ export const mainnet = function mainnet(): Mainnet {
     };
 
     let curve = {
-        CRV: {address: "0xD533a949740bb3306d119CC777fa900bA034cd52", ABI: ICRV__factory.abi},
+        CRV: {address: "0xD533a949740bb3306d119CC777fa900bA034cd52", ABI: null},
         Minter: {address: "0xd061d61a4d941c39e5453435b6345dc261c2fce0"},
         _3pool: {
             pool: {address: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7"},
@@ -284,7 +262,7 @@ export const mainnet = function mainnet(): Mainnet {
     };
 
     let harvest = {
-        FARM: {address: "0xa0246c9032bC3A600820415aE600c6388619A14D", ABI: IFARM__factory.abi},
+        FARM: {address: "0xa0246c9032bC3A600820415aE600c6388619A14D", ABI: null},
         DAI: {
             Vault: {address: "0xab7fa2b2985bccfc13c6d86b1d5a17486ab1e04c", ABI: IVault__factory.abi},
             Pool: {address: "0x15d3A64B2d5ab9E152F16593Cdebc4bB165B5B4A", ABI: IHarvestPool__factory.abi}
@@ -302,14 +280,14 @@ export const mainnet = function mainnet(): Mainnet {
     };
 
     let idle = {
-        Token: {address: "0x3fE7940616e5Bc47b0775a0dccf6237893353bB4", ABI: IIdleDAI__factory.abi},
+        Token: {address: "0x3fE7940616e5Bc47b0775a0dccf6237893353bB4", ABI: null},
         idleDAI: {address: "0x3fe7940616e5bc47b0775a0dccf6237893353bb4"},
         idleUSDC: {address: "0x5274891bEC421B39D23760c04A6755eCB444797C"},
         idleUSDT: {address: "0xF34842d05A1c888Ca02769A633DF37177415C2f8"},
     };
 
     let masterchef = {
-        Sushi: {address: "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2", ABI: ISUSHI__factory.abi},
+        Sushi: {address: "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2", ABI: null},
         Masterchef: {address: "0xbD17B1ce622d73bD438b9E658acA5996dc394b0d", ABI: IMasterChef__factory.abi},
     };
 
@@ -344,7 +322,7 @@ export const mainnet = function mainnet(): Mainnet {
         },
         USDC: {
             contract: {
-                delegator: {address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", ABI: IFiatTokenProxy__factory.abi},
+                delegator: {address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", ABI: null},
                 implementation: {address: "0xa2327a938febf5fec13bacfb16ae10ecbc4cbdcf", ABI: IUSDC__factory.abi},
             } as Proxy,
             units: 6,
