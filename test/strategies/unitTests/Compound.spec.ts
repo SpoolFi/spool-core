@@ -5,6 +5,7 @@ import { IBaseStrategy } from "../../../build/types/IBaseStrategy";
 import { IERC20 } from "../../../build/types/IERC20";
 import { TestStrategySetup__factory } from "../../../build/types/factories/TestStrategySetup__factory";
 import { CompoundStrategy__factory } from "../../../build/types/factories/CompoundStrategy__factory";
+import { CompoundContractHelper__factory } from "../../../build/types/factories/CompoundContractHelper__factory";
 import { underlyingTokensFixture, mainnetConst, TokensFixture, AccountsFixture } from "../../shared/fixtures";
 import { Tokens } from "../../shared/constants";
 
@@ -69,6 +70,7 @@ describe("Strategies Unit Test: Compound", () => {
                     "0x0000000000000000000000000000000000000001",
                     AddressZero,
                     "0x0000000000000000000000000000000000000001",
+                    "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001"
                 )
             ).to.be.revertedWith("CompoundStrategy::constructor: Token address cannot be 0");
@@ -81,9 +83,33 @@ describe("Strategies Unit Test: Compound", () => {
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
                     AddressZero,
+                    "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001"
                 )
             ).to.be.revertedWith("CompoundStrategy::constructor: Comptroller address cannot be 0");
+        });
+
+        it("Should fail deploying Compound Strategy with the wrong strategy helper", async () => {
+            const { tokens } = await loadFixture(underlyingTokensFixture);
+
+            const compoundHelper = await new CompoundContractHelper__factory().connect(accounts.administrator).deploy(
+                "0x0000000000000000000000000000000000000001",
+                strategyAssets[0].cToken, // DAI cToken address
+                mainnetConst.compound.COMPtroller.delegator.address,
+                tokens.DAI.address,
+                "0x0000000000000000000000000000000000000001"
+            );
+
+            const CompoundStrategy = new CompoundStrategy__factory().connect(accounts.administrator);
+            await expect(
+                CompoundStrategy.deploy(
+                    "0x0000000000000000000000000000000000000001",
+                    strategyAssets[1].cToken, // USDC cToken address
+                    "0x0000000000000000000000000000000000000001",
+                    tokens.USDC.address,
+                    compoundHelper.address
+                )
+            ).to.be.revertedWith("CompoundStrategy::constructor: cToken is not the same as helpers cToken");
         });
     });
 
@@ -99,51 +125,74 @@ describe("Strategies Unit Test: Compound", () => {
 
             describe(`Deployment: ${name}`, () => {
                 it("Should deploy", async () => {
+                    const compoundStrategyProxy = await new TestStrategySetup__factory(accounts.administrator).deploy(
+                        AddressZero
+                    );
+
+                    const compoundHelper = await new CompoundContractHelper__factory()
+                        .connect(accounts.administrator)
+                        .deploy(
+                            mainnetConst.compound.COMP.address,
+                            cToken,
+                            mainnetConst.compound.COMPtroller.delegator.address,
+                            token.address,
+                            compoundStrategyProxy.address
+                        );
+
                     const compStrategy = await new CompoundStrategy__factory()
                         .connect(accounts.administrator)
                         .deploy(
                             mainnetConst.compound.COMP.address,
                             cToken,
                             mainnetConst.compound.COMPtroller.delegator.address,
-                            token.address
+                            token.address,
+                            compoundHelper.address
                         );
 
-                    await compStrategy.initialize();
+                    await compoundStrategyProxy.setImplementation(compStrategy.address);
                 });
             });
 
             describe(`Functions: ${name}`, () => {
                 let compoundContract: IBaseStrategy;
-                let implAddress: string;
                 let millionUnits: BigNumber;
 
                 before(async () => {
-                    const compStrategyImpl = await new CompoundStrategy__factory()
-                        .connect(accounts.administrator)
-                        .deploy(
-                            mainnetConst.compound.COMP.address,
-                            cToken,
-                            mainnetConst.compound.COMPtroller.delegator.address,
-                            token.address
-                        );
-
-                    implAddress = compStrategyImpl.address;
-
                     millionUnits = getMillionUnits(mainnetConst.tokens[name].units);
                 });
 
                 beforeEach(async () => {
                     // deploy proxy for a strategy
                     const compoundStrategyProxy = await new TestStrategySetup__factory(accounts.administrator).deploy(
-                        implAddress
+                        AddressZero
                     );
+
+                    const compoundHelper = await new CompoundContractHelper__factory()
+                        .connect(accounts.administrator)
+                        .deploy(
+                            mainnetConst.compound.COMP.address,
+                            cToken,
+                            mainnetConst.compound.COMPtroller.delegator.address,
+                            token.address,
+                            compoundStrategyProxy.address
+                        );
+
+                    const compStrategy = await new CompoundStrategy__factory()
+                        .connect(accounts.administrator)
+                        .deploy(
+                            mainnetConst.compound.COMP.address,
+                            cToken,
+                            mainnetConst.compound.COMPtroller.delegator.address,
+                            token.address,
+                            compoundHelper.address
+                        );
+
+                    await compoundStrategyProxy.setImplementation(compStrategy.address);
 
                     compoundContract = CompoundStrategy__factory.connect(
                         compoundStrategyProxy.address,
                         accounts.administrator
                     );
-
-                    await compoundContract.initialize();
                 });
 
                 it("Process deposit, should deposit in strategy", async () => {
@@ -152,7 +201,7 @@ describe("Strategies Unit Test: Compound", () => {
                     const stratSetup = getStrategySetupObject();
                     stratSetup.pendingUser.deposit = depositAmount;
                     await setStrategyState(compoundContract, stratSetup);
-                    token.transfer(compoundContract.address, depositAmount);
+                    await token.transfer(compoundContract.address, depositAmount);
 
                     // ACT
                     await compoundContract.process([], false, []);
@@ -173,7 +222,7 @@ describe("Strategies Unit Test: Compound", () => {
                     const stratSetup = getStrategySetupObject();
                     stratSetup.pendingUser.deposit = depositAmount;
                     await setStrategyState(compoundContract, stratSetup);
-                    token.transfer(compoundContract.address, depositAmount);
+                    await token.transfer(compoundContract.address, depositAmount);
 
                     await compoundContract.process([], false, []);
 
@@ -184,7 +233,7 @@ describe("Strategies Unit Test: Compound", () => {
                     const stratSetup2 = await getStrategyState(compoundContract);
                     stratSetup2.pendingUser.deposit = depositAmount;
                     await setStrategyState(compoundContract, stratSetup2);
-                    token.transfer(compoundContract.address, depositAmount);
+                    await token.transfer(compoundContract.address, depositAmount);
 
                     // ACT
                     await compoundContract.process([], true, [{ slippage: 1, path: swapPath }]);
@@ -208,7 +257,7 @@ describe("Strategies Unit Test: Compound", () => {
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(compoundContract, stratSetupDeposit);
-                    token.transfer(compoundContract.address, depositAmount);
+                    await token.transfer(compoundContract.address, depositAmount);
                     await compoundContract.process([], false, []);
 
                     // set withdraw
@@ -236,7 +285,7 @@ describe("Strategies Unit Test: Compound", () => {
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(compoundContract, stratSetupDeposit);
-                    token.transfer(compoundContract.address, depositAmount);
+                    await token.transfer(compoundContract.address, depositAmount);
                     await compoundContract.process([], false, []);
 
                     // mine block, to gain reward
@@ -260,7 +309,7 @@ describe("Strategies Unit Test: Compound", () => {
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(compoundContract, stratSetupDeposit);
-                    token.transfer(compoundContract.address, depositAmount);
+                    await token.transfer(compoundContract.address, depositAmount);
                     await compoundContract.process([], false, []);
 
                     // mine block, to gain reward
@@ -287,7 +336,7 @@ describe("Strategies Unit Test: Compound", () => {
 
                     // check if balance is greater than initial, as we claim the rewards as well
                     const tokenBalance = await token.balanceOf(compoundContract.address);
-                    expect(tokenBalance).to.be.greaterWithTolerance(depositAmount, BasisPoints.Basis_1);
+                    expect(tokenBalance).to.be.gt(depositAmount);
                 });
 
                 it("Emergency withdraw, should withdraw all funds and send it to the recipient", async () => {
@@ -300,7 +349,7 @@ describe("Strategies Unit Test: Compound", () => {
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(compoundContract, stratSetupDeposit);
-                    token.transfer(compoundContract.address, depositAmount);
+                    await token.transfer(compoundContract.address, depositAmount);
                     await compoundContract.process([], false, []);
 
                     // add pending deposit
@@ -311,7 +360,7 @@ describe("Strategies Unit Test: Compound", () => {
                     await setStrategyState(compoundContract, stratSetupDepositpending);
 
                     const totalPendingDeposit = pendingDeposit.add(pendingDeposit);
-                    token.transfer(compoundContract.address, totalPendingDeposit);
+                    await token.transfer(compoundContract.address, totalPendingDeposit);
 
                     // mine blocks
                     console.log("mining blocks...");
