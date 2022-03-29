@@ -97,7 +97,6 @@ describe("Controller", () => {
     });
 
     describe("Vault creation tests", () => {
-        // TODO one function to handle all this; pass an object with the data having modified the required arg, with msg
         it("should fail to create a vault with duplicate strategies", async () => {
             const vaultDetails = {
                 underlying: tokens.USDC.address,
@@ -507,5 +506,4 @@ describe("Controller", () => {
             ).to.be.revertedWith("Controller::_onlyUnpauser: Can only be invoked by unpauser");
         });
     });
-    // TODO getRewards tests
 });
