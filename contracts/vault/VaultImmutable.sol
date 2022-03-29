@@ -13,6 +13,7 @@ abstract contract VaultImmutable {
 
     /**
      * @dev Returns the underlying vault token from proxy address
+     * @return Underlying token contract
      */
     function _underlying() internal view returns (IERC20) {
         return IVaultImmutable(address(this)).underlying();
@@ -20,6 +21,7 @@ abstract contract VaultImmutable {
 
     /**
      * @dev Returns vaults risk provider from proxy address
+     * @return Risk provider contract
      */
     function _riskProvider() internal view returns (address) {
         return IVaultImmutable(address(this)).riskProvider();

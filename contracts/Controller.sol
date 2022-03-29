@@ -9,7 +9,6 @@ import "./shared/Constants.sol";
 
 // libraries
 import "./external/@openzeppelin/token/ERC20/utils/SafeERC20.sol";
-import "./external/@openzeppelin/security/Pausable.sol";
 import "./libraries/Hash.sol";
 
 // other imports
@@ -19,6 +18,7 @@ import "./interfaces/IBaseStrategy.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/vault/IVaultDetails.sol";
 import "./vault/VaultNonUpgradableProxy.sol";
+import "./external/@openzeppelin/security/Pausable.sol";
 
 /**
  * @notice Implementation of the {IController} interface.
@@ -132,7 +132,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
     /* ========== VIEWS ========== */
 
     /**
-    * @dev Throws if controller is paused.
+     * @dev Throws if controller is paused.
      */
     function checkPaused() external view whenNotPaused {}
 
@@ -291,6 +291,11 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
         _emitVaultCreated(vault, details);
     }
 
+    /**
+     * @notice Emit event with vault details on creation
+     * @param vault Vault address
+     * @param details Vault details
+     */
     function _emitVaultCreated(address vault, VaultDetails calldata details) private {
         emit VaultCreated(
             vault,
@@ -329,6 +334,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
      * @notice Return new vault immutable values
      *
      * @param vaultDetails details of the vault to be created
+     * @return Vault immutable values
      */
     function _getVaultImmutables(VaultDetails calldata vaultDetails) private pure returns (VaultImmutables memory) {
         return VaultImmutables(
@@ -342,6 +348,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
      * @notice Return new vault initializable values
      *
      * @param vaultDetails details of the vault to be created
+     * @return New vault initializable values
      */
     function _getVaultInitializable(VaultDetails calldata vaultDetails) private pure returns (VaultInitializable memory) {
         return VaultInitializable(
@@ -409,9 +416,11 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
      * Requirements:
      *
      * - the caller must be the contract owner (Spool DAO)
+     * - the provided strategies must either be all valid or an empty array
      * - the strategy must not have already been added
      * 
      * @param strategy the strategy to add to the system
+     * @param allStrategies All valid strategies in the system
      */
     function addStrategy(
         address strategy,
@@ -447,6 +456,12 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
         emit StrategyAdded(strategy);
     }
 
+    /**
+     * @notice Add a strategy
+     * @param currentStrategies Array of current strategies
+     * @param strategy Address of the strategy to add
+     * @return Array with the given strategy added
+     */
     function _addStrategy(address[] memory currentStrategies, address strategy) private pure returns(address[] memory) {
         address[] memory newStrategies = new address[](currentStrategies.length + 1);
         for(uint256 i = 0; i < currentStrategies.length; i++) {
@@ -661,6 +676,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
     /**
      * @notice Returns address to send the emergency whithdrawn funds
      * @dev if the address is not defined assets are sent to the caller address
+     * @param _emergencyRecipient Emergency recipient address
      */
     function _getEmergencyRecipient() private view returns(address _emergencyRecipient) {
         _emergencyRecipient = emergencyRecipient;
@@ -700,6 +716,8 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
      * Requirements:
      *
      * - the caller must be the contract owner (Spool DAO)
+     * @param user Address for which to set the role
+     * @param _isEmergencyWithdrawer Flag to set the role to
      */
     function setEmergencyWithdrawer(address user, bool _isEmergencyWithdrawer) external onlyOwner {
         isEmergencyWithdrawer[user] = _isEmergencyWithdrawer;
@@ -713,6 +731,8 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
      * Requirements:
      *
      * - the caller must be the contract owner (Spool DAO)
+     * @param user Address for which to set the role
+     * @param _set Flag to set the role to
      */
     function setPauser(address user, bool _set) external onlyOwner {
         isPauser[user] = _set;
@@ -726,6 +746,8 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
      * Requirements:
      *
      * - the caller must be the contract owner (Spool DAO)
+     * @param user Address for which to set the role
+     * @param _set Flag to set the role to
      */
     function setUnpauser(address user, bool _set) external onlyOwner {
         isUnpauser[user] = _set;
@@ -739,6 +761,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
      * Requirements:
      *
      * - the caller must be the contract owner (Spool DAO)
+     * @param _emergencyRecipient Flag to set the role to
      */
     function setEmergencyRecipient(address _emergencyRecipient) external onlyOwner {
         emergencyRecipient = _emergencyRecipient;
@@ -786,6 +809,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
     /**
      * @notice Ensures the provided strategies are correct
      * @dev Allow if array of strategies is empty
+     * @param _strategies Array of strategies to verify
      */
     function _validStrategiesOrEmpty(address[] memory _strategies) private view {
         require(
@@ -835,6 +859,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
 
     /**
      * @notice Throws if the strategies are not valid or empty array
+     * @param allStrategies Array of strategies
      */
     modifier validStrategiesOrEmpty(address[] memory allStrategies) {
         _validStrategiesOrEmpty(allStrategies);

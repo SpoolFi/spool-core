@@ -206,8 +206,13 @@ contract Vault is VaultRestricted {
      * @notice Allows a user to withdraw their deposited funds right away.
      *
      * @dev
-     * Shares belonging to the user and are sent to FaswWithdraw contract
-     * where a withdraw can be executed.
+     * @dev
+     * User can execute the withdrawal of his shares from the vault at any time without
+     * waiting for the DHW to process it. This is done independently of other events (e.g. DHW)
+     * and the gas cost is paid entirely by the user.
+     * Shares belonging to the user and are sent back to the FastWithdraw contract
+     * where an actual withdrawal can be peformed, where user recieves the underlying tokens
+     * right away.
      *
      * Requirements:
      *
@@ -259,8 +264,10 @@ contract Vault is VaultRestricted {
     }
 
     /**
-     * @dev Updates storage according to shares withdrawn.
+     * @dev Updates storage values according to shares withdrawn.
      *      If `withdrawAll` is true, all shares are removed from the users
+     * @param sharesToWithdraw Amount of shares to withdraw
+     * @param withdrawAll Withdraw all user shares
      */
     function _withdrawShares(uint128 sharesToWithdraw, bool withdrawAll) private returns(uint128) {
         User storage user = users[msg.sender];
@@ -268,20 +275,27 @@ contract Vault is VaultRestricted {
 
         uint128 userActiveInstantDeposit = user.instantDeposit;
 
-        // substract not pricessed instant deposit
-        // this way we don't consider it when calculating amount of it withdrawn
+        // Substract the not processed instant deposit
+        // This way we don't consider the deposit that was not yet processed by the DHW
+        // when calculating amount of it withdrawn
         LastIndexInteracted memory userIndexInteracted = userLastInteractions[msg.sender];
         if (userIndexInteracted.index1 > 0) {
             userActiveInstantDeposit -= userIndexAction[msg.sender][userIndexInteracted.index1].depositAmount;
-
+            // also check if user second index has pending actions
             if (userIndexInteracted.index2 > 0) {
                 userActiveInstantDeposit -= userIndexAction[msg.sender][userIndexInteracted.index2].depositAmount;
             }
         }
         
+        // check if withdraw all flag was set or user requested
+        // withdraw of all shares in `sharesToWithdraw`
         if (withdrawAll || userShares == sharesToWithdraw) {
             sharesToWithdraw = userShares;
+            // set user shares to 0
             user.shares = 0;
+
+            // substract all the users instant deposit processed till now
+            // substract the same amount from vault total instand deposit value
             totalInstantDeposit -= userActiveInstantDeposit;
             user.instantDeposit -= userActiveInstantDeposit;
         } else {
@@ -291,11 +305,17 @@ contract Vault is VaultRestricted {
                 "WSH"
             );
 
+            // if we didnt withdraw all calculate the proportion of
+            // the instant deposit to substract it from the user and vault amounts
             uint128 instantDepositWithdrawn = _getProportion128(userActiveInstantDeposit, sharesToWithdraw, userShares);
 
             totalInstantDeposit -= instantDepositWithdrawn;
             user.instantDeposit -= instantDepositWithdrawn;
 
+            // susrtact withdrawn shares from the user
+            // NOTE: vault shares will be substracted when the at the redeem
+            // for the current active index is processed. This way we substract it
+            // only once for all the users.
             user.shares = userShares - sharesToWithdraw;
         }
         
@@ -306,6 +326,7 @@ contract Vault is VaultRestricted {
      * @notice Calculates user proportionate deposit when withdrawing and updated user deposit storage
      * @dev Checks user index action to see if user already has some withdrawn shares
      *      pending to be processed.
+     *      Called when performing the fast withdraw
      *
      * @param sharesToWithdraw shares amount to withdraw
      *
@@ -518,6 +539,25 @@ contract Vault is VaultRestricted {
 
     /* ========== STRATEGY REMOVED ========== */
 
+    /**
+     * @notice Notify a vault a strategy was removed from the Spool system
+     * @dev
+     * This can be called by anyone after a strategy has been removed from the system.
+     * After the removal of the strategy that the vault contains, all actions
+     * calling central Spool contract will revert. This function must be called,
+     * to remove the strategy from the vault and update the strategy hash according
+     * to the new strategy array.
+     *
+     * Requirements:
+     *
+     * - The Spool system must finish reallocation if it's in progress
+     * - the provided strategies must be valid
+     * - The strategy must belong to this vault
+     * - The strategy must be removed from the system
+     *
+     * @param vaultStrategies Array of current vault strategies (including the removed one)
+     * @param i Index of the removed strategy in the `vaultStrategies`
+     */
     function notifyStrategyRemoved(
         address[] memory vaultStrategies,
         uint256 i
@@ -585,12 +625,18 @@ contract Vault is VaultRestricted {
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
+    /**
+     * @notice Throws if given array of strategies is empty
+     */
     function _hasStrategies(address[] memory vaultStrategies) private pure {
         require(vaultStrategies.length > 0, "NST");
     }
 
     /* ========== MODIFIERS ========== */
 
+    /**
+     * @notice Throws if given array of strategies is empty
+     */
     modifier hasStrategies(address[] memory vaultStrategies) {
         _hasStrategies(vaultStrategies);
         _;

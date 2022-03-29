@@ -32,8 +32,14 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
 
     /// @notice The total slippage slots the strategy supports, used for validation of provided slippage
     uint256 internal immutable rewardSlippageSlots;
+
+    /// @notice Slots for processing
     uint256 internal immutable processSlippageSlots;
+
+    /// @notice Slots for reallocation
     uint256 internal immutable reallocationSlippageSlots;
+
+    /// @notice Slots for deposit
     uint256 internal immutable depositSlippageSlots;
 
     /** 
@@ -45,6 +51,8 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      */
     bool internal immutable forceClaim;
 
+    /// @notice flag to force balance validation before running process strategy
+    /// @dev this is done so noone can manipulate the strategies before we interact with them and cause harm to the system
     bool internal immutable doValidateBalance;
 
     /// @notice The self address, set at initialization to allow proper share accounting
@@ -72,6 +80,7 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      * @param _reallocationSlippageSlots slots for reallocation
      * @param _depositSlippageSlots slots for deposits
      * @param _forceClaim force claim of rewards
+     * @param _doValidateBalance force balance validation
      */
     constructor(
         IERC20  _underlying,
@@ -131,6 +140,14 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         _process(slippages, 0);
     }
 
+    /**
+     * @notice Process first part of the reallocation DHW
+     * @dev Withdraws for reallocation, depositn and withdraww for a user
+     *
+     * @param slippages Parameters to apply when performing a deposit or a withdraw
+     * @param processReallocationData Data containing amuont of optimized and not optimized shares to withdraw
+     * @return withdrawnReallocationReceived actual amount recieveed from peforming withdraw
+     */
     function processReallocation(uint256[] calldata slippages, ProcessReallocationData calldata processReallocationData) external override returns(uint128)
     {   
         slippages = _validateStrategyBalance(slippages);
@@ -145,6 +162,11 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         return withdrawnReallocationReceived;
     }
 
+    /**
+     * @dev Update reallocation batch storage for index after withdrawing reallocated shares
+     * @param processReallocationData Data containing amount of optimized and not optimized shares to withdraw
+     * @return Withdrawn reallocation received
+     */
     function _updateReallocationWithdraw(ProcessReallocationData calldata processReallocationData) internal virtual returns(uint128) {
         Strategy storage strategy = strategies[self];
         uint24 stratIndex = _getProcessingIndex();
@@ -160,6 +182,10 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         return withdrawnReallocationReceived;
     }
 
+    /**
+     * @notice Process deposit
+     * @param slippages Array of slippage parameters to apply when depositing
+     */
     function processDeposit(uint256[] calldata slippages)
         external
         override
@@ -172,11 +198,22 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         _processDeposit(slippages);
     }
 
+    /**
+     * @notice Returns total starategy balance includign pending rewards
+     * @return strategyBalance total starategy balance includign pending rewards
+     */
     function getStrategyUnderlyingWithRewards() public view override returns(uint128)
     {
         return _getStrategyUnderlyingWithRewards();
     }
 
+    /**
+     * @notice Fast withdraw
+     * @param shares Shares to fast withdraw
+     * @param slippages Array of slippage parameters to apply when withdrawing
+     * @param swapData Swap slippage and path array
+     * @return Withdrawn amount withdawn
+     */
     function fastWithdraw(uint128 shares, uint256[] calldata slippages, SwapData[] calldata swapData) external override returns(uint128)
     {
         slippages = _validateStrategyBalance(slippages);
@@ -271,6 +308,11 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
+    /**
+     * @dev Validate strategy balance
+     * @param slippages Check if the strategy balance is within defined min and max values
+     * @return slippages Same array without first 2 slippages
+     */
     function _validateStrategyBalance(uint256[] calldata slippages) internal virtual returns(uint256[] calldata) {
         if (doValidateBalance) {
             require(slippages.length >= 2, "BaseStrategy:: _validateStrategyBalance: Invalid number of slippages");
@@ -288,6 +330,10 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         return slippages;
     }
 
+    /**
+     * @dev Validate reards slippage
+     * @param swapData Swap slippage and path array
+     */
     function _validateRewardsSlippage(SwapData[] calldata swapData) internal view virtual {
         if (swapData.length > 0) {
             require(
@@ -297,24 +343,42 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         }
     }
 
+    /**
+     * @dev Retrieve reward slippage slots
+     * @return Reward slippage slots
+     */
     function _getRewardSlippageSlots() internal view virtual returns(uint256) {
         return rewardSlippageSlots;
     }
 
+    /**
+     * @dev Validate process slippage
+     * @param slippages parameters to verify validity of the strategy state
+     */
     function _validateProcessSlippage(uint256[] calldata slippages) internal view virtual {
         _validateSlippage(slippages.length, processSlippageSlots);
     }
 
+    /**
+     * @dev Validate reallocation slippage
+     * @param slippages parameters to verify validity of the strategy state
+     */
     function _validateReallocationSlippage(uint256[] calldata slippages) internal view virtual {
         _validateSlippage(slippages.length, reallocationSlippageSlots);
     }
 
+    /**
+     * @dev Validate deposit slippage
+     * @param slippages parameters to verify validity of the strategy state
+     */
     function _validateDepositSlippage(uint256[] calldata slippages) internal view virtual {
         _validateSlippage(slippages.length, depositSlippageSlots);
     }
 
     /**
-     * @notice Validates the provided slippage in length.
+     * @dev Validates the provided slippage in length.
+     * @param currentLength actual slippage array length
+     * @param shouldBeLength expected slippages array length
      */
     function _validateSlippage(uint256 currentLength, uint256 shouldBeLength)
         internal
@@ -327,12 +391,19 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         );
     }
 
+    /**
+     * @dev Retrieve processing index
+     * @return Processing index
+     */
     function _getProcessingIndex() internal view returns(uint24) {
         return strategies[self].index + 1;
     }
 
     /**
-     * @notice Calculates shares before they are added to the total shares
+     * @dev Calculates shares before they are added to the total shares
+     * @param strategyTotalShares Total shares for strategy
+     * @param stratTotalUnderlying Total underlying for strategy
+     * @return newShares New shares calculated
      */
     function _getNewSharesAfterWithdraw(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal pure returns(uint128 newShares){
         uint128 oldUnderlying;
@@ -349,7 +420,11 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
     }
 
     /**
-     * @notice Calculates shares when they are already part of the total shares
+     * @dev Calculates shares when they are already part of the total shares
+     *
+     * @param strategyTotalShares Total shares
+     * @param stratTotalUnderlying Total underlying
+     * @return newShares New shares calculated
      */
     function _getNewShares(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal pure returns(uint128 newShares){
         if (strategyTotalShares == 0 || stratTotalUnderlying == 0) {
@@ -361,7 +436,9 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
     }
 
     /**
-     * @notice Reset allowance to zero if previously set to a higher value.
+     * @dev Reset allowance to zero if previously set to a higher value.
+     * @param token Asset
+     * @param spender Spender address
      */
     function _resetAllowance(IERC20 token, address spender) internal {
         if (token.allowance(address(this), spender) > 0) {

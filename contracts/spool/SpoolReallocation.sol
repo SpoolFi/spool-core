@@ -29,6 +29,18 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
 
     /**
      * @notice Set vaults to reallocate on next do hard work
+     * Requirements:
+     * - Caller must have allocation provider role
+     * - Vaults array must not be empty
+     * - Vaults must be valid
+     * - Strategies must be valid
+     * - If reallocation was already initialized before:
+     *    - Reallocation table hash must be set
+     *    - Reallocation table must be valid
+     *
+     * @param vaults Array of vault addresses
+     * @param strategies Array of strategy addresses
+     * @param reallocationTable Reallocation details
      */
     function reallocateVaults(
         VaultData[] memory vaults,
@@ -109,6 +121,14 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
         _hashReallocationTable(reallocationTable);
     }
 
+    /**
+     * @notice Remove shares from strategy to set them for a reallocation
+     * @param vaultAddress Vault address
+     * @param strat Strategy address to remove shares
+     * @param vaultProportion Proportion of all vault-strategy shares a vault wants to reallocate
+     * @param index Global index we're reallocating for
+     * @return newSharesWithdrawn New shares withdrawn fro reallocation
+     */
     function _reallocateVaultStratWithdraw(
         address vaultAddress,
         address strat, 
@@ -125,6 +145,7 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
         uint128 unwithdrawnVaultShares = vault.shares - vaultBatch.withdrawnShares;
 
         // if strategy wasn't executed in current batch yet, also substract unprocessed withdrawal shares in current batch
+
         if(!_isNextStrategyIndex(strategy, index)) {
             VaultBatch storage vaultBatchPrevious = vault.vaultBatches[index - 1];
             unwithdrawnVaultShares -= vaultBatchPrevious.withdrawnShares;
@@ -137,6 +158,12 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
         vault.withdrawnReallocationShares = newSharesWithdrawn;
     }
 
+    /**
+     * @notice Checks whether the given index is next index for the strategy
+     * @param strategy Strategy data (see Strategy struct)
+     * @param interactingIndex Index to check
+     * @return isNextStrategyIndex True if given index is the next strategy index
+     */
     function _isNextStrategyIndex(
         Strategy storage strategy,
         uint256 interactingIndex
@@ -146,6 +173,13 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
         }
     }
 
+    /**
+     * @notice Update deposit reallocation for strategy
+     * @param sharesWithdrawn Withdrawn shares
+     * @param vaultData Vault data (see VaultData struct)
+     * @param depositProportions Deposit proportions
+     * @param stratReallocationTable Strategy reallocation table
+     */
     function _updateDepositReallocationForStrat(
         uint128 sharesWithdrawn,
         VaultData memory vaultData,
@@ -173,6 +207,15 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
 
     /* ========== SHARED ========== */
 
+    /**
+     * @notice Build vault strategies array from a 256bit word.
+     * @dev Each vault index takes 8bits.
+     *
+     * @param bitwiseAddressIndexes Bitwise address indexes
+     * @param strategiesCount Strategies count
+     * @param strategies Array of strategy addresses
+     * @return vaultStrategies Array of vault strategy addresses
+     */
     function _buildVaultStrategiesArray(
         uint256 bitwiseAddressIndexes,
         uint8 strategiesCount,

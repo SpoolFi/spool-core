@@ -6,16 +6,27 @@ import "../../external/@openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import "../NoRewardStrategy.sol";
 import "../../external/interfaces/yearn/IYearnTokenVault.sol";
 
+/**
+ * @notice Yearn Strategy implementation
+ */
 contract YearnStrategy is NoRewardStrategy {
     using SafeERC20 for IERC20;
 
     /* ========== STATE VARIABLES ========== */
 
+    /// @notice Vault contract
     IYearnTokenVault public immutable vault;
+
+    /// @notice One yearn vault share amount
     uint256 public immutable oneShare;
 
     /* ========== CONSTRUCTOR ========== */
 
+    /**
+     * @notice Set initial values
+     * @param _vault Vault contract
+     * @param _underlying Underlying asset
+     */
     constructor(
         IYearnTokenVault _vault,
         IERC20 _underlying
@@ -29,6 +40,10 @@ contract YearnStrategy is NoRewardStrategy {
 
     /* ========== VIEWS ========== */
 
+    /**
+     * @notice Get strategy balance
+     * @return Strategy balance
+     */
     function getStrategyBalance() public view override returns(uint128) {
         uint256 yearnTokenAmount = vault.balanceOf(address(this));
         return SafeCast.toUint128(_getYearnTokenValue(yearnTokenAmount));
@@ -36,6 +51,12 @@ contract YearnStrategy is NoRewardStrategy {
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
+    /**
+     * @notice Deposit
+     * @param amount Amount to deposit
+     * @param slippages Slippages array
+     * @return Minted idle amount
+     */
     function _deposit(uint128 amount, uint256[] memory slippages) internal override returns(uint128) {
         (bool isDeposit, uint256 slippage) = _getSlippageAction(slippages[0]);
         require(isDeposit, "YearnStrategy::_deposit: Withdraw slippage provided");
@@ -56,6 +77,12 @@ contract YearnStrategy is NoRewardStrategy {
         return SafeCast.toUint128(_getYearnTokenValue(yearnTokenNew));
     }
 
+    /**
+     * @notice Withdraw
+     * @param shares Shares to withdraw
+     * @param slippages Slippages array
+     * @return Underlying withdrawn
+     */
     function _withdraw(uint128 shares, uint256[] memory slippages) internal override returns(uint128) {
         (bool isDeposit, uint256 slippage) = _getSlippageAction(slippages[0]);
         require(!isDeposit, "YearnStrategy::_withdraw: Deposit slippage provided");
@@ -71,6 +98,11 @@ contract YearnStrategy is NoRewardStrategy {
         return SafeCast.toUint128(undelyingWithdrawn);
     }
 
+    /**
+     * @notice Emergency withdraw
+     * @param recipient Address to withdraw to
+     * @param data Data to perform emergency withdrawal
+     */
     function _emergencyWithdraw(address recipient, uint256[] calldata data) internal override {
         // if no data provided set max loss to 100%
         uint256 maxLoss = data.length > 0 ? data[0] : 100_00;

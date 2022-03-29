@@ -5,16 +5,27 @@ pragma solidity 0.8.11;
 import "../MultipleRewardStrategy.sol";
 import "../../external/interfaces/idle-finance/IIdleToken.sol";
 
+/**
+ * @notice Idle strategy implementation
+ */
 contract IdleStrategy is MultipleRewardStrategy {
     using SafeERC20 for IERC20;
 
     /* ========== STATE VARIABLES ========== */
 
+    /// @notice Idle token contract
     IIdleToken public immutable idleToken;
+
+    /// @notice One idle token shares amount
     uint256 public immutable oneShare;
 
     /* ========== CONSTRUCTOR ========== */
 
+    /**
+     * @notice Set initial values
+     * @param _idleToken Idle token contract
+     * @param _underlying Underlying asset
+     */
     constructor(
         IIdleToken _idleToken,
         IERC20 _underlying
@@ -28,6 +39,10 @@ contract IdleStrategy is MultipleRewardStrategy {
 
     /* ========== VIEWS ========== */
 
+    /**
+     * @notice Get strategy balance
+     * @return strategyBalance Strategy balance in strategy underlying tokens
+     */
     function getStrategyBalance() public view override returns(uint128) {
         uint256 idleTokenBalance = idleToken.balanceOf(address(this));
         return SafeCast.toUint128(_getIdleTokenValue(idleTokenBalance));
@@ -43,6 +58,12 @@ contract IdleStrategy is MultipleRewardStrategy {
         return idleToken.getGovTokens().length;
     }
 
+    /**
+     * @notice Deposit to Idle (mint idle tokens)
+     * @param amount Amount to deposit
+     * @param slippages Slippages array
+     * @return Minted idle amount
+     */
     function _deposit(uint128 amount, uint256[] memory slippages) internal override returns(uint128) {
         (bool isDeposit, uint256 slippage) = _getSlippageAction(slippages[0]);
         require(isDeposit, "IdleStrategy::_deposit: Withdraw slippage provided");
@@ -65,6 +86,12 @@ contract IdleStrategy is MultipleRewardStrategy {
         return SafeCast.toUint128(_getIdleTokenValue(mintedIdleAmount));
     }
 
+    /**
+     * @notice Withdraw from the Idle strategy
+     * @param shares Amount of shares to withdraw
+     * @param slippages Slippage values
+     * @return undelyingWithdrawn Withdrawn underlying recieved amount
+     */
     function _withdraw(uint128 shares, uint256[] memory slippages) internal override returns(uint128) {
         (bool isDeposit, uint256 slippage) = _getSlippageAction(slippages[0]);
         require(!isDeposit, "IdleStrategy::_withdraw: Deposit slippage provided");
@@ -86,12 +113,20 @@ contract IdleStrategy is MultipleRewardStrategy {
         return SafeCast.toUint128(undelyingWithdrawn);
     }
 
+    /**
+     * @notice Emergency withdraw all the balance from the idle strategy
+     */
     function _emergencyWithdraw(address, uint256[] calldata) internal override {
         idleToken.redeemIdleToken(idleToken.balanceOf(address(this)));
     }
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
+    /**
+     * @notice Get idle token value for the given token amount
+     * @param idleAmount Idle token amount
+     * @return Token value for given amount
+     */
     function _getIdleTokenValue(uint256 idleAmount) private view returns(uint256) {
         if (idleAmount == 0)
             return 0;
@@ -100,8 +135,11 @@ contract IdleStrategy is MultipleRewardStrategy {
     }
 
     /**
-     * @dev Claim all idle governance reward tokens
-     *  Force claiming tokens on every strategy interaction
+     * @notice Claim all idle governance reward tokens
+     * @dev Force claiming tokens on every strategy interaction
+     * @param shares amount of shares to claim for
+     * @param _swapData Swap values, representing paths to swap the tokens to underlying
+     * @return rewards Claimed reward tokens
      */
     function _claimMultipleRewards(uint128 shares, SwapData[] calldata _swapData) internal override returns(Reward[] memory rewards) {
         address[] memory rewardTokens = idleToken.getGovTokens();
@@ -141,6 +179,11 @@ contract IdleStrategy is MultipleRewardStrategy {
         }
     }
 
+    /**
+     * @notice Claim strategy rewards
+     * @param rewardTokens Tokens to claim
+     * @return Reward token amounts
+     */
     function _claimStrategyRewards(address[] memory rewardTokens) private returns(uint256[] memory) {
         uint256[] memory rewardTokenAmountsBefore = _getRewardTokenAmounts(rewardTokens);
         
@@ -157,6 +200,11 @@ contract IdleStrategy is MultipleRewardStrategy {
         return rewardTokenAmounts;
     }
 
+    /**
+     * @notice Get reward token amounts
+     * @param rewardTokens Reward token address array
+     * @return Reward token amounts
+     */
     function _getRewardTokenAmounts(address[] memory rewardTokens) private view returns(uint256[] memory) {
         uint256[] memory rewardTokenAmounts = new uint[](rewardTokens.length);
 
