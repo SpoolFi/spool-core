@@ -70,10 +70,10 @@ abstract contract VaultRestricted is IVaultRestricted, VaultIndexActions {
     ) 
         external 
         override
-        noReallocation
         onlySpool
         verifyStrategies(vaultStrategies)
         redeemVaultStrategiesModifier(vaultStrategies)
+        noReallocation
         returns(uint256[] memory withdrawProportionsArray, uint256 newDepositProportions)
     {
         (withdrawProportionsArray, newDepositProportions) = _adjustAllocation(vaultStrategies, newVaultProportions, finishedIndex);
