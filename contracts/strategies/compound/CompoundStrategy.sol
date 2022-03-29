@@ -13,16 +13,26 @@ contract CompoundStrategy is ClaimFullSingleRewardStrategy {
 
     /* ========== CONSTANT VARIABLES ========== */
 
+    /// @notice Helper value
     uint256 public immutable MANTISSA = 10 ** 18;
 
     /* ========== STATE VARIABLES ========== */
 
+    /// @notice Compound market
     ICErc20 public immutable cToken;
+    /// @notice Comptroller implementaiton
     IComptroller public immutable comptroller;
     ICompoundStrategyContractHelper public immutable strategyHelper;
 
     /* ========== CONSTRUCTOR ========== */
 
+    /**
+     * @notice Set initial values
+     * @param _comp COMP token, reward token
+     * @param _cToken Comptroller implementaiton
+     * @param _comptroller Comptroller contract
+     * @param _underlying Underlying asset
+     */
     constructor(
         IERC20 _comp,
         ICErc20 _cToken,
@@ -44,6 +54,10 @@ contract CompoundStrategy is ClaimFullSingleRewardStrategy {
 
     /* ========== VIEWS ========== */
 
+    /**
+     * @notice Get strategy balance
+     * @return Strategy balance
+     */
     function getStrategyBalance() public view override returns(uint128) {
         uint256 cTokenBalance = cToken.balanceOf(address(strategyHelper));
         return SafeCast.toUint128(_getcTokenValue(cTokenBalance));
@@ -85,12 +99,21 @@ contract CompoundStrategy is ClaimFullSingleRewardStrategy {
         return SafeCast.toUint128(undelyingWithdrawn);
     }
 
+    /**
+     * @dev Emergency withdraw
+     * @param data to perform emergency withdaw
+     */
     function _emergencyWithdraw(address, uint256[] calldata data) internal override {
         strategyHelper.withdrawAll(data);
     }
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
+    /**
+     * @dev Get value of the desire cTkoen amount in the underlying asset
+     * @param cTokenBalance cToken value
+     * @return underlyingAmount value og `cTokenBalance` in underlying token
+     */
     function _getcTokenValue(uint256 cTokenBalance) private view returns(uint256) {
         if (cTokenBalance == 0)
             return 0;

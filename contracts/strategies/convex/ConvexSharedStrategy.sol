@@ -9,6 +9,9 @@ import "../../external/interfaces/convex/IBooster.sol";
 import "../../external/interfaces/convex/IBaseRewardPool.sol";
 import "../../interfaces/IStrategyContractHelper.sol";
 
+/**
+ * @notice Convex strategy implementation
+ */
 contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy {
     using SafeERC20 for IERC20;
 
@@ -19,16 +22,33 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
 
     /* ========== STATE VARIABLES ========== */
 
+    /// @notice Convex booster contract
     IBooster public immutable booster;
+    /// @notice booster pool id
     uint256 public immutable pid;
+    /// @notice Reward pool contract
     IBaseRewardPool public immutable crvRewards;
+    /// @notice Reward token contract
     IERC20 public immutable rewardToken;
+    /// @notice CVX token, reward token
     IERC20 public immutable cvxToken;
+    /// @notice Booster helper contract
     IStrategyContractHelper public immutable boosterHelper;
+    /// @notice Shared key
     bytes32 private immutable _sharedKey;
 
     /* ========== CONSTRUCTOR ========== */
 
+
+    /**
+     * @notice Set initial values
+     * @param _booster Booster contract
+     * @param _boosterPoolId Booster pool id
+     * @param _pool Stable swap pool contract
+     * @param _lpToken LP token contract
+     * @param _underlying Underlying asset
+     * @param _boosterDeposit Strategy contract helper
+     */
     constructor(
         IBooster _booster,
         uint256 _boosterPoolId,
@@ -59,16 +79,23 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
+    /**
+     * @notice Initialize strategy
+     */
     function initialize() external override {
         _initialize();
     }
 
+    /**
+     * @notice Disable strategy
+     */
     function disable() external override {
         _disable();
     }
 
     /**
      * @dev Dynamically return slippage length
+     * @return Reward slippage slots
      */
     function _getRewardSlippageSlots() internal view override returns(uint256) {
         return crvRewards.extraRewardsLength() + BASE_REWARDS_COUNT;
@@ -91,6 +118,10 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         boosterHelper.withdraw(lp);
     }
 
+    /**
+     * @dev Handle emergency withdrawal
+     * @param data Values to perform emergency withdraw
+     */
     function _handleEmergencyWithdrawal(address, uint256[] calldata data) internal override {
         // NOTE: withdrawAll removes all lp tokens from the liquidity gauge,
         //       including the tokens from the other strategies in the same pool
@@ -117,6 +148,12 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         }
     }
 
+    /**
+     * @dev Claim multiple rewards
+     * @param shares Shares to claim
+     * @param swapData Swap slippage and path array
+     * @return rewards array of claimed rewards
+     */
     function _claimMultipleRewards(uint128 shares, SwapData[] calldata swapData) internal override returns(Reward[] memory rewards) {
         if (swapData.length > 0) {
             uint256 extraRewardCount = crvRewards.extraRewardsLength();
@@ -152,6 +189,10 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
+    /**
+     * @dev Claim strategy rewards
+     * @param rewardTokens Reward tokens
+     */
     function _claimStrategyRewards(address[] memory rewardTokens) private {
         // check if any other shared strategy has claimed in the same block
         if (strategiesShared[_sharedKey].lastClaimBlock < block.number) {
@@ -169,6 +210,11 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         }
     }
 
+    /**
+     * @dev Get reward addresses
+     * @param extraRewardCount Extra reward count
+     * @return Reward addresses
+     */
     function _getRewardAddresses(uint256 extraRewardCount) private view returns(address[] memory) {
         address[] memory rewardAddresses = new address[](extraRewardCount + BASE_REWARDS_COUNT);
         rewardAddresses[0] = address(rewardToken);
@@ -181,6 +227,11 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         return rewardAddresses;
     }
 
+    /**
+     * @dev Spread rewards to shared strategies
+     * @param rewardTokens All shared reward tokens
+     * @param rewardTokenAmounts Reward token amounts
+     */
     function _spreadRewardsToSharedStrats(address[] memory rewardTokens, uint256[] memory rewardTokenAmounts) private {
         StrategiesShared storage stratsShared = strategiesShared[_sharedKey];
 
@@ -205,10 +256,18 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         }
     }
 
+    /**
+     * @dev Calculate shared key
+     * @return Shared key
+     */
     function _calculateSharedKey() private view returns(bytes32) {
         return keccak256(abi.encodePacked(address(booster), pid));
     }
 
+    /**
+     * @dev Get shared key
+     * @return Shared key
+     */
     function _getSharedKey() internal view override returns(bytes32) {
         return _sharedKey;
     }

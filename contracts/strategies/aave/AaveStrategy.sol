@@ -10,18 +10,35 @@ import "../../external/interfaces/aave/ILendingPoolAddressesProvider.sol";
 import "../../external/interfaces/aave/IAaveIncentivesController.sol";
 import "../../external/interfaces/aave/ILendingPool.sol";
 
+/**
+ * @notice AAVE strategy implementation
+ */
 contract AaveStrategy is RewardStrategy, SwapHelperMainnet {
     using SafeERC20 for IERC20;
 
     /* ========== STATE VARIABLES ========== */
 
+    /// @notice AAVE strategy reward token
     IERC20 public immutable stkAave;
+
+    /// @notice AAVE token recieved after depositindinto a lending pool 
     IAToken public immutable aToken;
+
+    /// @notice Lending pool addresses provider
     ILendingPoolAddressesProvider public immutable provider;
+
+    /// @notice AAVE incentive controller
     IAaveIncentivesController public immutable incentive;
 
     /* ========== CONSTRUCTOR ========== */
 
+    /**
+     * @notice Set initial values
+     * @param _stkAave AAVE strategy reward token
+     * @param _provider Lending pool addresses provider contract address
+     * @param _incentive Incentives controller contract address
+     * @param _underlying Underlying asset
+     */
     constructor(
         IERC20 _stkAave,
         ILendingPoolAddressesProvider _provider,
@@ -55,20 +72,38 @@ contract AaveStrategy is RewardStrategy, SwapHelperMainnet {
 
     /* ========== VIEWS ========== */
 
+    /**
+     * @notice Get strategy balance
+     * @return Strategy balance
+     */
     function getStrategyBalance() public view override returns (uint128) {
         return SafeCast.toUint128(aToken.balanceOf(address(this)));
     }
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
+    /**
+     * @dev Claim rewards
+     * @param swapData Swap slippage and path
+     */
     function _claimRewards(SwapData[] calldata swapData) internal override returns(Reward[] memory) {
         return _claimAaveRewards(type(uint128).max, swapData);
     }
 
+    /**
+     * @dev Claim fast withdraw rewards
+     * @param shares Amount
+     * @param swapData Swap slippage and path
+     */
     function _claimFastWithdrawRewards(uint128 shares, SwapData[] calldata swapData) internal override returns(Reward[] memory) {
         return _claimAaveRewards(shares, swapData);
     }
 
+    /**
+     * @dev Deposit
+     * @param amount Amount to deposit
+     * @return Deposited amount
+     */
     function _deposit(uint128 amount, uint256[] memory) internal override returns(uint128) {
         ILendingPool lendingPool = provider.getLendingPool();
         
@@ -83,6 +118,11 @@ contract AaveStrategy is RewardStrategy, SwapHelperMainnet {
         return amount;
     }
 
+    /**
+     * @dev Withdraw
+     * @param shares Shares to withdraw
+     * @return Withdrawn amount
+     */
     function _withdraw(uint128 shares, uint256[] memory) internal override returns(uint128) {
         return SafeCast.toUint128(
             provider.getLendingPool().withdraw(
@@ -93,6 +133,10 @@ contract AaveStrategy is RewardStrategy, SwapHelperMainnet {
         );
     }
 
+    /**
+     * @dev Emergency withdraw
+     * @param recipient Recipient to withdraw to
+     */
     function _emergencyWithdraw(address recipient, uint256[] calldata) internal override {
         provider.getLendingPool().withdraw(
             address(underlying),
@@ -103,6 +147,12 @@ contract AaveStrategy is RewardStrategy, SwapHelperMainnet {
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
+    /**
+     * @dev Claim AAVE rewards
+     * @param shares Amount to claim
+     * @param swapData Slippage and path array
+     * @return rewards array of claimed rewards
+     */
     function _claimAaveRewards(uint128 shares, SwapData[] calldata swapData) private returns(Reward[] memory rewards) {
         if (swapData.length > 0 && swapData[0].slippage > 0) {
             address[] memory tokens = new address[](1);
