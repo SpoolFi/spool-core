@@ -94,6 +94,7 @@ contract AaveStrategy is RewardStrategy, SwapHelperMainnet {
      * @dev Claim fast withdraw rewards
      * @param shares Amount
      * @param swapData Swap slippage and path
+     * @return Rewards
      */
     function _claimFastWithdrawRewards(uint128 shares, SwapData[] calldata swapData) internal override returns(Reward[] memory) {
         return _claimAaveRewards(shares, swapData);
