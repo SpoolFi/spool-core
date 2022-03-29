@@ -273,7 +273,7 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
 
     /**
      * @dev Update last index with which the system interacted
-     * @param lit TODO docs
+     * @param lit Last interacted idex of a user or a vault
      * @param globalIndex Global index
      */
     function _updateLastIndexInteracted(LastIndexInteracted storage lit, uint24 globalIndex) private {
