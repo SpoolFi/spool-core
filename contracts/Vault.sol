@@ -175,9 +175,9 @@ contract Vault is VaultRestricted {
         bool withdrawAll
     )
         external
-        noReallocation
         verifyStrategies(vaultStrategies)
         redeemVaultStrategiesModifier(vaultStrategies)
+        noReallocation
         redeemUserModifier
         updateRewards
     {
@@ -235,10 +235,10 @@ contract Vault is VaultRestricted {
         FastWithdrawParams memory fastWithdrawParams
     )
         external
-        noReallocation
         noMidReallocation
         verifyStrategies(vaultStrategies)
         redeemVaultStrategiesModifier(vaultStrategies)
+        noReallocation
         redeemUserModifier
         updateRewards
     {
