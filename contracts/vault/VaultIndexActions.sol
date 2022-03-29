@@ -45,12 +45,22 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
 
     // =========== VIEW FUNCTIONS ============ //
 
+    /**
+     * @notice Checks and sets the "is reallocating" flag for given index
+     * @param index Index to check
+     * @return isReallocating True if vault is reallocating at this `index`
+     */
     function _isVaultReallocatingAtIndex(uint256 index) internal view returns (bool isReallocating) {
         if (index == reallocationIndex) {
             isReallocating = true;
         }
     }
 
+    /**
+     * @notice Check if the vault is set to reallocate
+     * @dev True if in the current index or the next one
+     * @return isReallocating True if vault is set to reallocate
+     */
     function _isVaultReallocating() internal view returns (bool isReallocating) {
         if (reallocationIndex > 0) {
             isReallocating = true;
@@ -95,7 +105,12 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         }
     }
 
-    // NOTE: causes additional gas for first interaction after DHW index has been completed
+    /**
+     * @notice Redeem strategies for at index
+     * @dev Causes additional gas for first interaction after DHW index has been completed
+     * @param globalIndex Global index
+     * @param vaultStrategies Array of vault strategy addresses
+     */
     function _redeemStrategiesIndex(uint256 globalIndex, address[] memory vaultStrategies) private {
         uint128 _totalShares = totalShares;
         uint128 totalReceived = 0;
@@ -179,6 +194,11 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
         }
     }
 
+    /**
+     * @notice Redeem user action for the `index`
+     * @param index index aw which user performed the action
+     * @param isFirstIndex Is this the first user index
+     */
     function _redeemUserAction(uint256 index, bool isFirstIndex) private {
         User storage user = users[msg.sender];
         IndexAction storage userIndex = userIndexAction[msg.sender][index];
@@ -200,6 +220,7 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
                 sharesAtWithdrawal += userIndexAction[msg.sender][index + 1].withdrawShares;
             }
 
+            // check if withdrawal of all user shares was performes (all shares at the index of the action)
             if (sharesAtWithdrawal > userWithdrawalShares) {
                 uint128 userTotalDeposit = user.activeDeposit;
                 
@@ -236,6 +257,7 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
 
     /**
      * @dev Saves vault last interacted global index
+     * @param globalIndex Global index
      */
     function _updateInteractedIndex(uint24 globalIndex) internal {
         _updateLastIndexInteracted(lastIndexInteracted, globalIndex);
@@ -243,11 +265,17 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
 
     /**
      * @dev Saves last user interacted global index
+     * @param globalIndex Global index
      */
     function _updateUserInteractedIndex(uint24 globalIndex) internal {
         _updateLastIndexInteracted(userLastInteractions[msg.sender], globalIndex);
     }
 
+    /**
+     * @dev Update last index with which the system interacted
+     * @param lit TODO docs
+     * @param globalIndex Global index
+     */
     function _updateLastIndexInteracted(LastIndexInteracted storage lit, uint24 globalIndex) private {
         if (lit.index1 > 0) {
             if (lit.index1 < globalIndex) {
@@ -268,22 +296,34 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
+    /**
+     * @dev Ensures the vault is not currently reallocating
+     */
     function _noReallocation() private view {
         require(!_isVaultReallocating(), "NRED");
     }
 
     /* ========== MODIFIERS ========== */
 
+    /**
+    * @dev Redeem given array of vault strategies
+     */
     modifier redeemVaultStrategiesModifier(address[] memory vaultStrategies) {
         _redeemVaultStrategies(vaultStrategies);
         _;
     }
 
+    /**
+    * @dev Redeem user
+     */
     modifier redeemUserModifier() {
         _redeemUser();
         _;
     }
 
+    /**
+     * @dev Ensures the vault is not currently reallocating
+     */
     modifier noReallocation() {
         _noReallocation();
         _;

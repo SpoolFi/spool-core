@@ -189,6 +189,11 @@ abstract contract VaultRestricted is IVaultRestricted, VaultIndexActions {
         return (withdrawProportionsArray, newDepositProportions);
     }
 
+    /**
+     * @notice Get strategies and vault underlying
+     * @param vaultStrategies Array of vault strategy addresses
+     * @param index Get the underlying amounts at index
+     */
     function _getStratsAndVaultUnderlying(address[] memory vaultStrategies, uint256 index)
         private
         view

@@ -12,11 +12,25 @@ struct ProcessInfo {
     uint128 userDepositReceived;
 }
 
+/**
+ * @notice Process strategy logic
+ */
 abstract contract ProcessStrategy is BaseStrategy {
     using Max128Bit for uint128;
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
+    /**
+     * @notice Process the strategy pending deposits, withdrawals, and collected strategy rewards
+     * @dev
+     * Deposit amount amd withdrawal shares are matched between eachother, effecively only one of
+     * those 2 is called. Shares are converted to the dollar value, based on the current strategy
+     * total balance. This ensures the minimum amount of assets are moved around to lower the price
+     * drift and total fees paid to the protocols the strategy is interacting with (if there are any)
+     *
+     * @param slippages Strategy slippage values verifying the validity of the strategy state
+     * @param reallocateSharesToWithdraw Reallocation shares to withdraw (non-zero only if reallocation DHW is in progress, otherwise 0)
+     */
     function _process(uint256[] memory slippages, uint128 reallocateSharesToWithdraw) internal override virtual {
         // PREPARE
         Strategy storage strategy = strategies[self];
@@ -148,6 +162,10 @@ abstract contract ProcessStrategy is BaseStrategy {
         }
     }
 
+    /**
+     * @notice Process deposit
+     * @param slippages Slippages array
+     */
     function _processDeposit(uint256[] memory slippages) internal override virtual {
         Strategy storage strategy = strategies[self];
         
@@ -225,19 +243,32 @@ abstract contract ProcessStrategy is BaseStrategy {
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
+    /**
+     * @notice get the value of the strategy shares in the underlying tokens
+     * @param shares Number of shares
+     * @return amount Underling amount representing the `share` value of the strategy
+     */
     function _getSharesToAmount(uint256 shares) internal virtual returns(uint128 amount) {
         amount = Math.getProportion128( getStrategyBalance(), shares, strategies[self].totalShares );
     }
 
     /**
-     * @dev get slippage, and action type (withdraw/deposit).
-     * Most significant bit represents an action, 0 for withdrawal and 1 for deposit.
+     * @notice get slippage amount, and action type (withdraw/deposit).
+     * @dev
+     * Most significant bit represents an action, 0 for a withdrawal and 1 for deposit.
+     *
+     * This ensures the slippage will be used for the action intended by the do-hard-worker,
+     * otherwise the transavtion will revert.
+     *
+     * @param slippageAction number containing the slippage action and the actual slippage amount
+     * @return isDeposit Flag showing if the slippage is for the deposit action
+     * @return slippage the slippage value cleaned of the most significant bit
      */
     function _getSlippageAction(uint256 slippageAction) internal pure returns (bool isDeposit, uint256 slippage) {
         // remove most significant bit
         slippage = (slippageAction << 1) >> 1;
 
-        // if numbers are not the same set action to deposit
+        // if values are not the same (the removed bit was 1) set action to deposit
         if (slippageAction != slippage) {
             isDeposit = true;
         }

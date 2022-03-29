@@ -79,6 +79,8 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard, SpoolPausable {
      *
      * @param proportionateDeposit used to know how much fees to pay
      * @param strategyShares shares in each chosen strategy for user
+     * @return proportionateDeposit Proportionate deposit
+     * @return strategyShares Array of shares per strategy
      */
     function getUserVaultWithdraw(
         address user,
@@ -139,6 +141,8 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard, SpoolPausable {
      *      transfered the shares from vault to FastWithdraw contracts. Now user can execute
      *      withdraw manually for strategies that belonged to the vault at any time immidiately.
      *      When withdrawn, performance fees are paid to the vault at the same rate as standar witdraw.
+     * Requirements:
+     * - System must not be paused.
      *
      * @param vault Vault where fees are paid at withdraw
      * @param strategies Array of strategy addresses to fast withdraw from
@@ -250,6 +254,8 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard, SpoolPausable {
 
     /**
      * @dev call vault to calculate and pay fees
+     * @param vault Vault address
+     * @param profit Profit
      */
     function _payFeesAndTransfer(
         IVault vault,
@@ -261,6 +267,7 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard, SpoolPausable {
 
     /**
      * @dev Ensures that the caller is a valid vault
+     * @param vault Vault address
      */
     function _onlyVault(address vault) private view {
         require(

@@ -32,8 +32,14 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
 
     /// @notice The total slippage slots the strategy supports, used for validation of provided slippage
     uint256 internal immutable rewardSlippageSlots;
+
+    /// @notice Slots for processing
     uint256 internal immutable processSlippageSlots;
+
+    /// @notice Slots for reallocation
     uint256 internal immutable reallocationSlippageSlots;
+
+    /// @notice Slots for deposit
     uint256 internal immutable depositSlippageSlots;
 
     /** 
@@ -74,6 +80,7 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      * @param _reallocationSlippageSlots slots for reallocation
      * @param _depositSlippageSlots slots for deposits
      * @param _forceClaim force claim of rewards
+     * @param _doValidateBalance force balance validation
      */
     constructor(
         IERC20  _underlying,

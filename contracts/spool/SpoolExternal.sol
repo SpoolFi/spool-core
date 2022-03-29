@@ -298,13 +298,13 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
     /* ========== FAST WITHDRAW ========== */
 
     /**
-     * @notice Fast withdtaw from a strategy.
-     *
+     * @notice Instantly withdraw shares from a strategy and return recieved underlying tokens.
      * @dev
-     * Performs immediate withdrawal executing strategy protocol
-     * functions directly.
-     * Can be very gas expensive, especially if executing it for
-     * multiple strategies.
+     * User can execute the withdrawal of his shares from the vault at any time (except when
+     * the reallocation is pending) without waiting for the DHW to process it. This is done
+     * independently of other events. The gas cost is paid entirely by the user.
+     * Withdrawn amount is sent back to the caller (FastWithdraw) contract, that later on,
+     * sends it to a user.
      *
      * Requirements:
      *
@@ -313,10 +313,10 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
      *
      * @param strat Strategy address
      * @param underlying Address of underlying asset
-     * @param shares AShares to withdraw
-     * @param slippages Strategy slippage values checking the vlidity of the strategy state 
+     * @param shares Amount of shares to withdraw
+     * @param slippages Strategy slippage values verifying the validity of the strategy state
      * @param swapData Array containig data to swap unclaimed strategy reward tokens for underlying asset
-     * @return Withdrawn underlying asset amount
+     * @return Withdrawn Underlying asset withdrarn amount
      */
     function fastWithdrawStrat(
         address strat,
@@ -340,7 +340,10 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
     /**
      * @notice Remove vault shares.
      *
-     * @dev Called by the vault when a user is fast withdrawing
+     * @dev 
+     * Called by the vault when a user requested a fast withdraw
+     * These shares are either withdrawn from the strategies immidiately or
+     * stored as user-strategy shares in the FastWithdraw contract.
      *
      * Requirements:
      *

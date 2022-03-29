@@ -214,6 +214,13 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, SpoolPa
         totalInstantDeposit += amount;
     }
 
+    /**
+     * @notice Get strategy deposit amount for the strategy
+     * @param _proportions Vault strategy proportions (14bit each)
+     * @param i index to get the proportion
+     * @param amount Total deposit amount
+     * @return strategyDepositAmount 
+     */
     function _getStrategyDepositAmount(
         uint256 _proportions,
         uint256 i,
@@ -304,6 +311,7 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, SpoolPa
 
     /**
      * @dev Store vault strategy addresses array hash in `strategiesHash` storage
+     * @param vaultStrategies Array of strategy addresses
      */
     function _updateStrategiesHash(address[] memory vaultStrategies) internal {
         strategiesHash = Hash.hashStrategies(vaultStrategies);
@@ -311,6 +319,7 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, SpoolPa
 
     /**
      * @dev verify vault strategy addresses array against storage `strategiesHash`
+     * @param vaultStrategies Array of strategies to verify
      */
     function _verifyStrategies(address[] memory vaultStrategies) internal view {
         require(Hash.sameStrategies(vaultStrategies, strategiesHash), "VSH");
@@ -372,31 +381,49 @@ abstract contract VaultBase is IVaultBase, VaultImmutable, SpoolOwnable, SpoolPa
 
     /* ========== MODIFIERS ========== */
 
+    /**
+     * @notice Ensures caller is vault owner or spool owner.
+     */
     modifier onlyVaultOwnerOrSpoolOwner() {
         _onlyVaultOwnerOrSpoolOwner();
         _;
     }
 
+    /**
+     * @notice Ensures caller is central spool contract
+     */
     modifier onlySpool() {
         _onlySpool();
         _;
     }
 
+    /**
+     * @notice Ensures caller is fast withdraw contract
+     */
     modifier onlyFastWithdraw() {
         _onlyFastWithdraw();
         _;
     }
 
+    /**
+     * @notice Verifies given array of strategy addresses
+     */
     modifier verifyStrategies(address[] memory vaultStrategies) {
         _verifyStrategies(vaultStrategies);
         _;
     }
 
+    /**
+     * @notice Ensures the system is not mid reallocation
+     */
     modifier noMidReallocation() {
         _noMidReallocation();
         _;
     }
 
+    /**
+     * @notice Ensures the vault has not been initialized before
+     */
     modifier initializer() {
         require(!_initialized, "AINT");
         _;
