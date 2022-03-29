@@ -7,18 +7,31 @@ import "../MultipleRewardStrategy.sol";
 import "../../external/interfaces/barnbridge/ISmartYield.sol";
 import "../../external/interfaces/barnbridge/IPoolMulti.sol";
 
+/**
+ * @notice BarnBridge strategy implementation
+ */
 contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
     using SafeERC20 for IERC20;
 
     /* ========== STATE VARIABLES ========== */
 
+    /// @notice Yield contract
     ISmartYield public immutable yield;
+    /// @notice Rward pool contract
     IPoolMulti public immutable rewardPool;
+    /// @notice Provider implementaition
     address public immutable provider;
+    /// @notice Helper value to calculate the correct strategy balance
     uint256 public immutable EXP_SCALE;
 
     /* ========== CONSTRUCTOR ========== */
 
+    /**
+     * @notice Set initial values
+     * @param _yield Yield contract address
+     * @param _rewardPool Reward pool contract address
+     * @param _underlying Underlying asset
+     */
     constructor(
         ISmartYield _yield,
         IPoolMulti _rewardPool,
@@ -43,6 +56,10 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
 
     /* ========== VIEWS ========== */
 
+    /**
+     * @notice Get strategy balance
+     * @return Strategy balance
+     */
     function getStrategyBalance() public view override returns(uint128) {
         uint256 bbAmount = rewardPool.balances(address(this));
         return _getStrategyBalance(bbAmount);
@@ -52,11 +69,17 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
 
     /**
      * @dev Dynamically return reward slippage length
+     * @return Reward token count
      */
     function _getRewardSlippageSlots() internal view override returns(uint256) {
         return rewardPool.numRewardTokens();
     }
 
+    /**
+     * @dev Claim multiple rewards
+     * @param shares Shares to claim
+     * @param swapData Swap slippage and path array
+     */
     function _claimMultipleRewards(uint128 shares, SwapData[] calldata swapData) internal override returns(Reward[] memory rewards) {
         if (swapData.length > 0) {
 
@@ -90,6 +113,12 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
         }
     }
 
+    /**
+     * @dev Deposit
+     * @param amount Amount to deposit
+     * @param slippages parameters to verify validity of the deposit
+     * @return underlyingDeposited Underlying deposited amount
+     */
     function _deposit(uint128 amount, uint256[] memory slippages) internal override returns(uint128) {
         (bool isDeposit, uint256 slippage) = _getSlippageAction(slippages[0]);
         require(isDeposit, "BarnBridgeMultiRewardStrategy::_deposit: Withdraw slippage provided");
@@ -109,6 +138,12 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
         return underlyingDeposited;
     }
 
+    /**
+     * @dev Withdraw
+     * @param shares Amount to withdraw
+     * @param slippages parameters to verify validity of the withdraw action
+     * @return Withdrawn amount
+     */
     function _withdraw(uint128 shares, uint256[] memory slippages) internal override returns(uint128) {
         // uint256 shares = amount.mul(EXP_SCALE).div(yield.price());
         (bool isDeposit, uint256 slippage) = _getSlippageAction(slippages[0]);
@@ -128,6 +163,10 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
         return SafeCast.toUint128(underlyingWithdrawn);
     }
 
+    /**
+     * @dev Emergency withdraw
+     * @param data to perform emergency withdaw
+     */
     function _emergencyWithdraw(address, uint256[] calldata data) internal override {
         uint256 bbAmount = rewardPool.balances(address(this));
         rewardPool.withdraw(bbAmount);
@@ -139,6 +178,11 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
+    /**
+     * @dev Get strategy balance.
+     * @param bbAmount amount 
+     * @return undelrlyingBalance Underlying total balance
+     */
     function _getStrategyBalance(uint256 bbAmount) private view returns(uint128) {
         if (bbAmount == 0)
             return 0;
@@ -149,6 +193,11 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
         return SafeCast.toUint128(result);
     }
 
+    /**
+     * @dev Claim BarnBridge strategy reward
+     * @param rewardToken Reward token address
+     * @return Claimed rewards
+     */
     function _claimStrategyReward(address rewardToken) private returns(uint256) {
         uint256 claimedRewards = rewardPool.claim(rewardToken);
 

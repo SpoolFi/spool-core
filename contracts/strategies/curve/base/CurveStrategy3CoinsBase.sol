@@ -5,15 +5,20 @@ pragma solidity 0.8.11;
 import "./CurveStrategyBase.sol";
 import "../../../external/interfaces/curve/IStableSwap3Pool.sol";
 
+/**
+ * @notice Curve 3Coins base strategy
+ */
 abstract contract CurveStrategy3CoinsBase is CurveStrategyBase {
     using SafeERC20 for IERC20;
 
     /* ========== CONSTANT VARIABLES ========== */
-    
+
+    /// @notice Total number of coins
     uint256 internal constant TOTAL_COINS = 3;
 
     /* ========== STATE VARIABLES ========== */
 
+    /// @notice Stable swap pool
     IStableSwap3Pool public immutable pool3Coins;
 
     /* ========== CONSTRUCTOR ========== */
@@ -34,6 +39,9 @@ abstract contract CurveStrategy3CoinsBase is CurveStrategyBase {
         stratsShared.stratsCount++;
     }
 
+    /**
+     * @notice Run after strategy was removed as a breakdown function
+     */
     function _disable() internal virtual {
         StrategiesShared storage stratsShared = strategiesShared[_getSharedKey()];
 
@@ -49,6 +57,11 @@ abstract contract CurveStrategy3CoinsBase is CurveStrategyBase {
         }
     }
 
+    /**
+     * @notice Deposit
+     * @param amount Amount
+     * @param slippage Slippage
+     */
     function _curveDeposit(uint256 amount, uint256 slippage) internal override {
         uint256[TOTAL_COINS] memory amounts;
         amounts[uint128(nCoin)] = amount;
@@ -58,5 +71,9 @@ abstract contract CurveStrategy3CoinsBase is CurveStrategyBase {
 
     /* ========== VIRTUAL FUNCTIONS ========== */
 
+    /**
+     * @notice Get shared key
+     * @return Shared key
+     */
     function _getSharedKey() internal virtual view returns(bytes32);
 }

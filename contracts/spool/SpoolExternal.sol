@@ -37,13 +37,17 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
     /* ========== DEPOSIT ========== */
 
     /**
-     * @notice Allows a vault to queue a deposit to a single-collateral strategy.
+     * @notice Allows a vault to queue a deposit to a strategy.
      *
      * @dev
      * Requirements:
      *
      * - the caller must be a vault
      * - strategy shouldn't be removed
+     *
+     * @param strat Strategy address to deposit to
+     * @param amount Amount to deposit
+     * @param index Global index vault is depositing at (active global index)
      */
     function deposit(address strat, uint128 amount, uint256 index)
         external
@@ -72,6 +76,10 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
      *
      * - the caller must be a vault
      * - strategy shouldn't be removed
+     *
+     * @param strat Strategy address to withdraw from
+     * @param vaultProportion Proportion of all vault-strategy shares a vault wants to withdraw, denoted in basis points (10_000 is 100%)
+     * @param index Global index vault is depositing at (active global index)
      */
     function withdraw(address strat, uint256 vaultProportion, uint256 index)
         external
@@ -96,6 +104,9 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
 
     /**
      * @notice Get strategy pending struct, depending on if the strategy do hard work has already been executed in the current index
+     * @param strategy Strategy data (see Strategy struct)
+     * @param interactingIndex Global index for which to get the struct
+     * @return pending Storage struct containing all unprocessed deposits and withdrawals for the `interactingIndex`
      */
     function _getStrategyPending(Strategy storage strategy, uint256 interactingIndex) private view returns (Pending storage pending) {
         // if index we are interacting with (active global index) is same as strategy index, then DHW has already been executed in index
@@ -110,10 +121,15 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
 
     /**
      * @notice Allows a vault to redeem deposit and withdrawals for the processed index.
+     * @dev
      *
      * Requirements:
      *
      * - the caller must be a valid vault
+     *
+     * @param strat Strategy address
+     * @param index Global index the vault is redeeming for
+     * @return Received vault received shares from the deposit and received vault underlying withdrawn amounts
      */
     function redeem(address strat, uint256 index)
         external
@@ -133,28 +149,49 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         uint128 vaultWithdrawnReceived = 0;
         uint128 vaultShares = vault.shares;
 
-        // Make action if deposit in vault batch was performed
+        // Make calculations if deposit in vault batch was performed
         if (vaultBatchDeposited > 0 && batch.deposited > 0) {
             vaultDepositReceived = Math.getProportion128(batch.depositedReceived, vaultBatchDeposited, batch.deposited);
+            // calculate new vault-strategy shares
+            // new shares are calculated at the DHW time, here vault only
+            // takes the proportion of the vault deposit compared to the total deposit
             vaultShares += Math.getProportion128(batch.depositedSharesReceived, vaultBatchDeposited, batch.deposited);
 
+            // reset to 0 to get the gas reimbursement
             vaultBatch.deposited = 0;
         }
 
-        // Make action if withdraw in vault batch was performed
+        // Make calculations if withdraw in vault batch was performed
         if (vaultBatchWithdrawnShares > 0 && batch.withdrawnShares > 0) {
+            // Withdrawn recieved represents the total underlying a strategy got back after DHW has processed the withdrawn shares.
+            // This is stored at the DHW time, here vault only takes the proportion
+            // of the vault shares withdrwan compared to the total shares withdrawn
             vaultWithdrawnReceived = Math.getProportion128(batch.withdrawnReceived, vaultBatchWithdrawnShares, batch.withdrawnShares);
-
+            // substract all the shares withdrawn in the index after collecting the withdrawn recieved
             vaultShares -= vaultBatchWithdrawnShares;
 
+            // reset to 0 to get the gas reimbursement
             vaultBatch.withdrawnShares = 0;
         }
 
+        // store the updated shares
         vault.shares = vaultShares;
 
         return (vaultDepositReceived, vaultWithdrawnReceived);
     }
 
+    /**
+     * @notice Redeem underlying token
+     * @dev
+     * This function is only called by the vault after the vault redeem is processed
+     * As redeem is called by each strategy separately, we don't want to transfer the
+     * withdrawn underlyin tokens x amount of times. 
+     *
+     * Requirements:
+     * - Can only be invoked by vault
+     *
+     * @param amount Amount to redeem
+     */
     function redeemUnderlying(uint128 amount) external override onlyVault {
         IVault(msg.sender).underlying().safeTransfer(msg.sender, amount);
     }
@@ -162,14 +199,22 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
     /* ========== REDEEM REALLOCATION ========== */
 
     /**
-     * @notice Redeem vault shares after vault reallocation has been performed
+     * @notice Redeem vault shares after reallocation has been processed for the vault
+     * @dev
+     *
+     * Requirements:
+     * - Can only be invoked by vault
+     *
+     * @param vaultStrategies Array of vault strategy addresses
+     * @param depositProportions Values representing how the vault has deposited it's withdrawn shares 
+     * @param index Index at which the reallocation was perofmed
      */
     function redeemReallocation(
         address[] memory vaultStrategies,
         uint256 depositProportions,
         uint256 index
     ) external override onlyVault {
-        // count strategies we deposit into
+        // count number of strategies we deposit into
         uint128 depositStratsCount = 0;
         for (uint256 i = 0; i < vaultStrategies.length; i++) {
             uint256 prop = depositProportions.get14BitUintByIndex(i);
@@ -216,7 +261,7 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
                 if (reallocationBatch.withdrawnReallocationShares > 0) {
                     totalVaultWithdrawnReceived += 
                         (reallocationBatch.withdrawnReallocationReceived * vaultWithdrawnReallocationShares) / reallocationBatch.withdrawnReallocationShares;
-
+                    // substract the shares withdrawn from in the reallocation
                     vault.shares -= uint128(vaultWithdrawnReallocationShares);
                 }
                 
@@ -224,6 +269,7 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
             }
         }
 
+        // calculate how the withdrawn amount was deposited to the depositing strategies
         uint256 vaultWithdrawnReceivedLeft = totalVaultWithdrawnReceived;
         uint256 lastDepositStratIndex = depositStratsCount - 1;
         for (uint256 i = 0; i < depositStratsCount; i++) {
@@ -233,6 +279,8 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
             if (reallocationBatch.depositedReallocation > 0) {
                 // calculate reallocation strat deposit amount
                 uint256 depositAmount;
+                // if the strategy is last among the depositing ones, use the amount left to calculate the new shares
+                // (same pattern was used when distributing the withdrawn shares to the depositing strategies - last strategy got what was left of shares)
                 if (i < lastDepositStratIndex) {
                     depositAmount = (totalVaultWithdrawnReceived * depositProps[i]) / FULL_PERCENT;
                     vaultWithdrawnReceivedLeft -= depositAmount;
@@ -240,6 +288,7 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
                     depositAmount = vaultWithdrawnReceivedLeft;
                 }
 
+                // based on calculated deposited amount calculate/redeem the new strategy shares belonging to a vault
                 depositVault.shares += 
                     SafeCast.toUint128((reallocationBatch.depositedReallocationSharesReceived * depositAmount) / reallocationBatch.depositedReallocation);
             }
@@ -261,6 +310,13 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
      *
      * - the caller must be a fast withdraw contract
      * - strategy shouldn't be removed
+     *
+     * @param strat Strategy address
+     * @param underlying Address of underlying asset
+     * @param shares AShares to withdraw
+     * @param slippages Strategy slippage values checking the vlidity of the strategy state 
+     * @param swapData Array containig data to swap unclaimed strategy reward tokens for underlying asset
+     * @return Withdrawn underlying asset amount
      */
     function fastWithdrawStrat(
         address strat,
@@ -284,10 +340,15 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
     /**
      * @notice Remove vault shares.
      *
-     * @dev
+     * @dev Called by the vault when a user is fast withdrawing
+     *
      * Requirements:
      *
      * - can only be called by the vault
+     *
+     * @param vaultStrategies Array of strategy addresses
+     * @param vaultProportion Proportion of all vault-strategy shares a vault wants to remove, denoted in basis points (10_000 is 100%)
+     * @return Array of removed shares per strategy
      */
     function removeShares(
         address[] memory vaultStrategies,
