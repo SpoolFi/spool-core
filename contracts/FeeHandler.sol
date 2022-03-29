@@ -149,6 +149,8 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
      * transfers any fees collected for the ecosystem fee collecter to them.
      * callable by anyone, but only transfers to ecosystem fee collector address.
      * see NOTE in {collectFees} for more details on internal logic.
+     * Requirements:
+     * - Caller address must be equal to ecosystem fee collector     *
      *
      * @param tokens token addresses for which fees have been collected in
      */
@@ -175,6 +177,8 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
      *
      * transfers any fees collected for the treasury fee collecter to them.
      * see NOTE in {collectFees} for more details on internal logic.
+     * Requirements:
+     * - Caller address must be equal to treasury fee collector
      *
      * @param tokens token addresses for which fees have been collected in
      */    
@@ -331,9 +335,11 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
 
     /**
      * @notice calculate fee from profit and size of fee
+     * @dev fee is denoted in basis points, `FULL_PERCENT` being 10,000 or 100%
      *
      * @param profit user profit amount
      * @param feeSize fee size in basis points
+     * @return feeAmount Fee amount calculated from the `profit`
      */
     function _calculateFee(uint256 profit, uint16 feeSize) private pure returns(uint128) {
         return SafeCast.toUint128((profit * feeSize) / FULL_PERCENT);

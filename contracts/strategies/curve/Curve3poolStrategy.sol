@@ -9,17 +9,29 @@ import "../../external/interfaces/curve/ILiquidityGauge.sol";
 import "../../external/interfaces/curve/IMinter.sol";
 
 
+/**
+ * @notice Curve 3 pool strategy implementation
+ */
 contract Curve3poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy3CoinsBase {
     using SafeERC20 for IERC20;
 
     /* ========== STATE VARIABLES ========== */
 
+    /// @notice Liquidity gauge
     ILiquidityGauge public immutable liquidityGauge;
+    /// @notice Minter contract
     IMinter public immutable minter;
+    /// @notice Shared key
     bytes32 private immutable _sharedKey;
 
     /* ========== CONSTRUCTOR ========== */
 
+    /**
+     * @notice Set initial values
+     * @param _pool Stable swap pool contract
+     * @param _liquidityGauge Liquidity gauge contract
+     * @param _underlying Underlying asset contract
+     */
     constructor(
         IStableSwap3Pool _pool,
         ILiquidityGauge _liquidityGauge,
@@ -37,14 +49,24 @@ contract Curve3poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy3Coin
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
+    /**
+     * @notice Initialize strategy
+     */
     function initialize() external override {
         _initialize();
     }
 
+    /**
+     * @notice Disable strategy
+     */
     function disable() external override {
         _disable();
     }
 
+    /**
+     * @dev Claim strategy reward
+     * @return Claimed rewards
+     */
     function _claimStrategyReward() internal override returns(uint128) {
         if (strategiesShared[_sharedKey].lastClaimBlock < block.number) {
             // claim
@@ -62,16 +84,28 @@ contract Curve3poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy3Coin
         return SafeCast.toUint128(strategies[self].pendingRewards[address(rewardToken)]);
     }
 
+    /**
+     * @dev Handle deposit
+     * @param lp deposit lp token amount
+     */
     function _handleDeposit(uint256 lp) internal override {
         lpToken.safeApprove(address(liquidityGauge), lp);
         liquidityGauge.deposit(lp);
         _resetAllowance(lpToken, address(liquidityGauge));
     }
 
+    /**
+     * @dev Handle withdrawal
+     * @param lp Withdraw lp token amount
+     */
     function _handleWithdrawal(uint256 lp) internal override {
         liquidityGauge.withdraw(lp);
     }
 
+    /**
+     * @dev Handle emergency withdrawal
+     * @param data to perform emergency withdaw
+     */
     function _handleEmergencyWithdrawal(address, uint256[] calldata data) internal override {
         // NOTE: withdrawAll removes all lp tokens from the liquidity gauge,
         //       including the tokens from the other strategies in the same pool
@@ -100,12 +134,21 @@ contract Curve3poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy3Coin
         liquidityGauge.withdraw(withdrawLp);
     }
 
+
+    /**
+     * @dev Get shared key
+     * @return Shared key
+     */
     function _getSharedKey() internal view override returns(bytes32) {
         return _sharedKey;
     }
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
+    /**
+     * @dev Spread rewards to shared strategies
+     * @param rewardAmount Reward amount
+     */
     function _spreadRewardsToSharedStrats(uint256 rewardAmount) private {        
         StrategiesShared storage stratsShared = strategiesShared[_sharedKey];
 
@@ -126,6 +169,10 @@ contract Curve3poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy3Coin
         }
     }
 
+    /**
+     * @dev Calculate shared key
+     * @return Shared key
+     */
     function _calculateSharedKey() private view returns(bytes32) {
         return keccak256(abi.encodePacked(address(pool), address(liquidityGauge)));
     }

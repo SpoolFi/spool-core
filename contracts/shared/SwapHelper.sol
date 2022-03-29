@@ -8,6 +8,7 @@ import "../external/@openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import "../external/uniswap/interfaces/ISwapRouter02.sol";
 import "../interfaces/ISwapData.sol";
 
+/// @notice Denotes swap action mode
 enum SwapAction {
     NONE,
     UNI_V2_DIRECT,
@@ -18,40 +19,59 @@ enum SwapAction {
     UNI_V3
 }
 
-struct SwapDetails {
-    SwapAction action;
-    bytes path;
-}
-
+/// @title Contains logic facilitating swapping using Uniswap
 abstract contract SwapHelper {
     using BytesLib for bytes;
     using SafeERC20 for IERC20;
 
     /// @dev The length of the bytes encoded swap action
     uint256 private constant ACTION_SIZE = 1;
+
     /// @dev The length of the bytes encoded address
     uint256 private constant ADDR_SIZE = 20;
+
     /// @dev The length of the bytes encoded fee
     uint256 private constant FEE_SIZE = 3;
+
     /// @dev The offset of a single token address and pool fee
     uint256 private constant NEXT_OFFSET = ADDR_SIZE + FEE_SIZE;
+
     /// @dev Maximum V2 path length (4 swaps)
     uint256 private constant MAX_V2_PATH = ADDR_SIZE * 3;
+
     /// @dev V3 WETH path length
     uint256 private constant WETH_V3_PATH_SIZE = FEE_SIZE + FEE_SIZE;
+
     /// @dev Minimum V3 custom path length (2 swaps)
     uint256 private constant MIN_V3_PATH = FEE_SIZE + NEXT_OFFSET;
+
     /// @dev Maximum V3 path length (4 swaps)
     uint256 private constant MAX_V3_PATH = FEE_SIZE + NEXT_OFFSET * 3;
 
+    /// @notice Uniswap router supporting Uniswap V2 and V3
     ISwapRouter02 internal immutable uniswapRouter;
+
+    /// @notice Address of WETH token
     address private immutable WETH;
 
+    /**
+     * @notice Sets initial values
+     * @param _uniswapRouter Uniswap router address
+     * @param _WETH WETH token address
+     */
     constructor(ISwapRouter02 _uniswapRouter, address _WETH) {
         uniswapRouter = _uniswapRouter;
         WETH = _WETH;
     }
 
+    /**
+     * @notice Approve reward token and swap the `amount` to a strategy underlying asset
+     * @param from Token to swap from
+     * @param to Token to swap to
+     * @param amount Amount of tokens to swap
+     * @param swapData Swap details showing the path of the swap
+     * @return result Amount of underlying (`to`) tokens recieved
+     */
     function _approveAndSwap(
         IERC20 from,
         IERC20 to,
@@ -108,6 +128,15 @@ abstract contract SwapHelper {
         return result;
     }
 
+    /**
+     * @notice Swaps tokens using Uniswap V2
+     * @param from Token to swap from
+     * @param to Token to swap to
+     * @param amount Amount of tokens to swap
+     * @param slippage Allowed slippage
+     * @param path Steps to complete the swap
+     * @return result Amount of underlying (`to`) tokens recieved
+     */
     function _swapV2(
         IERC20 from,
         IERC20 to,
@@ -126,6 +155,15 @@ abstract contract SwapHelper {
         );
     }
 
+    /**
+     * @notice Swaps tokens using Uniswap V3
+     * @param from Token to swap from
+     * @param to Token to swap to
+     * @param amount Amount of tokens to swap
+     * @param slippage Allowed slippage
+     * @param path Steps to complete the swap
+     * @return result Amount of underlying (`to`) tokens recieved
+     */
     function _swapV3(
         IERC20 from,
         IERC20 to,
@@ -147,6 +185,15 @@ abstract contract SwapHelper {
         return received;
     }
 
+    /**
+     * @notice Does a direct swap from `from` address to the `to` address using Uniswap V3
+     * @param from Token to swap from
+     * @param to Token to swap to
+     * @param amount Amount of tokens to swap
+     * @param slippage Allowed slippage
+     * @param fee V3 direct fee configuration
+     * @return result Amount of underlying (`to`) tokens recieved
+     */
     function _swapDirectV3(
         IERC20 from,
         IERC20 to,
@@ -170,6 +217,11 @@ abstract contract SwapHelper {
         return uniswapRouter.exactInputSingle(params);
     }
 
+    /**
+     * @notice Converts passed bytes to V2 path
+     * @param pathBytes Swap path in bytes, converted to addresses
+     * @return path list of addresses in the swap path (skipping first and last element)
+     */
     function _getV2Path(bytes calldata pathBytes) internal pure returns(address[] memory) {
         require(pathBytes.length > ACTION_SIZE, "SwapHelper::_getV2Path: No path provided");
         uint256 actualpathSize = pathBytes.length - ACTION_SIZE;
@@ -187,6 +239,11 @@ abstract contract SwapHelper {
         return path;
     }
 
+    /**
+     * @notice Get Unswap V3 path to swap tokens via WETH LP pool
+     * @param pathBytes Swap path in bytes
+     * @return wethPath Unswap V3 path routing via WETH pool
+     */
     function _getV3WethPath(bytes calldata pathBytes) internal view returns(bytes memory) {
         require(pathBytes.length == WETH_V3_PATH_SIZE + ACTION_SIZE, "SwapHelper::_getV3WethPath: Bad V3 WETH path");
         // ignore first byte as it's used for swap action

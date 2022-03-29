@@ -47,6 +47,8 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
 
     /**
      * @notice Returns total strategy underlying value.
+     * @param strat Strategy address
+     * @return Total strategy underlying value
      */
     function getStratUnderlying(address strat) external returns (uint128) {
         return _totalUnderlying(strat); // deletagecall
@@ -61,6 +63,7 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
      *
      * @param strat strategy address
      * @param index index in total underlying
+     * @return Total vault underlying at index
      */
     function getVaultTotalUnderlyingAtIndex(address strat, uint256 index) external override view returns(uint128) {
         Strategy storage strategy = strategies[strat];
@@ -80,6 +83,8 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
      * @dev
      * The function is not set as view given that it performs a delegate call
      * instruction to the strategy.
+     * @param strategy Strategy address
+     * @return Total underlying funds
      */
     function _totalUnderlying(address strategy)
         internal
@@ -93,6 +98,11 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         return abi.decode(data, (uint128));
     }
 
+    /**
+     * @notice Get strategy total underlying balance including rewards
+     * @param strategy Strategy address
+     * @return strategyBačance Returns strategy balance with the rewards
+     */
     function _getStratValue(
         address strategy
     ) internal returns(uint128) {
@@ -108,6 +118,9 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
 
     /**
      * @notice Returns pending rewards for a strategy
+     * @param strat Strategy for which to return rewards
+     * @param reward Reward address
+     * @return Pending rewards
      */
     function getPendingRewards(address strat, address reward) external view returns(uint256) {
         return strategies[strat].pendingRewards[reward];
@@ -115,6 +128,9 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
 
     /**
      * @notice Returns strat address in shared strategies mapping for index
+     * @param sharedKey Shared strategies key
+     * @param index Strategy addresses index
+     * @return Strategy address
      */
     function getStratSharedAddress(bytes32 sharedKey, uint256 index) external view returns(address) {
         return strategiesShared[sharedKey].stratAddresses[index];
@@ -131,6 +147,8 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
      * - the caller must be the controller
      * - reallcation must not be pending
      * - strategy shouldn't be previously removed
+     *
+     * @param strat Strategy to be added
      */
     function addStrategy(address strat)
         external
@@ -195,6 +213,10 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         _awaitingEmergencyWithdraw[strat] = true;
     }
 
+    /**
+     * @notice Disable strategy when reallocating
+     * @param strat Strategy to disable
+     */
     function _disableStrategyWhenReallocating(address strat) private {
         Strategy storage strategy = strategies[strat];
 
@@ -219,6 +241,10 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         }
     }
 
+    /**
+     * @notice Disable strategy when there is no reallocation
+     * @param strat Strategy to disable
+     */
     function _disableStrategyNoReallocation(address strat) private {
         Strategy storage strategy = strategies[strat];
 
@@ -236,6 +262,10 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         }
     }
 
+    /**
+     * @notice Decrease "do hard work" actions left
+     * @notice isMidReallocation Whether system is mid-reallocation
+     */
     function _decreaseDoHardWorksLeft(bool isMidReallocation) private {
         if (doHardWorksLeft > 0) {
             doHardWorksLeft--;
@@ -244,6 +274,13 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         }
     }
 
+    /**
+     * @notice Removes the nondistributed amounts recieved, if any
+     * @dev used when emergency withdrawing
+     *
+     * @param strategy Strategy address
+     * @param index index remove from
+     */
     function _removeNondistributedWithdrawnReceived(Strategy storage strategy, uint256 index) private {
         strategy.emergencyPending += strategy.batches[index].withdrawnReceived;
         strategy.batches[index].withdrawnReceived = 0;
@@ -288,6 +325,11 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
 
     /**
      * @notice Runs strategy specific disable function if it was skipped when disabling the strategy.
+     * Requirements:
+     * - the caller must be the controller
+     * - the strategy must be disabled
+     *
+     * @param strat Strategy to remove
      */
     function runDisableStrategy(address strat)
         external
@@ -304,7 +346,13 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
     /* ========== MUTATIVE INTERNAL FUNCTIONS ========== */
 
     /**
-     * @notice Invokes the process function on the strategy to either deposit to or withdraw from it
+     * @notice Invokes the process function on the strategy to process teh pending actions
+     * @dev executed deposit or withdrawal and compound of the reward tokens
+     *
+     * @param strategy Strategy address
+     * @param slippages Array of slippage parameters to apply when depositing or withdrawing
+     * @param harvestRewards Whether to harvest (swap and deposit) strategy rewards or not
+     * @param swapData Array containig data to swap unclaimed strategy reward tokens for underlying asset
      */
     function _process(
         address strategy,
@@ -323,6 +371,15 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         );
     }
 
+    /**
+     * @notice Invoke process reallocation for a strategy
+     * @dev This is the first par of the strategy DHW when reallocating
+     *
+     * @param strategy Strategy address
+     * @param slippages Array of slippage parameters to apply when withdrawing
+     * @param processReallocationData Reallocation values used when processing
+     * @return withdrawnUnderlying Actual withdrawn reallocation underlying assets received
+     */
     function _processReallocation(
         address strategy,
         uint256[] memory slippages,
@@ -341,6 +398,11 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         return abi.decode(data, (uint128));
     }
 
+    /**
+     * @notice Invoke process deposit for a strategy
+     * @param strategy Strategy address
+     * @param slippages Array of slippage parameters to apply when depositing
+     */
     function _processDeposit(
         address strategy,
         uint256[] memory slippages
@@ -354,6 +416,15 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         );
     }
 
+    /**
+     * @notice Invoke fast withdraw for a strategy
+     * @param strategy Strategy to withdraw from
+     * @param underlying Asset to withdraw
+     * @param shares Amount of shares to withdraw
+     * @param slippages Array of slippage parameters to apply when withdrawing
+     * @param swapData Swap slippage and path array
+     * @return Withdrawn amount
+     */
     function _fastWithdrawStrat(
         address strategy,
         address underlying,
@@ -378,6 +449,11 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
         return withdrawnAmount;
     }
 
+    /**
+     * @notice Invoke claim rewards for a strategy
+     * @param strategy Strategy address
+     * @param swapData Swap slippage and path
+     */
     function _claimRewards(
         address strategy,
         SwapData[] memory swapData
@@ -393,6 +469,9 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
 
     /**
      * @notice Invokes the emergencyWithdraw function on a strategy
+     * @param strategy Strategy to which to relay the call to
+     * @param recipient Address to which to withdraw to
+     * @param data Strategy specific data to perorm energency withdraw  on a strategy
      */
     function _emergencyWithdraw(address strategy, address recipient, uint256[] memory data) internal {
         _relay(
@@ -407,6 +486,7 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
 
     /**
      * @notice Initializes strategy specific values
+     * @param strategy Strategy to initialize
      */
     function _initializeStrategy(address strategy) internal {
         _relay(
@@ -417,6 +497,7 @@ abstract contract SpoolStrategy is ISpoolStrategy, SpoolBase {
 
     /**
      * @notice Cleans strategy specific values after disabling
+     * @param strategy Strategy to disable
      */
     function _disableStrategy(address strategy) internal {
         _relay(

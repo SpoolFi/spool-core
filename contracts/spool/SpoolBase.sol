@@ -74,7 +74,8 @@ abstract contract SpoolBase is
     /* ========== VIEWS ========== */
 
     /**
-     * @notice Returns whether spool is mid reallocation
+     * @notice Checks whether Spool is mid reallocation
+     * @return _isMidReallocation True if Spool is mid reallocation
      */
     function isMidReallocation() public view override returns (bool _isMidReallocation) {
         if (reallocationIndex == globalIndex && !_isBatchComplete()) {
@@ -84,13 +85,17 @@ abstract contract SpoolBase is
 
     /**
      * @notice Returns strategy shares belonging to a vauld
+     * @param strat Strategy address
+     * @param vault Vault address
+     * @return Shares for a specific vault - strategy combination
      */
     function getStratVaultShares(address strat, address vault) external view returns(uint128) {
         return strategies[strat].vaults[vault].shares;
     }
 
     /**
-     * @notice Retruns completed index (all strategies in the do hard work have been processed)
+     * @notice Returns completed index (all strategies in the do hard work have been processed)
+     * @return Completed index
      */
     function getCompletedGlobalIndex() public override view returns(uint24) {
         if (_isBatchComplete()) {
@@ -102,13 +107,15 @@ abstract contract SpoolBase is
 
     /**
      * @notice Returns next possible index to interact with
+     * @return Next active global index
      */
     function getActiveGlobalIndex() public override view returns(uint24) {
         return globalIndex + 1;
     }
     
     /**
-     * @notice Returns true if all strategies have the same index
+     * @notice Check if batch complete
+     * @return isComplete True if all strategies have the same index
      */
     function _isBatchComplete() internal view returns(bool isComplete) {
         if (doHardWorksLeft == 0) {
@@ -116,6 +123,11 @@ abstract contract SpoolBase is
         }
     }
 
+    /**
+     * @notice Decode revert message
+     * @param _returnData Data returned by delegatecall
+     * @return Revert string
+     */
     function _getRevertMsg(bytes memory _returnData) internal pure returns (string memory) {
         // if the _res length is less than 68, then the transaction failed silently (without a revert message)
         if (_returnData.length < 68) return "SILENT";
@@ -134,6 +146,10 @@ abstract contract SpoolBase is
      * The require statement ensure that this comes from a static call off-chain, which can substitute an arbitrary address. 
      * The 'one' address is used. The zero address could be used, but due to the prevalence of zero address checks, the internal calls would likely fail.
      * It has the same level of security as finding any arbitrary address, including address zero.
+     *
+     * @param implementation Address which to relay the call to
+     * @param payload Payload to relay to the implementation
+     * @return Response returned by the relayed call
      */
     function relay(address implementation, bytes memory payload) external returns(bytes memory) {
         require(msg.sender == address(1));
@@ -142,6 +158,9 @@ abstract contract SpoolBase is
 
     /**
      * @notice Relays the particular action to the strategy via delegatecall.
+     * @param strategy Strategy address to delegate the call to
+     * @param payload Data to pass when delegating call
+     * @return Response received when delegating call
      */
     function _relay(address strategy, bytes memory payload)
         internal
@@ -154,18 +173,38 @@ abstract contract SpoolBase is
 
     /* ========== CONFIGURATION ========== */
 
+    /**
+     * @notice Set allocation provider role for given user
+     * Requirements:
+     * - the caller must be the Spool owner (Spool DAO)
+     *
+     * @param user Address to set the role for
+     * @param _isAllocationProvider Whether the user is assigned the role or not
+     */
     function setAllocationProvider(address user, bool _isAllocationProvider) external onlyOwner {
         isAllocationProvider[user] = _isAllocationProvider;
         emit SetAllocationProvider(user, _isAllocationProvider);
     }
 
+    /**
+     * @notice Set doHardWorker role for given user
+     * Requirements:
+     * - the caller must be the Spool owner (Spool DAO)
+     *
+     * @param user Address to set the role for
+     * @param _isDoHardWorker Whether the user is assigned the role or not
+     */
     function setDoHardWorker(address user, bool _isDoHardWorker) external onlyOwner {
         isDoHardWorker[user] = _isDoHardWorker;
         emit SetIsDoHardWorker(user, _isDoHardWorker);
     }
 
     /**
-     * @notice Set the flag to force do hard work to be executed in one transaction.
+     * @notice Set the flag to force "do hard work" to be executed in one transaction.
+     * Requirements:
+     * - the caller must be the Spool owner (Spool DAO)
+     *
+     * @param doForce Enable/disable running in one transactions
      */
     function setForceOneTxDoHardWork(bool doForce) external onlyOwner {
         forceOneTxDoHardWork = doForce;
@@ -173,7 +212,11 @@ abstract contract SpoolBase is
 
     /**
      * @notice Set the flag to log reallocation proportions on change.
-     * NOTE: Used for offchain execution to get the new reallocation table.
+     * Requirements:
+     * - the caller must be the Spool owner (Spool DAO)
+     *
+     * @dev Used for offchain execution to get the new reallocation table.
+     * @param doLog Whether to log or not
      */
     function setLogReallocationTable(bool doLog) external onlyOwner {
         logReallocationTable = doLog;
@@ -190,6 +233,7 @@ abstract contract SpoolBase is
      * - the caller must be the Spool owner (Spool DAO)
      *
      * @param strat strategy to set
+     * @param isAwaiting Flag value
      */
     function setAwaitingEmergencyWithdraw(address strat, bool isAwaiting) external onlyOwner {
         _awaitingEmergencyWithdraw[strat] = isAwaiting;
@@ -197,6 +241,9 @@ abstract contract SpoolBase is
 
     /* ========== INTERNAL FUNCTIONS ========== */
 
+    /**
+     * @notice Ensures that given address is a valid vault
+     */
     function _isVault(address vault) internal view {
         require(
             controller.validVault(vault),
@@ -214,6 +261,10 @@ abstract contract SpoolBase is
         );
     }
 
+    /**
+     * @notice If batch is complete it resets reallocation variables and emits an event
+     * @param isReallocation If true, reset the reallocation variables
+     */
     function _finishDhw(bool isReallocation) internal {
         if (_isBatchComplete()) {
             // reset reallocation variables
@@ -268,6 +319,10 @@ abstract contract SpoolBase is
         );
     }
 
+    /**
+     * @notice Verifies given strategies
+     * @param strategies Array of strategies to verify
+     */
     function _verifyStrategies(address[] memory strategies) internal view {
         controller.verifyStrategies(strategies);
     }
@@ -282,10 +337,18 @@ abstract contract SpoolBase is
         );
     }
 
+    /**
+     * @notice Verifies the reallocation table against the stored hash
+     * @param reallocationTable The data to verify
+     */
     function _verifyReallocationTable(uint256[][] memory reallocationTable) internal view {
         require(reallocationTableHash == Hash.hashReallocationTable(reallocationTable), "BRLC");
     }
 
+    /**
+     * @notice Verifies the reallocation strategies against the stored hash
+     * @param strategies Array of strategies to verify
+     */
     function _verifyReallocationStrategies(address[] memory strategies) internal view {
         require(Hash.sameStrategies(strategies, reallocationStrategiesHash), "BRLCSTR");
     }
@@ -324,16 +387,25 @@ abstract contract SpoolBase is
         _;
     }
 
+    /**
+     * @notice Throws if given array of strategies is not valid
+     */
     modifier verifyStrategies(address[] memory strategies) {
         _verifyStrategies(strategies);
         _;
     }
 
+    /**
+     * @notice Throws if given array of reallocation strategies is not valid
+     */
     modifier verifyReallocationStrategies(address[] memory strategies) {
         _verifyReallocationStrategies(strategies);
         _;
     }
 
+    /**
+     * @notice Throws if caller does not have the allocation provider role
+     */
     modifier onlyAllocationProvider() {
         require(
             isAllocationProvider[msg.sender],
@@ -342,6 +414,9 @@ abstract contract SpoolBase is
         _;
     }
 
+    /**
+     * @notice Ensures that there is no pending reallocation
+     */
     modifier noPendingReallocation() {
         _noPendingReallocation();
         _;

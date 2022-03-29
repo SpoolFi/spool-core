@@ -54,8 +54,14 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
      * - caller must be a valid do hard worker
      * - provided strategies must be valid
      * - reallocation is not pending for current index
-     * - at least one sttrategy must be processed
+     * - if `forceOneTxDoHardWork` flag is true all strategies should be executed in one transaction
+     * - at least one strategy must be processed
      * - the system should not be paused
+     *
+     * @param stratIndexes Array of strategy indexes
+     * @param slippages Array of slippage values to be used when depositing into protocols (e.g. minOut)
+     * @param rewardSlippages Array of values containing information of if and how to swap reward tokens to strategy underlying
+     * @param allStrategies Array of all valid strategy addresses in the system
      */
     function batchDoHardWork(
         uint256[] memory stratIndexes,
@@ -111,6 +117,9 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
     /**
      * @notice Process strategy DHW, deposit wnd withdraw
      * @dev Only executed when there is no reallocation for the DHW
+     * @param strat Strategy address
+     * @param slippages Array of slippage values to be used when depositing into protocols (e.g. minOut)
+     * @param rewardSlippages Array of values containing information of if and how to swap reward tokens to strategy underlying
      */
     function _doHardWork(
         address strat,
@@ -138,6 +147,11 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
      * - reallocation is pending for current index
      * - at least one strategy must be processed
      * - the system should not be paused
+     *
+     * @param withdrawData Reallocation values addressing withdrawal part of the reallocation DHW
+     * @param depositData Reallocation values addressing deposit part of the reallocation DHW
+     * @param allStrategies Array of all strategy addresses in the system for current set reallocation
+     * @param isOneTransaction Flag denoting if the DHW should execute in one transaction
      */
     function batchDoHardWorkReallocation(
         ReallocationWithdrawData memory withdrawData,
@@ -179,12 +193,20 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         _finishDhw(true);
     }
 
+    /**
+     * @notice Executes do hard work of specified strategies if reallocation is in progress.
+     * @param withdrawData Reallocation values addressing withdrawal part of the reallocation DHW
+     * @param depositData Reallocation values addressing deposit part of the reallocation DHW
+     * @param allStrategies Array of all strategy addresses in the system for current set reallocation
+     */
     function _batchDoHardWorkReallocation(
         ReallocationWithdrawData memory withdrawData,
         ReallocationData memory depositData,
         address[] memory allStrategies
     ) private {
         // WITHDRAWALS
+        // reallocation withdraw
+        // process users deposit and withdrawals
         if (withdrawData.stratIndexes.length > 0) {
             // check parameters
             require(
@@ -193,16 +215,24 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                 "BWI"
             );
             
+            // verify if reallocation table matches the reallocationtable hash
             _verifyReallocationTable(withdrawData.reallocationTable);
 
+            // get current strategy price data
+            // this is later used to calculate the amount that can me matched
+            // between 2 strategies when they deposit in eachother
             PriceData[] memory spotPrices = _getPriceData(withdrawData, allStrategies);
 
+            // process the withdraw part of the reallocation
+            // process the deposit and the withdrawal part of the users deposits/withdrawals
             _processWithdraw(
                 withdrawData,
                 allStrategies,
                 spotPrices
             );
 
+            // update number of strategies needing to be processed for the current reallocation DHW
+            // can continue to deposit only when it reaches 0
             _updateWithdrawalDohardWorksleft(withdrawData.stratIndexes.length);
         }
 
@@ -213,6 +243,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         );
 
         // DEPOSITS
+        // deposit reallocated amounts withdrawn above into strategies
         if (depositData.stratIndexes.length > 0) {
             // check parameters
             require(
@@ -221,30 +252,45 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                 "BDI"
             );
 
-            // go over deposits
+            // deposit reallocated amounts into strategies
+            // this only deals with the reallocated amounts as users were already processed in the withdrawal phase
             for (uint128 i = 0; i < depositData.stratIndexes.length; i++) {
                 uint256 stratIndex = depositData.stratIndexes[i];
                 address stratAddress = allStrategies[stratIndex];
                 Strategy storage strategy = strategies[stratAddress];
+
+                // verify the strategy was not removed (it could be removed in the middle of the DHW if the DHW was executed in multiple transactions)
                 _notRemoved(stratAddress);
                 require(strategy.isInDepositPhase, "SWNP");
 
-                // deposit
+                // deposit reallocation withdrawn amounts according to the calculations
                 _doHardWorkDeposit(stratAddress, depositData.slippages[stratIndex]);
+                // mark strategy as finished for the current index
                 _finishStrategyDoHardWork(stratAddress);
 
+                // remove the flag indicating strategy should deposit reallocated amount
                 strategy.isInDepositPhase = false;
             }
-
+            
+            // update number of strategies left in the current index
+            // if this reaches 0, DHW is considered complete
             _updateDoHardWorksLeft(depositData.stratIndexes.length);
         }
     }
 
+    /**
+      * @notice Executes user process and withdraw part of the do-hard-work for the specified strategies when reallocation is in progress.
+      * @param withdrawData Reallocation values addressing withdrawal part of the reallocation DHW
+      * @param allStrategies Array of all strategy addresses in the system for current set reallocation
+      * @param spotPrices current strategy share price data, used to calculate the amount that can me matched between 2 strategies when reallcating
+      */
     function _processWithdraw(
         ReallocationWithdrawData memory withdrawData,
         address[] memory allStrategies,
         PriceData[] memory spotPrices
     ) private {
+        // go over reallocation table and calculate what amount of shares can be optimized when reallocating
+        // we can optimize if two strategies deposit into eachother. With the `spotPrices` we can compare the strategy values.
         ReallocationShares memory reallocation = _optimizeReallocation(withdrawData, spotPrices);
 
         // go over withdrawals
@@ -287,6 +333,10 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
     /**
      * @notice Process strategy DHW, including reallocation 
      * @dev Only executed when reallocation is set for the DHW
+     * @param strat Strategy address
+     * @param slippages Array of slippage values
+     * @param processReallocationData Reallocation data (see ProcessReallocationData)
+     * @return Received withdrawn reallocation
      */
     function _doHardWorkReallocation(
         address strat,
@@ -306,6 +356,8 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
     /**
      * @notice Process deposit collected form the reallocation
      * @dev Only executed when reallocation is set for the DHW
+     * @param strat Strategy address
+     * @param slippages Array of slippage values
      */
     function _doHardWorkDeposit(
         address strat,
@@ -315,47 +367,66 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
     }
 
     /**
-     * @notice Calculate amount of shares that can be swapped between a pair of strategies
+     * @notice Calculate amount of shares that can be swapped between a pair of strategies (without withdrawing from the protocols)
      *
-     * @dev
+     * @dev This is done to ensure only the necessary amoun gets withdrawn from protocols and lower the total slippage and fee.
+     * NOTE: We know strategies depositing into eachother must have the same underlying asset
+     * The underlying asset is used to compare the amount ob both strategies withdrawing (depositing) into eachother. 
+     *
      * Returns:
      * - amount of optimized collateral amount for each strategy
      * - amount of optimized shares for each strategy
      * - total non-optimized amount of shares for each strategy
+     *
+     * @param withdrawData Withdraw data (see WithdrawData)
+     * @param priceData An array of price data (see PriceData)
+     * @return reallocationShares Containing arrays showing the optimized share and underlying token amounts
      */
     function _optimizeReallocation(
         ReallocationWithdrawData memory withdrawData,
         PriceData[] memory priceData
     ) private pure returns (ReallocationShares memory) {
+        // amount of optimized collateral amount for each strategy
         uint128[] memory optimizedWithdraws = new uint128[](withdrawData.reallocationTable.length);
+        // amount of optimized shares for each strategy
         uint128[] memory optimizedShares = new uint128[](withdrawData.reallocationTable.length);
+        // total non-optimized amount of shares for each strategy
         uint128[] memory totalShares = new uint128[](withdrawData.reallocationTable.length);
         
+        // go over all the strategies (over reallcation table)
         for (uint128 i = 0; i < withdrawData.reallocationTable.length; i++) {
             for (uint128 j = i + 1; j < withdrawData.reallocationTable.length; j++) {
-                // if both strategies are depositing to eachother, optimize
+                // check if both strategies are depositing to eachother, if yes - optimize
                 if (withdrawData.reallocationTable[i][j] > 0 && withdrawData.reallocationTable[j][i] > 0) {
+                    // calculate strategy I underlying collateral amout withdrawing
                     uint128 amountI = uint128(withdrawData.reallocationTable[i][j] * priceData[i].totalValue / priceData[i].totalShares);
+                    // calculate strategy I underlying collateral amout withdrawing
                     uint128 amountJ = uint128(withdrawData.reallocationTable[j][i] * priceData[j].totalValue / priceData[j].totalShares);
 
                     uint128 optimizedAmount;
                     
+                    // check which strategy is withdrawing less
                     if (amountI > amountJ) {
                         optimizedAmount = amountJ;
                     } else {
                         optimizedAmount = amountI;
                     }
-
+                    
+                    // use the lesser value of both to save maximum possible optimized amount withdrawing
                     optimizedWithdraws[i] += optimizedAmount;
                     optimizedWithdraws[j] += optimizedAmount;
                 }
 
+                // sum total shares withdrawing for each strategy
                 unchecked {
                     totalShares[i] += uint128(withdrawData.reallocationTable[i][j]);
                     totalShares[j] += uint128(withdrawData.reallocationTable[j][i]);
                 }
             }
 
+            // If we optimized for a strategy, calculate the total shares optimized back from the collateral amount.
+            // The optimized shares amount will never be withdrawn from the strategy, as we know other strategies are
+            // depositing to the strategy in the equal amount and we know how to mach them.
             if (optimizedWithdraws[i] > 0) {
                 optimizedShares[i] = Math.getProportion128(optimizedWithdraws[i], priceData[i].totalShares, priceData[i].totalValue);
             }
@@ -370,6 +441,14 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         return reallocationShares;
     }
 
+    /**
+     * @notice Get urrent strategy price data, containing total balance and total shares
+     * @dev Also verify if the total strategy value is according to the defined values
+     *
+     * @param withdrawData Withdraw data (see WithdrawData)
+     * @param allStrategies Array of strategy addresses
+     * @return Price data (see PriceData)
+     */
     function _getPriceData(
         ReallocationWithdrawData memory withdrawData,
         address[] memory allStrategies
@@ -406,6 +485,14 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         return spotPrices;
     }
 
+    /**
+      * @notice Processes reallocated amount deposits.
+      * @param reallocateSharesToWithdraw Reallocate shares to withdraw
+      * @param withdrawnReallocationReceived Received withdrawn reallocation
+      * @param optimizedWithdraw Optimized withdraw
+      * @param _strategies Array of strategy addresses
+      * @param stratReallocationShares Array of strategy reallocation shares
+      */
     function _depositReallocatedAmount(
         uint128 reallocateSharesToWithdraw,
         uint128 withdrawnReallocationReceived,
@@ -432,6 +519,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
 
     /**
      * @notice After strategy DHW is complete increment strategy index
+     * @param strat Strategy address
      */
     function _finishStrategyDoHardWork(address strat) private {
         Strategy storage strategy = strategies[strat];
@@ -444,6 +532,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
     /**
      * @notice After strategy DHW process update strategy pending values
      * @dev set pending next as pending and reset pending next
+     * @param strat Strategy address
      */
     function _updatePending(address strat) private {
         Strategy storage strategy = strategies[strat];
@@ -459,23 +548,40 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         }
     }
 
+    /**
+     * @notice Update the number of "do hard work" processes left.
+     * @param processedCount Number of completed actions
+     */
     function _updateDoHardWorksLeft(uint256 processedCount) private {
         doHardWorksLeft -= uint8(processedCount);
     }
 
+    /**
+     * @notice Update the number of "withdrawal do hard work" processes left.
+     * @param processedCount Number of completed actions
+     */
     function _updateWithdrawalDohardWorksleft(uint256 processedCount) private {
         withdrawalDoHardWorksLeft -= uint8(processedCount);
     }
 
+    /**
+     * @notice Hash a reallocation table after it was updated
+     * @param reallocationTable 2D table showing amount of shares withdrawing to each strategy
+     */
     function _hashReallocationTable(uint256[][] memory reallocationTable) internal {
         reallocationTableHash = Hash.hashReallocationTable(reallocationTable);
         if (logReallocationTable) {
+            // this is only meant to be emitted when debugging
             emit ReallocationTableUpdatedWithTable(reallocationIndex, reallocationTableHash, reallocationTable);
         } else {
             emit ReallocationTableUpdated(reallocationIndex, reallocationTableHash);
         }
     }
 
+    /**
+     * @notice Calculate and store the hash of the given strategy array
+     * @param strategies Strategy addresses to hash
+     */
     function _hashReallocationStrategies(address[] memory strategies) internal {
         reallocationStrategiesHash = Hash.hashStrategies(strategies);
     }

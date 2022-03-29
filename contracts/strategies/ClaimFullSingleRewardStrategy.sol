@@ -5,6 +5,9 @@ pragma solidity 0.8.11;
 import "./RewardStrategy.sol";
 import "../shared/SwapHelperMainnet.sol";
 
+/**
+ * @notice Claim full single reward strategy logic
+ */
 abstract contract ClaimFullSingleRewardStrategy is RewardStrategy, SwapHelperMainnet {
     /* ========== STATE VARIABLES ========== */
 
@@ -12,6 +15,10 @@ abstract contract ClaimFullSingleRewardStrategy is RewardStrategy, SwapHelperMai
 
     /* ========== CONSTRUCTOR ========== */
 
+    /**
+     * @notice Set initial values
+     * @param _rewardToken Reward token contract
+     */
     constructor(
         IERC20 _rewardToken
     ) {
@@ -21,16 +28,33 @@ abstract contract ClaimFullSingleRewardStrategy is RewardStrategy, SwapHelperMai
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
+    /**
+     * @notice Claim rewards
+     * @param swapData Slippage and path array
+     * @return Rewards
+     */
     function _claimRewards(SwapData[] calldata swapData) internal override returns(Reward[] memory) {
         return _claimSingleRewards(type(uint128).max, swapData);
     }
 
+    /**
+     * @dev Claim fast withdraw rewards
+     * @param shares Amount of shares
+     * @param swapData Swap slippage and path
+     * @return Rewards
+     */
     function _claimFastWithdrawRewards(uint128 shares, SwapData[] calldata swapData) internal override returns(Reward[] memory) {
         return _claimSingleRewards(shares, swapData);
     }
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
+    /**
+     * @dev Claim single rewards
+     * @param shares Amount of shares
+     * @param swapData Swap slippage and path
+     * @return rewards Collected reward amounts
+     */
     function _claimSingleRewards(uint128 shares, SwapData[] calldata swapData) private returns(Reward[] memory rewards) {
         if (swapData.length > 0 && swapData[0].slippage > 0) {
             uint128 rewardAmount = _claimStrategyReward();
