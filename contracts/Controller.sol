@@ -17,8 +17,10 @@ import "./interfaces/IRiskProviderRegistry.sol";
 import "./interfaces/IBaseStrategy.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/vault/IVaultDetails.sol";
-import "./vault/VaultNonUpgradableProxy.sol";
 import "./external/@openzeppelin/security/Pausable.sol";
+import "./interfaces/IStrategyRegistry.sol";
+import "./vault/VaultTransparentUpgradeableProxy.sol";
+import "./external/@openzeppelin/proxy/transparent/ProxyAdmin.sol";
 
 /**
  * @notice Implementation of the {IController} interface.
@@ -60,6 +62,12 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
     /// @notice The risk provider registry
     IRiskProviderRegistry public immutable riskRegistry;
 
+    /// @notice Strategy implementation registry
+    IStrategyRegistry internal immutable strategyRegistry;
+
+    /// @notice Proxy admin contract that controls the vault proxy
+    address internal immutable proxyAdmin;
+
     /// @notice vault implementation address
     address public immutable vaultImplementation;
 
@@ -74,6 +82,9 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
     
     /// @notice Recipient address of emergency withdrawn funds
     address public emergencyRecipient;
+
+    /// @notice Boolean signaling if the contract was initialized yet
+    bool private _initialized;
 
     /// @notice Whether the specified token is supported as an underlying token for a vault
     mapping(IERC20 => bool) public override supportedUnderlying;
@@ -105,27 +116,37 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
      * @param _spoolOwner the spool owner contract that owns this contract
      * @param _riskRegistry the risk provider registry contract
      * @param _spool the spool contract
+     * @param _strategyRegistry the strategy registry contract
      * @param _vaultImplementation vault implementation contract address
+     * @param _proxyAdmin Proxy admin contract address
      */
     constructor(
         ISpoolOwner _spoolOwner,
         IRiskProviderRegistry _riskRegistry,
         ISpool _spool,
-        address _vaultImplementation
-    ) 
+        IStrategyRegistry _strategyRegistry,
+        address _vaultImplementation,
+        address _proxyAdmin
+    )
         SpoolOwnable(_spoolOwner)
     {
         require(
             _riskRegistry != IRiskProviderRegistry(address(0)) &&
             _spool != ISpool(address(0)) &&
-            _vaultImplementation != address(0),
-            "Controller::constructor: Risk Provider, Spool or Vault Implementation addresses cannot be 0"
+            _vaultImplementation != address(0) &&
+            _strategyRegistry != IStrategyRegistry(address(0)) &&
+            _proxyAdmin != address(0),
+            "Controller::constructor: Risk Provider, Spool, Strategy registry, Proxy admin or Vault Implementation addresses cannot be 0"
         );
 
         riskRegistry = _riskRegistry;
         spool = _spool;
         vaultImplementation = _vaultImplementation;
+        strategyRegistry = _strategyRegistry;
+        proxyAdmin = _proxyAdmin;
+    }
 
+    function initialize() onlyOwner initializer external {
         _updateStrategiesHash(strategies);
     }
 
@@ -321,8 +342,9 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
         VaultDetails calldata vaultDetails
     ) private returns (address vault) {
         vault = address(
-            new VaultNonUpgradableProxy(
+            new VaultTransparentUpgradeableProxy(
                 vaultImplementation,
+                proxyAdmin,
                 _getVaultImmutables(vaultDetails)
             )
         );
@@ -440,6 +462,7 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
         IERC20 underlying = IBaseStrategy(strategy).underlying();
         supportedUnderlying[underlying] = true;
 
+        strategyRegistry.addStrategy(strategy);
         spool.addStrategy(strategy);
 
         strategies.push(strategy);
@@ -880,5 +903,14 @@ contract Controller is IController, SpoolOwnable, BaseConstants, Pausable {
     modifier onlyUnpauser() {
         _onlyUnpauser();
         _;
+    }
+
+    /**
+     * @notice Ensures the vault has not been initialized before
+     */
+    modifier initializer() {
+        require(!_initialized, "Controller::initializer: Can only be initialized once");
+        _;
+        _initialized = true;
     }
 }
