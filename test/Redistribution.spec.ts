@@ -1,23 +1,23 @@
-import {expect, use} from "chai";
-import {BigNumber, Contract, ContractTransaction} from "ethers";
-import {solidity, MockProvider, createFixtureLoader} from "ethereum-waffle";
-import {deploymentFixture} from "./shared/fixtures";
+import { expect, use } from "chai";
+import { BigNumber } from "ethers";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
+import { deploymentFixture } from "./shared/fixtures";
 import {
-    VaultDetailsStruct,
     createVault,
+    customConstants,
+    getBitwiseProportions,
+    getBitwiseStrategies,
     getProportionsFromBitwise,
     getStrategyIndexes,
-    getBitwiseStrategies,
-    getBitwiseProportions,
-    TEN_UNITS_E8,
     reset,
-    TestContext,
-    customConstants,
     setReallocationTable,
+    TEN_UNITS_E8,
+    TestContext,
+    VaultDetailsStruct,
 } from "./shared/utilities";
-import {Vault} from "../build/types/Vault";
+import { Vault } from "../build/types";
 
-const {MaxUint128} = customConstants;
+const { MaxUint128 } = customConstants;
 
 use(solidity);
 
@@ -29,15 +29,15 @@ describe("Vault Reallocation", () => {
         let vault: Vault;
         let vaultCreation: VaultDetailsStruct;
         const context: TestContext = {
-            reallocationTable: []
-        }
+            reallocationTable: [],
+        };
 
         before(async () => {
             await reset();
             console.log("getting deployment..");
             loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
-            const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
-            
+            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
+
             await spool.riskProviderRegistry.addProvider(accounts.riskProvider.address, 0);
 
             vaultCreation = {
@@ -71,7 +71,7 @@ describe("Vault Reallocation", () => {
             const slippages = Array.from(Array(strategies.strategyAddresses.length), () => []);
 
             const rewardSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
-                return {doClaim: false, swapData: [{slippage: 0, path: []}]};
+                return { doClaim: false, swapData: [{ slippage: 0, path: [] }] };
             });
 
             await spool.spool
@@ -80,7 +80,7 @@ describe("Vault Reallocation", () => {
         });
 
         it("should initialize reallocation for vault", async () => {
-            const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
+            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
 
             const newProportions = [4000, 6000];
             const vaultStratIndex = getStrategyIndexes(vaultCreation.strategies, strategies.strategyAddresses);
@@ -124,23 +124,21 @@ describe("Vault Reallocation", () => {
         });
 
         it("should revert withdrawing while reallocating", async () => {
-            await expect(vault.withdraw(vaultCreation.strategies, 0, true)).to.be.revertedWith(
-                "NRED"
-            );
+            await expect(vault.withdraw(vaultCreation.strategies, 0, true)).to.be.revertedWith("NRED");
         });
 
         it("should execute doHardWork after reallocation", async () => {
-            const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
+            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
 
             const stratIndexes = getStrategyIndexes(strategies.strategyAddresses, strategies.strategyAddresses);
             const slippages = Array.from(Array(strategies.strategyAddresses.length), () => []);
 
             const priceSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
-                return {min: 0, max: MaxUint128};
+                return { min: 0, max: MaxUint128 };
             });
 
             const rewardSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
-                return {doClaim: false, swapData: []};
+                return { doClaim: false, swapData: [] };
             });
 
             const withdrawData = {
@@ -158,12 +156,7 @@ describe("Vault Reallocation", () => {
 
             await spool.spool
                 .connect(accounts.doHardWorker)
-                .batchDoHardWorkReallocation(
-                    withdrawData,
-                    depositData,
-                    strategies.strategyAddresses,
-                    true
-                );
+                .batchDoHardWorkReallocation(withdrawData, depositData, strategies.strategyAddresses, true);
 
             const totalDeposit = TEN_UNITS_E8.add(TEN_UNITS_E8);
 
@@ -181,7 +174,7 @@ describe("Vault Reallocation", () => {
         });
 
         it("should claim vault shares after dhw", async () => {
-            const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
+            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
 
             await vault.connect(accounts.user0).redeemVaultStrategies(vaultCreation.strategies);
 
@@ -210,15 +203,15 @@ describe("Vault Reallocation", () => {
         let vault1Creation: VaultDetailsStruct;
         let depositPerStrat: BigNumber;
         const context: TestContext = {
-            reallocationTable: []
-        }
+            reallocationTable: [],
+        };
 
         before(async () => {
             await reset();
             console.log("getting deployment..");
             loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
-            const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
-            
+            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
+
             await spool.riskProviderRegistry.addProvider(accounts.riskProvider.address, 0);
 
             // SETUP VAULT 0
@@ -274,9 +267,8 @@ describe("Vault Reallocation", () => {
             const stratIndexes = [...Array(strategies.strategyAddresses.length).keys()];
             const slippages = Array.from(Array(strategies.strategyAddresses.length), () => []);
             const rewardSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
-                return {doClaim: false, swapData: []};
+                return { doClaim: false, swapData: [] };
             });
-
 
             await spool.spool
                 .connect(accounts.doHardWorker)
@@ -293,7 +285,7 @@ describe("Vault Reallocation", () => {
         });
 
         it("should initialize reallocation for both vaults (same amounts in opposite direction)", async () => {
-            const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
+            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
 
             const vaultStratIndexes = getStrategyIndexes(vault0Creation.strategies, strategies.strategyAddresses);
 
@@ -328,41 +320,35 @@ describe("Vault Reallocation", () => {
         });
 
         it("doHardWork, vaults should exchange shares, without getting hit by the fee", async () => {
-            const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
+            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
 
             const stratIndexes = getStrategyIndexes(strategies.strategyAddresses, strategies.strategyAddresses);
             const slippages = Array.from(Array(strategies.strategyAddresses.length), () => []);
 
             const priceSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
-                return {min: 0, max: MaxUint128};
-            });
-            
-            const rewardSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
-                return {doClaim: false, swapData: []};
+                return { min: 0, max: MaxUint128 };
             });
 
+            const rewardSlippages = Array.from(Array(strategies.strategyAddresses.length), () => {
+                return { doClaim: false, swapData: [] };
+            });
 
             const withdrawData = {
                 reallocationTable: context.reallocationTable,
                 priceSlippages: priceSlippages,
                 rewardSlippages: rewardSlippages,
-                stratIndexes: stratIndexes, // can be empty as it's one tx reallocation (array gets populated in the code)
+                stratIndexes: stratIndexes,
                 slippages: slippages,
             };
 
             const depositData = {
-                stratIndexes: stratIndexes, // can be empty as it's one tx reallocation (array gets populated in the code)
+                stratIndexes: stratIndexes,
                 slippages: slippages,
             };
 
             await spool.spool
                 .connect(accounts.doHardWorker)
-                .batchDoHardWorkReallocation(
-                    withdrawData,
-                    depositData,
-                    strategies.strategyAddresses,
-                    true
-                );
+                .batchDoHardWorkReallocation(withdrawData, depositData, strategies.strategyAddresses, true);
 
             expect(await spool.spool.callStatic.getStratUnderlying(vault0Creation.strategies[0])).to.be.closeTo(
                 depositPerStrat,
@@ -375,7 +361,7 @@ describe("Vault Reallocation", () => {
         });
 
         it("strategies should have same amount of shares after reallocation", async () => {
-            const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
+            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
 
             const strat0 = await spool.spool.strategies(vault0Creation.strategies[0]);
             const strat1 = await spool.spool.strategies(vault0Creation.strategies[1]);
@@ -385,7 +371,7 @@ describe("Vault Reallocation", () => {
         });
 
         it("should claim vault0 shares after dhw", async () => {
-            const {accounts, tokens, spool, strategies} = await loadFixture(deploymentFixture);
+            const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
 
             await vault0.connect(accounts.user0).redeemVaultStrategies(vault0Creation.strategies);
 
@@ -411,7 +397,7 @@ describe("Vault Reallocation", () => {
         });
 
         it("should claim vault1 shares after dhw", async () => {
-            const {accounts, spool} = await loadFixture(deploymentFixture);
+            const { accounts, spool } = await loadFixture(deploymentFixture);
 
             await vault1.connect(accounts.user0).redeemVaultStrategies(vault1Creation.strategies);
 

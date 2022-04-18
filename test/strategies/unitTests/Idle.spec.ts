@@ -1,24 +1,26 @@
 import { expect, use } from "chai";
-import { constants, BigNumber } from "ethers";
-import { solidity, MockProvider, createFixtureLoader, MockContract, deployMockContract } from "ethereum-waffle";
-import { IBaseStrategy } from "../../../build/types/IBaseStrategy";
-import { IERC20 } from "../../../build/types/IERC20";
-import { TestStrategySetup__factory } from "../../../build/types/factories/TestStrategySetup__factory";
-import { IdleStrategy__factory } from "../../../build/types/factories/IdleStrategy__factory";
-import { IIdleToken__factory } from "../../../build/types/factories/IIdleToken__factory";
-import { underlyingTokensFixture, mainnetConst, TokensFixture, AccountsFixture } from "../../shared/fixtures";
+import { BigNumber, constants } from "ethers";
+import { createFixtureLoader, deployMockContract, MockContract, MockProvider, solidity } from "ethereum-waffle";
+import {
+    IBaseStrategy,
+    IdleStrategy__factory,
+    IERC20,
+    IIdleToken__factory,
+    TestStrategySetup__factory,
+} from "../../../build/types";
+import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
 import { Tokens } from "../../shared/constants";
 
 import {
-    reset,
-    mineBlocks,
-    SECS_DAY,
     BasisPoints,
-    getMillionUnits,
-    getRewardSwapPathV3Weth,
-    getRewardSwapPathV3Custom,
-    UNISWAP_V3_FEE,
     encodeDepositSlippage,
+    getMillionUnits,
+    getRewardSwapPathV3Custom,
+    getRewardSwapPathV3Weth,
+    mineBlocks,
+    reset,
+    SECS_DAY,
+    UNISWAP_V3_FEE,
 } from "../../shared/utilities";
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
@@ -83,12 +85,9 @@ describe("Strategies Unit Test: Idle", () => {
 
     it("Should fail deploying Idle Strategy with underlying address 0", async () => {
         const IdleStrategy = await new IdleStrategy__factory().connect(accounts.administrator);
-        await expect(
-            IdleStrategy.deploy(
-                idleMock.address,
-                AddressZero,
-            )
-        ).to.be.revertedWith("BaseStrategy::constructor: Underlying address cannot be 0");
+        await expect(IdleStrategy.deploy(idleMock.address, AddressZero)).to.be.revertedWith(
+            "BaseStrategy::constructor: Underlying address cannot be 0"
+        );
     });
 
     strategyAssets.forEach(({ name, idleTokenYield }) => {
@@ -101,7 +100,6 @@ describe("Strategies Unit Test: Idle", () => {
             });
 
             describe(`Deployment: ${name}`, () => {
-
                 it("Should deploy", async () => {
                     await new IdleStrategy__factory()
                         .connect(accounts.administrator)
@@ -130,10 +128,7 @@ describe("Strategies Unit Test: Idle", () => {
                         implAddress
                     );
 
-                    idleContract = IdleStrategy__factory.connect(
-                        compoundStrategyProxy.address,
-                        accounts.administrator
-                    );
+                    idleContract = IdleStrategy__factory.connect(compoundStrategyProxy.address, accounts.administrator);
                 });
 
                 it("Process deposit, should deposit in strategy", async () => {

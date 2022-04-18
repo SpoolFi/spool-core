@@ -1,19 +1,17 @@
 import { expect, use } from "chai";
-import { BigNumber, Wallet, constants } from "ethers";
+import { BigNumber, Wallet } from "ethers";
 import { solidity } from "ethereum-waffle";
 import { reset } from "./shared/utilities";
 import {
     AccountsFixture,
     deploymentFixture,
+    MockStrategyFixture,
     PoolsFixture,
     SpoolFixture,
-    MockStrategyFixture,
     TokensFixture,
 } from "./shared/fixtures";
 import { ethers, waffle } from "hardhat";
-import { MockMasterChefStrategy } from "../build/types/MockMasterChefStrategy";
-import { MockMasterChefStrategy__factory } from "../build/types/factories/MockMasterChefStrategy__factory";
-import { Controller__factory } from "../build/types/factories/Controller__factory";
+import { Controller__factory, MockMasterChefStrategy, MockMasterChefStrategy__factory } from "../build/types";
 
 use(solidity);
 
@@ -60,10 +58,12 @@ describe("Controller", () => {
                     accounts.administrator.address,
                     ethers.constants.AddressZero,
                     "0x0000000000000000000000000000000000000001",
+                    "0x0000000000000000000000000000000000000001",
+                    "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001"
                 )
             ).to.be.revertedWith(
-                "Controller::constructor: Risk Provider, Spool or Vault Implementation addresses cannot be 0"
+                "Controller::constructor: Risk Provider, Spool, Strategy registry, Proxy admin or Vault Implementation addresses cannot be 0"
             );
         });
 
@@ -74,10 +74,12 @@ describe("Controller", () => {
                     accounts.administrator.address,
                     "0x0000000000000000000000000000000000000001",
                     ethers.constants.AddressZero,
+                    "0x0000000000000000000000000000000000000001",
+                    "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001"
                 )
             ).to.be.revertedWith(
-                "Controller::constructor: Risk Provider, Spool or Vault Implementation addresses cannot be 0"
+                "Controller::constructor: Risk Provider, Spool, Strategy registry, Proxy admin or Vault Implementation addresses cannot be 0"
             );
         });
 
@@ -88,10 +90,12 @@ describe("Controller", () => {
                     accounts.administrator.address,
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
-                    ethers.constants.AddressZero
+                    ethers.constants.AddressZero,
+                    "0x0000000000000000000000000000000000000001",
+                    "0x0000000000000000000000000000000000000001"
                 )
             ).to.be.revertedWith(
-                "Controller::constructor: Risk Provider, Spool or Vault Implementation addresses cannot be 0"
+                "Controller::constructor: Risk Provider, Spool, Strategy registry, Proxy admin or Vault Implementation addresses cannot be 0"
             );
         });
     });
@@ -297,9 +301,7 @@ describe("Controller", () => {
         });
 
         it("should add another strategy", async () => {
-            const MockMasterChefStrategyFactory = new MockMasterChefStrategy__factory().connect(
-                accounts.administrator
-            );
+            const MockMasterChefStrategyFactory = new MockMasterChefStrategy__factory().connect(accounts.administrator);
 
             const strategy = (await MockMasterChefStrategyFactory.deploy(
                 strategies.chefs[0].address,
@@ -317,9 +319,7 @@ describe("Controller", () => {
         });
 
         it("should add another strategy using calldata", async () => {
-            const MockMasterChefStrategyFactory = new MockMasterChefStrategy__factory().connect(
-                accounts.administrator
-            );
+            const MockMasterChefStrategyFactory = new MockMasterChefStrategy__factory().connect(accounts.administrator);
 
             const strategy = (await MockMasterChefStrategyFactory.deploy(
                 strategies.chefs[0].address,
@@ -330,21 +330,17 @@ describe("Controller", () => {
                 tokens.WETH.address
             )) as MockMasterChefStrategy;
 
-            
             const allStrategies = await spool.controller.getAllStrategies();
 
             await spool.controller.addStrategy(strategy.address, allStrategies);
 
-            
             const stratCount = await spool.controller.getStrategiesCount();
             expect(await spool.controller.strategies(stratCount - 1)).to.be.equal(strategy.address);
         });
 
         it("should fail to create a vault with incorrent currency for strategy", async () => {
             const vaultCount = await spool.controller.getStrategiesCount();
-            const MockMasterChefStrategyFactory = new MockMasterChefStrategy__factory().connect(
-                accounts.administrator
-            );
+            const MockMasterChefStrategyFactory = new MockMasterChefStrategy__factory().connect(accounts.administrator);
 
             const strategy = (await MockMasterChefStrategyFactory.deploy(
                 strategies.chefs[0].address,
@@ -495,15 +491,15 @@ describe("Controller", () => {
         });
         it("Should fail trying to pause from non-approved account", async () => {
             await spool.controller.setPauser(accounts.user0.address, false);
-            await expect(
-                spool.controller.connect(accounts.user0).pause()
-            ).to.be.revertedWith("Controller::_onlyPauser: Can only be invoked by pauser");
+            await expect(spool.controller.connect(accounts.user0).pause()).to.be.revertedWith(
+                "Controller::_onlyPauser: Can only be invoked by pauser"
+            );
         });
         it("Should fail trying to unpause from non-approved account", async () => {
             await spool.controller.setUnpauser(accounts.user0.address, false);
-            await expect(
-                spool.controller.connect(accounts.user0).unpause()
-            ).to.be.revertedWith("Controller::_onlyUnpauser: Can only be invoked by unpauser");
+            await expect(spool.controller.connect(accounts.user0).unpause()).to.be.revertedWith(
+                "Controller::_onlyUnpauser: Can only be invoked by unpauser"
+            );
         });
     });
 });

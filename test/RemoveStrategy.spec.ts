@@ -1,9 +1,9 @@
 import { expect, use } from "chai";
 import { BigNumber } from "ethers";
-import { solidity, MockProvider, createFixtureLoader } from "ethereum-waffle";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
 import { deploymentFixture } from "./shared/fixtures";
-import { VaultDetailsStruct, createVault, TEN_UNITS_E8, reset } from "./shared/utilities";
-import { Vault } from "../build/types/Vault";
+import { createVault, reset, TEN_UNITS_E8, VaultDetailsStruct } from "./shared/utilities";
+import { Vault } from "../build/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 use(solidity);

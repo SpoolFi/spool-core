@@ -1,30 +1,32 @@
-import {ethers} from "hardhat";
-import hre from "hardhat";
-import {BigNumber, BigNumberish, ContractTransaction} from "ethers";
-import {UniswapV2Factory} from "../../build/types/UniswapV2Factory";
-import {UniswapV2Pair} from "../../build/types/UniswapV2Pair";
-import {UniswapV2Pair__factory} from "../../build/types/factories/UniswapV2Pair__factory";
-import {Controller, VaultDetailsStruct} from "../../build/types/Controller";
-import {Vault} from "../../build/types/Vault";
-import {Vault__factory} from "../../build/types/factories/Vault__factory";
-import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
-import {Log} from "@ethersproject/abstract-provider";
-import {BaseContract} from "@ethersproject/contracts";
-import { pack } from '@ethersproject/solidity'
+import hre, { ethers } from "hardhat";
+import { BigNumber, BigNumberish, ContractTransaction } from "ethers";
+import {
+    IHarvestController__factory,
+    UniswapV2Factory,
+    UniswapV2Pair,
+    UniswapV2Pair__factory,
+    Vault,
+    Vault__factory,
+} from "../../build/types";
+import { Controller, VaultDetailsStruct } from "../../build/types/Controller";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { Log } from "@ethersproject/abstract-provider";
+import { BaseContract } from "@ethersproject/contracts";
+import { pack } from "@ethersproject/solidity";
+import { mainnet } from "./constants";
+import { SlippageStruct } from "../../build/types/SlippagesHelper";
+import { RewardDataStruct } from "../../build/types/RewardsHelper";
 
-export { BasisPoints } from './chaiExtension/chaiExtAssertions'
-export {VaultDetailsStruct};
+export { BasisPoints } from "./chaiExtension/chaiExtAssertions";
+export { VaultDetailsStruct };
 
 // constants
 export const SECS_DAY: number = 86400;
-export const BLOCKS_DAY: number = 6468;
-export const SECS_YEAR: number = SECS_DAY * 365;
-export const DAILY_DURATION = BigNumber.from(SECS_DAY.toString());
 export const parseUnits = ethers.utils.parseUnits;
 export const TEN_UNITS = parseUnits("10");
 export const TEN_UNITS_E8 = TEN_UNITS.div(parseUnits("1", 10));
-// using "Binance 8" address for tokens on mainnet
-export const BINANCE_WALLET = "0xf977814e90da44bfa03b6295a0616a897441acec";
+export const BINANCE_WALLET = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0";
+export const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
 
 const MaxUint16 = BigNumber.from("0xffff");
 const MaxUint128 = BigNumber.from("0xffffffffffffffffffffffffffffffff");
@@ -57,7 +59,7 @@ export async function mineBlocks(blockNumber: number, seconds = 0) {
     if (seconds > 0) {
         await increase(BigNumber.from(seconds));
     }
-    
+
     while (blockNumber > 0) {
         blockNumber--;
         await ethers.provider.send("evm_mine", []);
@@ -69,6 +71,14 @@ export async function mineBlocks(blockNumber: number, seconds = 0) {
 export async function impersonate(account: string): Promise<SignerWithAddress> {
     await ethers.provider.send("hardhat_impersonateAccount", [account]);
     return await ethers.getSigner(account);
+}
+
+export async function whitelistStrategy(address: string) {
+    const mainnetConst = mainnet();
+    await IHarvestController__factory.connect(
+        mainnetConst.harvest.Controller.address,
+        await impersonate(mainnetConst.harvest.Governance.address)
+    ).addToWhitelist(address);
 }
 
 export function isForking(): boolean {
@@ -185,10 +195,14 @@ type ReallocationTableUpdatedWithTableEvent = {
     index: BigNumber;
     reallocationTableHash: string;
     reallocationTable: BigNumber[][];
-}
+};
 
 export function getReallocationTableFromEvent(logs: Log[], contract: BaseContract) {
-    return getLogByName(logs, "ReallocationTableUpdatedWithTable", contract) as any as ReallocationTableUpdatedWithTableEvent;
+    return getLogByName(
+        logs,
+        "ReallocationTableUpdatedWithTable",
+        contract
+    ) as any as ReallocationTableUpdatedWithTableEvent;
 }
 
 function getLogByName(logs: Log[], topicName: string, contract: BaseContract) {
@@ -208,28 +222,25 @@ function getLogByName(logs: Log[], topicName: string, contract: BaseContract) {
 
 export type TestContext = {
     reallocationTable: BigNumber[][];
-}
+};
 
 export async function setReallocationTable(tx: ContractTransaction, spool: BaseContract, context: TestContext) {
     const receipt = await tx.wait();
 
-    const reallocationEvent = getReallocationTableFromEvent(
-        receipt.logs,
-        spool
-    );
+    const reallocationEvent = getReallocationTableFromEvent(receipt.logs, spool);
 
     context.reallocationTable = reallocationEvent.reallocationTable;
 }
 
 // Reward swap data utils
 
-type FeeValue = 10000 | 3000 | 500
+export type FeeValue = 10000 | 3000 | 500;
 
 export const UNISWAP_V3_FEE = {
     _10000: 10000 as FeeValue,
     _3000: 3000 as FeeValue,
-    _500: 500 as FeeValue
-}
+    _500: 500 as FeeValue,
+};
 
 export function getRewardSwapPathV2Direct() {
     return pack(["uint8"], [1]);
@@ -241,12 +252,12 @@ export function getRewardSwapPathV2Weth() {
 
 export function getRewardSwapPathV2Custom(path: string[]) {
     const types = ["uint8"];
-    const values: any[] = [6];
+    const values: any[] = [3];
 
-    path.forEach(p => {
+    path.forEach((p) => {
         types.push("address");
         values.push(p);
-    })
+    });
 
     return pack(types, values);
 }
@@ -266,20 +277,20 @@ export function getRewardSwapPathV3Weth(fee1: FeeValue, fee2: FeeValue) {
 }
 
 type PathV3 = {
-    address: string,
-    fee: FeeValue
-}
+    address: string;
+    fee: FeeValue;
+};
 
 export function getRewardSwapPathV3Custom(fee: FeeValue, path: PathV3[]) {
     const types = ["uint8", "uint24"];
     const values: any[] = [6, fee];
 
-    path.forEach(p => {
+    path.forEach((p) => {
         types.push("address");
-        values.push(p.address)
+        values.push(p.address);
         types.push("uint24");
-        values.push(p.fee)
-    })
+        values.push(p.fee);
+    });
 
     return pack(types, values);
 }
@@ -287,4 +298,66 @@ export function getRewardSwapPathV3Custom(fee: FeeValue, path: PathV3[]) {
 // for deposit slippage we set the most significant bit to 1 (withdraw most significant bit is 0)
 export function encodeDepositSlippage(slippage: BigNumberish) {
     return BigNumber.from(slippage).add(Uint2pow255);
+}
+
+// ********** SLIPPAGE UTILS **********
+// reduce a big number by a percentage, expressed in basis points.
+export function reduceByPercentage(x: BigNumber, bp: number) {
+    const maxBP = BigNumber.from("10000");
+    const bpBN = BigNumber.from(bp.toString());
+    const val = x.sub(x.div(maxBP).mul(bpBN));
+    return val;
+}
+
+export function convertBPToPercentage(bp: number): number {
+    return (bp / 10000) * 100;
+}
+
+export function convertToRewardDataStruct(raw: string[], _path: string): RewardDataStruct {
+    let rewardData: RewardDataStruct = {
+        from: raw[0].toString(),
+        to: raw[1].toString(),
+        amount: BigNumber.from(raw[2].toString()),
+        swapData: {
+            slippage: 0,
+            path: _path,
+        },
+        atRouter: Boolean(raw[4]),
+    };
+    return rewardData;
+}
+
+export function convertToSlippageStruct(raw: any): SlippageStruct {
+    let slippage: SlippageStruct = {
+        slippage: BigNumber.from(raw[0].toString()),
+        isDeposit: Boolean(raw[1]),
+        canProcess: Boolean(raw[2]),
+        basisPoints: Number(raw[3]),
+        balance: BigNumber.from(raw[4].toString()),
+    };
+    printSlippage(slippage);
+    return slippage;
+}
+
+export function printSlippage(slippage: SlippageStruct) {
+    console.log("Slippage argument: " + ethers.utils.formatUnits(slippage.slippage.toString()));
+    console.log("Is it a deposit? : " + slippage.isDeposit);
+    console.log(
+        "Percentage difference between output and input to slippage function: " +
+            convertBPToPercentage(Number(slippage.basisPoints)) +
+            "%"
+    );
+    console.log("Will it have deposits/withdrawals processed by DoHardWork? " + slippage.canProcess);
+    console.log("");
+}
+
+export function handleSlippageResult(slippage: SlippageStruct, _percents: number[]): BigNumber {
+    if (!slippage.canProcess) {
+        return BigNumber.from(0);
+    }
+    let arg = BigNumber.from(slippage.slippage);
+    if (slippage.isDeposit) {
+        return encodeDepositSlippage(reduceByPercentage(arg, _percents[0]));
+    }
+    return reduceByPercentage(arg, _percents[1]);
 }

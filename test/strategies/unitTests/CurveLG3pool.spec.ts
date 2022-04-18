@@ -1,24 +1,26 @@
 import { expect, use } from "chai";
-import { constants, BigNumber } from "ethers";
-import { solidity, MockProvider, createFixtureLoader, deployMockContract, MockContract } from "ethereum-waffle";
-import { IBaseStrategy } from "../../../build/types/IBaseStrategy";
-import { IERC20 } from "../../../build/types/IERC20";
-import { TestStrategySetup__factory } from "../../../build/types/factories/TestStrategySetup__factory";
-import { Curve3poolStrategy__factory } from "../../../build/types/factories/Curve3poolStrategy__factory";
-import { ILiquidityGauge__factory } from "../../../build/types/factories/ILiquidityGauge__factory";
-import { underlyingTokensFixture, mainnetConst, TokensFixture, AccountsFixture } from "../../shared/fixtures";
+import { BigNumber, constants } from "ethers";
+import { createFixtureLoader, deployMockContract, MockProvider, solidity } from "ethereum-waffle";
+import {
+    Curve3poolStrategy__factory,
+    IBaseStrategy,
+    IERC20,
+    ILiquidityGauge__factory,
+    TestStrategySetup__factory,
+} from "../../../build/types";
+import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
 import { Tokens } from "../../shared/constants";
 
 import {
-    reset,
-    mineBlocks,
-    SECS_DAY,
     BasisPoints,
+    encodeDepositSlippage,
     getMillionUnits,
     getRewardSwapPathV3Direct,
     getRewardSwapPathV3Weth,
+    mineBlocks,
+    reset,
+    SECS_DAY,
     UNISWAP_V3_FEE,
-    encodeDepositSlippage,
 } from "../../shared/utilities";
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
@@ -57,8 +59,8 @@ const strategyAssets: ConvexStratSetup[] = [
 
 const depositSlippage = encodeDepositSlippage(0);
 
-const depositSlippages = [0, MaxUint256, depositSlippage]
-const withdrawSlippages = [0, MaxUint256, 0]
+const depositSlippages = [0, MaxUint256, depositSlippage];
+const withdrawSlippages = [0, MaxUint256, 0];
 
 describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
     let accounts: AccountsFixture;
@@ -73,14 +75,10 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
 
         await liquidityGaugeMock.mock.lp_token.returns("0x0000000000000000000000000000000000000001");
         await liquidityGaugeMock.mock.crv_token.returns("0x0000000000000000000000000000000000000001");
-        
+
         const CurveStrategy = new Curve3poolStrategy__factory().connect(accounts.administrator);
         await expect(
-            CurveStrategy.deploy(
-                AddressZero,
-                liquidityGaugeMock.address,
-                "0x0000000000000000000000000000000000000001",
-            )
+            CurveStrategy.deploy(AddressZero, liquidityGaugeMock.address, "0x0000000000000000000000000000000000000001")
         ).to.be.revertedWith("CurveStrategy::constructor: Curve Pool address cannot be 0");
     });
 
@@ -268,11 +266,9 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                     const stratSetupWithdraw = await getStrategyState(curveContract);
 
                     // ACT
-                    await curveContract.fastWithdraw(
-                        stratSetupWithdraw.totalShares,
-                        withdrawSlippages,
-                        [{ slippage: 1, path: swapPath }]
-                    );
+                    await curveContract.fastWithdraw(stratSetupWithdraw.totalShares, withdrawSlippages, [
+                        { slippage: 1, path: swapPath },
+                    ]);
 
                     // ASSERT
                     const balance = await curveContract.getStrategyBalance();
