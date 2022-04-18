@@ -1,26 +1,22 @@
 import { expect, use } from "chai";
 import { constants, ethers } from "ethers";
-import { solidity, MockProvider, createFixtureLoader } from "ethereum-waffle";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
 import { deploymentFixture } from "./shared/fixtures";
-import { Vault } from "../build/types/Vault";
-import {FastWithdrawParamsStruct} from "../build/types/FastWithdraw";
+import { FastWithdraw__factory, Vault } from "../build/types";
 import {
-    VaultDetailsStruct,
     createVault,
-    setReallocationTable,
-    getStrategyIndexes,
-    getBitwiseStrategies,
     getBitwiseProportions,
-    TEN_UNITS_E8,
-    customConstants,
-    TestContext,
-    reset,
+    getBitwiseStrategies,
     getRewardSwapPathV2Weth,
+    getStrategyIndexes,
+    reset,
+    setReallocationTable,
+    TEN_UNITS_E8,
+    TestContext,
+    VaultDetailsStruct,
 } from "./shared/utilities";
-import {FastWithdraw__factory} from "../build/types/factories/FastWithdraw__factory";
 
 const { Zero } = constants;
-const { MaxUint128 } = customConstants;
 
 use(solidity);
 
@@ -88,15 +84,15 @@ describe("Vault Fast Withdraw", () => {
     });
 
     it("Should fail deploying the FastWithdraw contract with 0 addresses", async () => {
-        const { accounts} = await loadFixture(deploymentFixture);
+        const { accounts } = await loadFixture(deploymentFixture);
         await expect(
             new FastWithdraw__factory()
-             .connect(accounts.administrator)
-             .deploy(
-                 ethers.constants.AddressZero,
-                 "0x0000000000000000000000000000000000000001",
-                 "0x0000000000000000000000000000000000000001",
-             )
+                .connect(accounts.administrator)
+                .deploy(
+                    ethers.constants.AddressZero,
+                    "0x0000000000000000000000000000000000000001",
+                    "0x0000000000000000000000000000000000000001"
+                )
         ).to.be.revertedWith("SpoolPausable::constructor: Controller contract address cannot be 0");
     });
 
@@ -213,14 +209,13 @@ describe("Vault Fast Withdraw", () => {
 
             // ACT
 
-            await expect(fastWithdraw
-                .connect(accounts.user1)
-                .transferShares([], [], 0, ethers.constants.AddressZero, {
+            await expect(
+                fastWithdraw.connect(accounts.user1).transferShares([], [], 0, ethers.constants.AddressZero, {
                     doExecuteWithdraw: false,
                     slippages: [],
-                    swapData: []
-                }))
-            .to.be.revertedWith("FastWithdraw::_onlyVault: Can only be invoked by vault");
+                    swapData: [],
+                })
+            ).to.be.revertedWith("FastWithdraw::_onlyVault: Can only be invoked by vault");
         });
 
         it("should fail to withdraw with incorrect arguments", async () => {
@@ -238,21 +233,19 @@ describe("Vault Fast Withdraw", () => {
             });
 
             // ACT
-            await expect(fastWithdraw
-                .connect(accounts.user1)
-                .withdraw(vault.address, [], slippages, rewardSlippages))
-            .to.be.revertedWith("FastWithdraw::withdraw: No strategies");
+            await expect(
+                fastWithdraw.connect(accounts.user1).withdraw(vault.address, [], slippages, rewardSlippages)
+            ).to.be.revertedWith("FastWithdraw::withdraw: No strategies");
 
-            await expect(fastWithdraw
-                .connect(accounts.user1)
-                .withdraw(vault.address, vaultCreation.strategies, [], rewardSlippages))
-            .to.be.revertedWith("FastWithdraw::_executeWithdraw: Strategies length should match slippages length");
-            
-            await expect(fastWithdraw
-                .connect(accounts.user1)
-                .withdraw(vault.address, vaultCreation.strategies, slippages, []))
-            .to.be.revertedWith("FastWithdraw::_executeWithdraw: Strategies length should match swap data length");
+            await expect(
+                fastWithdraw
+                    .connect(accounts.user1)
+                    .withdraw(vault.address, vaultCreation.strategies, [], rewardSlippages)
+            ).to.be.revertedWith("FastWithdraw::_executeWithdraw: Strategies length should match slippages length");
 
+            await expect(
+                fastWithdraw.connect(accounts.user1).withdraw(vault.address, vaultCreation.strategies, slippages, [])
+            ).to.be.revertedWith("FastWithdraw::_executeWithdraw: Strategies length should match swap data length");
         });
 
         it("should execute fast withdraw for user 1", async () => {
@@ -292,7 +285,7 @@ describe("Vault Fast Withdraw", () => {
 
             expect(userVaultWithdraw.proportionateDeposit).to.equal(Zero);
         });
-        
+
         it("user 1 should not be able to fast withdraw if no fast withdraw shares", async () => {
             // ARRANGE
             const {

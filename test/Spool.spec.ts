@@ -4,16 +4,16 @@ import { solidity } from "ethereum-waffle";
 import {
     AccountsFixture,
     deploymentFixture,
-    SpoolFixture,
     MockStrategyFixture,
+    SpoolFixture,
     TokensFixture,
 } from "./shared/fixtures";
 import { ethers, waffle } from "hardhat";
 import { VaultDetailsStruct } from "../build/types/Controller";
-const { waffleChai } = require("@ethereum-waffle/chai");
-import { Vault } from "../build/types/Vault";
+import { Spool__factory, Vault } from "../build/types";
 import { createVault, reset } from "./shared/utilities";
-import { Spool__factory } from "../build/types/factories/Spool__factory";
+
+const { waffleChai } = require("@ethereum-waffle/chai");
 
 use(solidity);
 use(waffleChai);
@@ -60,15 +60,16 @@ describe("Spool", () => {
 
     describe("contract setup tests", () => {
         it("Should fail attempting to renounce ownership on spool owner contract", async () => {
-            await expect(
-                spool.spoolOwner.renounceOwnership()
-            ).to.be.revertedWith("SpoolOwner::renounceOwnership: Cannot renounce Spool ownership");
+            await expect(spool.spoolOwner.renounceOwnership()).to.be.revertedWith(
+                "SpoolOwner::renounceOwnership: Cannot renounce Spool ownership"
+            );
         });
         it("Should fail deploying the Spool with Spool address 0", async () => {
             const SpoolFactory = await new Spool__factory().connect(accounts.administrator);
             await expect(
                 SpoolFactory.deploy(
                     ethers.constants.AddressZero,
+                    "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001"
                 )
@@ -81,6 +82,7 @@ describe("Spool", () => {
                 SpoolFactory.deploy(
                     "0x0000000000000000000000000000000000000001",
                     ethers.constants.AddressZero,
+                    "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001"
                 )
             ).to.be.revertedWith("SpoolPausable::constructor: Controller contract address cannot be 0");
