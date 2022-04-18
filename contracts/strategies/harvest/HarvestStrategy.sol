@@ -13,6 +13,11 @@ import "../../external/interfaces/harvest/IHarvestPool.sol";
 contract HarvestStrategy is ClaimFullSingleRewardStrategy {
     using SafeERC20 for IERC20;
 
+    /* ========== CONSTANTS ========== */
+
+    /// @notice Spool reward distributor contract
+    address public constant REWARD_DISTRIBUTOR = 0x22bB10A016B1eb7bFFD304862051aA3fCe723F74;
+
     /* ========== STATE VARIABLES ========== */
 
     /// @notice Harvest vault contract
@@ -58,7 +63,7 @@ contract HarvestStrategy is ClaimFullSingleRewardStrategy {
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
     /**
-     * @dev Claim strategy reward
+     * @dev Claim strategy reward and send them to the reward distributor contract
      * @return Reward amount
      */
     function _claimStrategyReward() internal override returns(uint128) {
@@ -67,10 +72,12 @@ contract HarvestStrategy is ClaimFullSingleRewardStrategy {
         pool.getReward();
         uint256 rewardAmount = rewardToken.balanceOf(address(this)) - rewardBefore;
 
-        // add already claimed rewards
-        rewardAmount += strategies[self].pendingRewards[address(rewardToken)];
+        // transfer FARM tokens to the reward distributor contract
+        if (rewardAmount > 0) {
+            rewardToken.safeTransfer(REWARD_DISTRIBUTOR, rewardAmount);
+        }
 
-        return SafeCast.toUint128(rewardAmount);
+        return 0;
     }
 
     /**
