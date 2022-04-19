@@ -179,24 +179,24 @@ describe("Vault", () => {
 
             const strat0 = await spool.spool.strategies(vaultCreation.strategies[0]);
             const stratPendingDeposit0 = strat0.pendingUser.deposit;
-            const stratTotalShares0 = strat0.totalShares;
+            const stratUnderlying0 = await spool.spool.callStatic.getStratUnderlying(vaultCreation.strategies[0]);
             const amount0 = TEN_UNITS_E8.mul(BigNumber.from(2)).mul(BigNumber.from(4500)).div(BigNumber.from(10000));
             expect(stratPendingDeposit0).to.equal(customConstants.MaxUint128);
-            expect(stratTotalShares0).to.equal(amount0);
+            expect(stratUnderlying0).to.equal(amount0);
 
             const strat1 = await spool.spool.strategies(vaultCreation.strategies[1]);
             const stratPendingDeposit1 = strat1.pendingUser.deposit;
-            const stratTotalShares1 = strat1.totalShares;
+            const stratUnderlying1 = await spool.spool.callStatic.getStratUnderlying(vaultCreation.strategies[1]);
             const amount1 = TEN_UNITS_E8.mul(BigNumber.from(2)).mul(BigNumber.from(2500)).div(BigNumber.from(10000));
             expect(stratPendingDeposit1).to.equal(customConstants.MaxUint128);
-            expect(stratTotalShares1).to.equal(amount1);
+            expect(stratUnderlying1).to.equal(amount1);
 
             const strat2 = await spool.spool.strategies(vaultCreation.strategies[2]);
             const stratPendingDeposit2 = strat2.pendingUser.deposit;
-            const stratTotalShares2 = strat2.totalShares;
+            const stratUnderlying2 = await spool.spool.callStatic.getStratUnderlying(vaultCreation.strategies[2]);
             const amount2 = TEN_UNITS_E8.mul(BigNumber.from(2)).mul(BigNumber.from(3000)).div(BigNumber.from(10000));
             expect(stratPendingDeposit2).to.equal(customConstants.MaxUint128);
-            expect(stratTotalShares2).to.equal(amount2);
+            expect(stratUnderlying2).to.equal(amount2);
         });
 
         it("should claim vault and user shares after deposit and dhw", async () => {

@@ -87,7 +87,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             // if yes, reset reallocation index
             reallocationIndex = 0;
         }
-        
+
         require(
             stratIndexes.length > 0 &&
             stratIndexes.length == slippages.length &&
@@ -254,7 +254,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
 
             // deposit reallocated amounts into strategies
             // this only deals with the reallocated amounts as users were already processed in the withdrawal phase
-            for (uint128 i = 0; i < depositData.stratIndexes.length; i++) {
+            for (uint256 i = 0; i < depositData.stratIndexes.length; i++) {
                 uint256 stratIndex = depositData.stratIndexes[i];
                 address stratAddress = allStrategies[stratIndex];
                 Strategy storage strategy = strategies[stratAddress];
@@ -313,16 +313,18 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                 
                 // withdraw reallocation / returns non-optimized withdrawn amount
                 withdrawnReallocationReceived = _doHardWorkReallocation(stratAddress, withdrawData.slippages[stratIndex], processReallocationData);
-            }            
+            }
 
             // reallocate withdrawn to other strategies
-            _depositReallocatedAmount(
-                reallocation.totalSharesWithdrawn[stratIndex],
-                withdrawnReallocationReceived,
-                reallocation.optimizedWithdraws[stratIndex],
-                allStrategies,
-                withdrawData.reallocationTable[stratIndex]
-            );
+            if (reallocation.totalSharesWithdrawn[stratIndex] > 0) {
+                _depositReallocatedAmount(
+                    stratIndex,
+                    withdrawnReallocationReceived,
+                    allStrategies,
+                    withdrawData.reallocationTable[stratIndex],
+                    reallocation
+                );
+            }           
 
             _updatePending(stratAddress);
 
@@ -393,17 +395,23 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
         // total non-optimized amount of shares for each strategy
         uint128[] memory totalShares = new uint128[](withdrawData.reallocationTable.length);
         
+        uint256[][] memory optimizedReallocationTable = new uint256[][](withdrawData.reallocationTable.length);
+
+        for (uint256 i = 0; i < withdrawData.reallocationTable.length; i++) {
+            optimizedReallocationTable[i] = new uint256[](withdrawData.reallocationTable.length);
+        }
+        
         // go over all the strategies (over reallcation table)
-        for (uint128 i = 0; i < withdrawData.reallocationTable.length; i++) {
-            for (uint128 j = i + 1; j < withdrawData.reallocationTable.length; j++) {
+        for (uint256 i = 0; i < withdrawData.reallocationTable.length; i++) {
+            for (uint256 j = i + 1; j < withdrawData.reallocationTable.length; j++) {
                 // check if both strategies are depositing to eachother, if yes - optimize
                 if (withdrawData.reallocationTable[i][j] > 0 && withdrawData.reallocationTable[j][i] > 0) {
-                    // calculate strategy I underlying collateral amout withdrawing
-                    uint128 amountI = uint128(withdrawData.reallocationTable[i][j] * priceData[i].totalValue / priceData[i].totalShares);
-                    // calculate strategy I underlying collateral amout withdrawing
-                    uint128 amountJ = uint128(withdrawData.reallocationTable[j][i] * priceData[j].totalValue / priceData[j].totalShares);
+                    // calculate strategy I underlying collateral amount withdrawing
+                    uint256 amountI = withdrawData.reallocationTable[i][j] * priceData[i].totalValue / priceData[i].totalShares;
+                    // calculate strategy J underlying collateral amount withdrawing
+                    uint256 amountJ = withdrawData.reallocationTable[j][i] * priceData[j].totalValue / priceData[j].totalShares;
 
-                    uint128 optimizedAmount;
+                    uint256 optimizedAmount;
                     
                     // check which strategy is withdrawing less
                     if (amountI > amountJ) {
@@ -413,8 +421,19 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                     }
                     
                     // use the lesser value of both to save maximum possible optimized amount withdrawing
-                    optimizedWithdraws[i] += optimizedAmount;
-                    optimizedWithdraws[j] += optimizedAmount;
+                    optimizedWithdraws[i] += uint128(optimizedAmount);
+                    optimizedWithdraws[j] += uint128(optimizedAmount);
+
+                    unchecked {
+                        // If we optimized for a strategy, calculate the total shares optimized back from the collateral amount.
+                        // The optimized shares amount will never be withdrawn from the strategy, as we know other strategies are
+                        // depositing to the strategy in the equal amount and we know how to mach them.
+                        optimizedReallocationTable[i][j] = optimizedAmount * priceData[i].totalShares / priceData[i].totalValue;
+                        optimizedReallocationTable[j][i] = optimizedAmount * priceData[j].totalShares / priceData[j].totalValue;
+
+                        optimizedShares[i] += uint128(optimizedReallocationTable[i][j]);
+                        optimizedShares[j] += uint128(optimizedReallocationTable[j][i]);
+                    }
                 }
 
                 // sum total shares withdrawing for each strategy
@@ -423,19 +442,13 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
                     totalShares[j] += uint128(withdrawData.reallocationTable[j][i]);
                 }
             }
-
-            // If we optimized for a strategy, calculate the total shares optimized back from the collateral amount.
-            // The optimized shares amount will never be withdrawn from the strategy, as we know other strategies are
-            // depositing to the strategy in the equal amount and we know how to mach them.
-            if (optimizedWithdraws[i] > 0) {
-                optimizedShares[i] = Math.getProportion128(optimizedWithdraws[i], priceData[i].totalShares, priceData[i].totalValue);
-            }
         }
 
         ReallocationShares memory reallocationShares = ReallocationShares(
             optimizedWithdraws,
             optimizedShares,
-            totalShares
+            totalShares,
+            optimizedReallocationTable
         );
         
         return reallocationShares;
@@ -455,13 +468,13 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
     ) private returns(PriceData[] memory) {
         PriceData[] memory spotPrices = new PriceData[](allStrategies.length);
 
-        for (uint128 i = 0; i < allStrategies.length; i++) {
+        for (uint256 i = 0; i < allStrategies.length; i++) {
             // claim rewards before getting the price
             if (withdrawData.rewardSlippages[i].doClaim) {
                 _claimRewards(allStrategies[i], withdrawData.rewardSlippages[i].swapData);
             }
             
-            for (uint128 j = 0; j < allStrategies.length; j++) {
+            for (uint256 j = 0; j < allStrategies.length; j++) {
                 // if a strategy is withdrawing in reallocation get its spot price
                 if (withdrawData.reallocationTable[i][j] > 0) {
                     // if strategy is removed treat it's value as 0
@@ -487,30 +500,46 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
 
     /**
       * @notice Processes reallocated amount deposits.
-      * @param reallocateSharesToWithdraw Reallocate shares to withdraw
-      * @param withdrawnReallocationReceived Received withdrawn reallocation
-      * @param optimizedWithdraw Optimized withdraw
-      * @param _strategies Array of strategy addresses
-      * @param stratReallocationShares Array of strategy reallocation shares
+      * @dev Deposits withdrawn optimized and non-optimized amounts to the according strategies
+      * @param stratIndex Index of the reallocating (wtihdrawing) strategy
+      * @param withdrawnReallocationReceived Actual received withdrawn reallocation
+      * @param _strategies Array of all system strategy addresses
+      * @param stratReallocationShares Array of strategy reallocation shares do deposit to
+      * @param reallocation Reallocation share values
       */
     function _depositReallocatedAmount(
-        uint128 reallocateSharesToWithdraw,
+        uint256 stratIndex,
         uint128 withdrawnReallocationReceived,
-        uint128 optimizedWithdraw,
         address[] memory _strategies,
-        uint256[] memory stratReallocationShares
+        uint256[] memory stratReallocationShares,
+        ReallocationShares memory reallocation
     ) private {
+        uint128 optimizedWithdraw = reallocation.optimizedWithdraws[stratIndex];
+        uint128 optimizedShares = reallocation.optimizedShares[stratIndex];
+        uint256[] memory stratOptimizedReallocationShares = reallocation.optimizedReallocationTable[stratIndex];
+
+        uint256 nonOptimizedTotalWithdrawnShares = reallocation.totalSharesWithdrawn[stratIndex] - optimizedShares;
         for (uint256 i = 0; i < stratReallocationShares.length; i++) {
             if (stratReallocationShares[i] > 0) {
                 Strategy storage depositStrategy = strategies[_strategies[i]];
 
-                // add actual withdrawn deposit
-                depositStrategy.pendingReallocateDeposit +=
-                    Math.getProportion128(withdrawnReallocationReceived, stratReallocationShares[i], reallocateSharesToWithdraw);
+                uint256 nonOptimizedWithdrawnShares = stratReallocationShares[i] - stratOptimizedReallocationShares[i];
 
-                // add optimized deposit
-                depositStrategy.pendingReallocateOptimizedDeposit +=
-                    Math.getProportion128(optimizedWithdraw, stratReallocationShares[i], reallocateSharesToWithdraw);
+                // add actual withdrawn deposit
+                depositStrategy.pendingReallocateAverageDeposit +=
+                    Math.getProportion128(withdrawnReallocationReceived + optimizedWithdraw, stratReallocationShares[i], reallocation.totalSharesWithdrawn[stratIndex]);
+                
+                if (nonOptimizedWithdrawnShares > 0 && nonOptimizedTotalWithdrawnShares > 0) {
+                    // add actual withdrawn deposit
+                    depositStrategy.pendingReallocateDeposit +=
+                        Math.getProportion128(withdrawnReallocationReceived, nonOptimizedWithdrawnShares, nonOptimizedTotalWithdrawnShares);
+                }
+
+                if (stratOptimizedReallocationShares[i] > 0 && optimizedShares > 0) {
+                    // add optimized deposit
+                    depositStrategy.pendingReallocateOptimizedDeposit +=
+                        Math.getProportion128(optimizedWithdraw, stratOptimizedReallocationShares[i], optimizedShares);
+                }
             }
         }
     }

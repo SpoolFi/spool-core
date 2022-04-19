@@ -27,6 +27,10 @@ interface IBaseStrategy {
     function initialize() external;
 
     function disable() external;
+
+    /* ========== EVENTS ========== */
+
+    event Slippage(address strategy, IERC20 underlying, bool isDeposit, uint256 amountIn, uint256 amountOut);
 }
 
 struct ProcessReallocationData {

@@ -215,10 +215,9 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         uint256 index
     ) external override onlyVault {
         // count number of strategies we deposit into
-        uint128 depositStratsCount = 0;
-        for (uint256 i = 0; i < vaultStrategies.length; i++) {
-            uint256 prop = depositProportions.get14BitUintByIndex(i);
-            if (prop > 0) {
+        uint256 depositStratsCount;
+        for (uint256 i; i < vaultStrategies.length; i++) {
+            if (depositProportions.get14BitUintByIndex(i) > 0) {
                 depositStratsCount++;
             }
         }
@@ -230,23 +229,27 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
 
         // fill deposit and withdrawal strategy arrays 
         {
-            uint128 k = 0;
-            uint128 l = 0;
-            for (uint256 i = 0; i < vaultStrategies.length; i++) {
+            uint256 k;
+            uint256 l;
+            for (uint256 i; i < vaultStrategies.length; i++) {
                 uint256 prop = depositProportions.get14BitUintByIndex(i);
                 if (prop > 0) {
                     depositStrats[k] = vaultStrategies[i];
                     depositProps[k] = prop;
-                    k++;
+                    unchecked {
+                        k++;
+                    }
                 } else {
                     withdrawStrats[l] = vaultStrategies[i];
-                    l++;
+                    unchecked {
+                        l++;
+                    }
                 }
             }
         }
 
-        uint256 totalVaultWithdrawnReceived = 0;
-
+        uint256[] memory vaultWithdrawnReceived = new uint256[](withdrawStrats.length);
+        uint256[] memory vaultWithdrawnReceivedLeft = new uint256[](withdrawStrats.length);
         // calculate total withdrawal amount 
         for (uint256 i = 0; i < withdrawStrats.length; i++) {
             Strategy storage strategy = strategies[withdrawStrats[i]];
@@ -259,8 +262,9 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
                 // if batch withdrawn shares is 0, reallocation was canceled as a strategy was removed
                 // if so, skip calculation and reset withdrawn reallcoation shares to 0
                 if (reallocationBatch.withdrawnReallocationShares > 0) {
-                    totalVaultWithdrawnReceived += 
+                    vaultWithdrawnReceived[i] = 
                         (reallocationBatch.withdrawnReallocationReceived * vaultWithdrawnReallocationShares) / reallocationBatch.withdrawnReallocationShares;
+                    vaultWithdrawnReceivedLeft[i] = vaultWithdrawnReceived[i];
                     // substract the shares withdrawn from in the reallocation
                     vault.shares -= uint128(vaultWithdrawnReallocationShares);
                 }
@@ -270,27 +274,46 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
         }
 
         // calculate how the withdrawn amount was deposited to the depositing strategies
-        uint256 vaultWithdrawnReceivedLeft = totalVaultWithdrawnReceived;
+        // uint256 vaultWithdrawnReceivedLeft = totalVaultWithdrawnReceived;
         uint256 lastDepositStratIndex = depositStratsCount - 1;
-        for (uint256 i = 0; i < depositStratsCount; i++) {
+        for (uint256 i; i < depositStratsCount; i++) {
             Strategy storage depositStrategy = strategies[depositStrats[i]];
             Vault storage depositVault = depositStrategy.vaults[msg.sender];
             BatchReallocation storage reallocationBatch = depositStrategy.reallocationBatches[index];
             if (reallocationBatch.depositedReallocation > 0) {
                 // calculate reallocation strat deposit amount
-                uint256 depositAmount;
+                
                 // if the strategy is last among the depositing ones, use the amount left to calculate the new shares
                 // (same pattern was used when distributing the withdrawn shares to the depositing strategies - last strategy got what was left of shares)
+                uint256 depositAmount;
                 if (i < lastDepositStratIndex) {
-                    depositAmount = (totalVaultWithdrawnReceived * depositProps[i]) / FULL_PERCENT;
-                    vaultWithdrawnReceivedLeft -= depositAmount;
+                    for (uint256 j; j < withdrawStrats.length; j++) {
+                        uint256 depositAmountFromStrat = (vaultWithdrawnReceived[j] * depositProps[i]) / FULL_PERCENT;
+                        depositAmount += depositAmountFromStrat;
+                        vaultWithdrawnReceivedLeft[j] -= depositAmountFromStrat;                        
+                    }
                 } else { // if strat is last, use deposit left
-                    depositAmount = vaultWithdrawnReceivedLeft;
+                    for (uint256 j; j < withdrawStrats.length; j++) {
+                        depositAmount += vaultWithdrawnReceivedLeft[j];
+                    }
                 }
 
                 // based on calculated deposited amount calculate/redeem the new strategy shares belonging to a vault
-                depositVault.shares += 
-                    SafeCast.toUint128((reallocationBatch.depositedReallocationSharesReceived * depositAmount) / reallocationBatch.depositedReallocation);
+                uint128 newShares;
+                if (depositAmount < reallocationBatch.depositedReallocation) {
+                    newShares = uint128(reallocationBatch.depositedReallocationSharesReceived * depositAmount / reallocationBatch.depositedReallocation);
+                    
+                    unchecked {
+                        reallocationBatch.depositedReallocationSharesReceived -= newShares;
+                        reallocationBatch.depositedReallocation -= uint128(depositAmount); 
+                    }
+                } else {
+                    newShares = reallocationBatch.depositedReallocationSharesReceived;
+                    reallocationBatch.depositedReallocationSharesReceived = 0;
+                    reallocationBatch.depositedReallocation = 0;
+                }
+                
+                depositVault.shares += newShares;
             }
         }
     }
@@ -364,7 +387,7 @@ abstract contract SpoolExternal is ISpoolExternal, SpoolReallocation {
     {
         uint128[] memory removedShares = new uint128[](vaultStrategies.length);
 
-        for (uint128 i = 0; i < vaultStrategies.length; i++) {
+        for (uint256 i; i < vaultStrategies.length; i++) {
             _notRemoved(vaultStrategies[i]);
             Strategy storage strategy = strategies[vaultStrategies[i]];
 

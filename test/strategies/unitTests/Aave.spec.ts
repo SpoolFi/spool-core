@@ -144,7 +144,8 @@ describe("Strategies Unit Test: AAVE", () => {
                     expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_1);
 
                     const strategyDetails = await getStrategyState(aaveContract);
-                    expect(strategyDetails.totalShares).to.equal(depositAmount);
+                    const totalShares = depositAmount.mul(10**6).sub(10**5);
+                    expect(strategyDetails.totalShares).to.beCloseTo(totalShares, BasisPoints.Basis_01);
                 });
 
                 it("Process deposit twice, should redeposit rewards", async () => {
@@ -178,9 +179,10 @@ describe("Strategies Unit Test: AAVE", () => {
                     expect(balance).to.be.gt(depositAmount.mul(2));
 
                     const strategyDetails = await getStrategyState(aaveContract);
+                    const totalShares = depositAmount.mul(10**6).mul(2).sub(10**5);
                     // total shares should be less or equal, as we redeposit, so shares are not 1 to 1 with deposit anymore
                     // so second user gets less shares than first
-                    expect(strategyDetails.totalShares).to.be.lte(depositAmount.mul(2));
+                    expect(strategyDetails.totalShares).to.be.lte(totalShares);
                 });
 
                 it("Process withraw, should withdraw from strategy", async () => {
@@ -197,7 +199,7 @@ describe("Strategies Unit Test: AAVE", () => {
                     // set withdraw
                     const stratSetupWithdraw = await getStrategyState(aaveContract);
                     stratSetupWithdraw.pendingUser.deposit = Zero;
-                    stratSetupWithdraw.pendingUser.sharesToWithdraw = depositAmount;
+                    stratSetupWithdraw.pendingUser.sharesToWithdraw = stratSetupWithdraw.totalShares;
                     await setStrategyState(aaveContract, stratSetupWithdraw);
 
                     // ACT
@@ -252,7 +254,8 @@ describe("Strategies Unit Test: AAVE", () => {
                     console.log("mined");
 
                     // ACT
-                    await aaveContract.fastWithdraw(depositAmount, [], [{ slippage: 1, path: swapPath }]);
+                    const stratSetupWithdraw = await getStrategyState(aaveContract);
+                    await aaveContract.fastWithdraw(stratSetupWithdraw.totalShares, [], [{ slippage: 1, path: swapPath }]);
 
                     // ASSERT
                     const balance = await aaveContract.getStrategyBalance();

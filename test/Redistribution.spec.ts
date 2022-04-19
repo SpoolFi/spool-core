@@ -3,6 +3,7 @@ import { BigNumber } from "ethers";
 import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
 import { deploymentFixture } from "./shared/fixtures";
 import {
+    BasisPoints,
     createVault,
     customConstants,
     getBitwiseProportions,
@@ -183,16 +184,18 @@ describe("Vault Reallocation", () => {
 
             const vaultStratShares0 = await spool.spool.getStratVaultShares(vaultCreation.strategies[0], vault.address);
             const vaultStratShares1 = await spool.spool.getStratVaultShares(vaultCreation.strategies[1], vault.address);
+            const stratUnderlying0 = await spool.spool.callStatic.getStratUnderlying(vaultCreation.strategies[0]);
+            const stratUnderlying1 = await spool.spool.callStatic.getStratUnderlying(vaultCreation.strategies[1]);
 
             const totalDeposit = TEN_UNITS_E8.add(TEN_UNITS_E8);
 
-            const totalShares0 = totalDeposit.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
-            const totalShares1 = totalDeposit.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
+            const totalDeposit0 = totalDeposit.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
+            const totalDeposit1 = totalDeposit.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
 
             expect(strat0.totalShares).to.be.equal(vaultStratShares0);
             expect(strat1.totalShares).to.be.equal(vaultStratShares1);
-            expect(strat0.totalShares).to.be.closeTo(totalShares0, 10);
-            expect(strat1.totalShares).to.be.closeTo(totalShares1, 10);
+            expect(stratUnderlying0).to.beCloseTo(totalDeposit0, BasisPoints.Basis_01);
+            expect(stratUnderlying1).to.beCloseTo(totalDeposit1, BasisPoints.Basis_01);
         });
     });
 
@@ -362,12 +365,12 @@ describe("Vault Reallocation", () => {
 
         it("strategies should have same amount of shares after reallocation", async () => {
             const { accounts, tokens, spool, strategies } = await loadFixture(deploymentFixture);
-
-            const strat0 = await spool.spool.strategies(vault0Creation.strategies[0]);
-            const strat1 = await spool.spool.strategies(vault0Creation.strategies[1]);
-
-            expect(strat0.totalShares).to.be.closeTo(depositPerStrat, 1);
-            expect(strat1.totalShares).to.be.closeTo(depositPerStrat, 1);
+            
+            const stratUnderlying0 = await spool.spool.callStatic.getStratUnderlying(vault0Creation.strategies[0]);
+            const stratUnderlying1 = await spool.spool.callStatic.getStratUnderlying(vault0Creation.strategies[1]);
+            
+            expect(stratUnderlying0).to.beCloseTo(depositPerStrat, BasisPoints.Basis_01);
+            expect(stratUnderlying1).to.beCloseTo(depositPerStrat, BasisPoints.Basis_01);
         });
 
         it("should claim vault0 shares after dhw", async () => {
@@ -375,8 +378,6 @@ describe("Vault Reallocation", () => {
 
             await vault0.connect(accounts.user0).redeemVaultStrategies(vault0Creation.strategies);
 
-            const strat0 = await spool.spool.strategies(vault0Creation.strategies[0]);
-            const strat1 = await spool.spool.strategies(vault0Creation.strategies[1]);
 
             const vaultStratShares0 = await spool.spool.getStratVaultShares(
                 vault0Creation.strategies[0],
@@ -387,13 +388,14 @@ describe("Vault Reallocation", () => {
                 vault0.address
             );
 
-            const totalDeposit = TEN_UNITS_E8.add(TEN_UNITS_E8);
+            const strat0 = await spool.spool.strategies(vault0Creation.strategies[0]);
+            const strat1 = await spool.spool.strategies(vault0Creation.strategies[1]);
 
-            const totalDeposit0 = totalDeposit.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
-            const totalDeposit1 = totalDeposit.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
+            const totalVaultShares0 = strat0.totalShares.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
+            const totalVaultShares1 = strat1.totalShares.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
 
-            expect(vaultStratShares0).to.be.closeTo(totalDeposit0, 1);
-            expect(vaultStratShares1).to.be.closeTo(totalDeposit1, 1);
+            expect(vaultStratShares0).to.beCloseTo(totalVaultShares0, BasisPoints.Basis_01);
+            expect(vaultStratShares1).to.beCloseTo(totalVaultShares1, BasisPoints.Basis_01);
         });
 
         it("should claim vault1 shares after dhw", async () => {
@@ -410,13 +412,14 @@ describe("Vault Reallocation", () => {
                 vault1.address
             );
 
-            const totalDeposit = TEN_UNITS_E8.add(TEN_UNITS_E8);
+            const strat0 = await spool.spool.strategies(vault1Creation.strategies[0]);
+            const strat1 = await spool.spool.strategies(vault1Creation.strategies[1]);
 
-            const totalDeposit0 = totalDeposit.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
-            const totalDeposit1 = totalDeposit.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
+            const totalVaultShares0 = strat0.totalShares.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
+            const totalVaultShares1 = strat1.totalShares.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
 
-            expect(vaultStratShares0).to.be.closeTo(totalDeposit0, 1);
-            expect(vaultStratShares1).to.be.closeTo(totalDeposit1, 1);
+            expect(vaultStratShares0).to.beCloseTo(totalVaultShares0, BasisPoints.Basis_01);
+            expect(vaultStratShares1).to.beCloseTo(totalVaultShares1, BasisPoints.Basis_01);
         });
     });
 });
