@@ -235,8 +235,9 @@ describe("Strategies Unit Test: Compound", () => {
 
                     const strategyDetails = await getStrategyState(compoundContract);
 
-                    expect(strategyDetails.totalShares).to.beCloseTo(depositAmount, BasisPoints.Basis_100);
-                    expect(strategyDetails.totalShares).to.beCloseTo(balance, BasisPoints.Basis_100);
+                    expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_1);
+                    const totalShares = depositAmount.mul(10**6).sub(10**5);
+                    expect(strategyDetails.totalShares).to.beCloseTo(totalShares, BasisPoints.Basis_01);
                 });
 
                 it("Process deposit twice, should redeposit rewards", async () => {
@@ -266,10 +267,8 @@ describe("Strategies Unit Test: Compound", () => {
                     expect(balance).to.be.gt(depositAmount.mul(2));
 
                     const strategyDetails = await getStrategyState(compoundContract);
-                    expect(strategyDetails.totalShares).to.be.greaterWithTolerance(
-                        depositAmount.mul(2),
-                        BasisPoints.Basis_1
-                    );
+                    const totalShares = balance.mul(10**6).mul(2).sub(10**5);
+                    expect(strategyDetails.totalShares).to.be.lt(totalShares);
                 });
 
                 it("Process withraw, should withdraw from strategy", async () => {
