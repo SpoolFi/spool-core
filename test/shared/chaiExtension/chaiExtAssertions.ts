@@ -2,13 +2,14 @@ import { Assertion, expect } from "chai";
 import { BigNumber, BigNumberish } from "ethers";
 
 export enum BasisPoints {
-    Basis_1000 = 10_00,
-    Basis_100 = 1_00,
-    Basis_10 = 10,
-    Basis_5 = 5,
-    Basis_3 = 3,
-    Basis_1 = 1,
-    Basis_01 = 0.1,
+    Basis_1000 = 10_00, // 10%
+    Basis_100 = 1_00, // 1%
+    Basis_50 = 0_50, // 0.5%
+    Basis_10 = 0_10, // 0.1%
+    Basis_5 = 0_05, // 0.05%
+    Basis_3 = 0_03, // 0.03%
+    Basis_1 = 0_01, // 0.01%
+    Basis_01 = 0.1, // 0.001%
 }
 
 const FULL_PERCENT_BASIS = 100_00;
@@ -38,8 +39,8 @@ Assertion.addMethod("beCloseTo", function (shouldBeish: BigNumberish, precision:
         result.gte(resultLow) && result.lte(resultHigh),
         errorMessage,
         "Expected not to be close to",
-        result.toString(),
-        shouldBe.toString()
+        shouldBe.toString(),
+        result.toString()
     );
 });
 
@@ -95,7 +96,7 @@ Assertion.addMethod("greaterWithTolerance", function (shouldBeish: BigNumberish,
     this.assert(
         result.gte(resultLow),
         errorMessage,
-        "Expected not to be greater than with tolerance",
+        "Expected not to be greater with tolerance",
         shouldBe.toString(),
         result.toString()
     );

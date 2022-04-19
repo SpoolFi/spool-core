@@ -15,6 +15,7 @@ import {
     BasisPoints,
     getBitwiseProportions,
     getBitwiseStrategies,
+    getProportionsFromBitwise,
     getStrategyIndexes,
     impersonate,
     parseUnits,
@@ -34,9 +35,12 @@ import seedrandom from "seedrandom";
 
 const spoolTokenAddress = "0x40803cea2b2a32bda1be61d3604af6a814e70976";
 const spoolTokenHolder = "0xf6bc2e3b1f939c435d9769d078a6e5048aabd463";
-var rng = seedrandom("some random seed.", { global: true });
+seedrandom("some random seed.", { global: true });
 
 type Snapshot = {
+    strategies: {
+        [key: string]: StrategySnapshot;
+    };
     vaults: {
         [key: string]: VaultSnapshot;
     };
@@ -52,6 +56,11 @@ type Snapshot = {
     };
 };
 
+type StrategySnapshot = {
+    totalShares: string;
+    totalUnderlying: string;
+};
+
 type VaultSnapshot = {
     totalShares: string;
     totalUnderlying: string;
@@ -60,6 +69,12 @@ type VaultSnapshot = {
     depositAmount2: string;
     withdrawShares2: string;
     balance: string;
+    strategies: {
+        address: string;
+        balance: string;
+        stratShares: string;
+        proportion: number;
+    }[];
 };
 
 type UserAssetSnapshot = {
@@ -116,9 +131,9 @@ export async function buildContext(): Promise<Context> {
     );
 
     await writeContracts(hre, {
-        slippagesHelper,
-        reallocationHelper,
-        rewardsHelper,
+        slippagesHelper: slippagesHelper.address,
+        reallocationHelper: reallocationHelper.address,
+        rewardsHelper: rewardsHelper.address,
     });
 
     const signers = await hre.ethers.getSigners();
@@ -372,10 +387,12 @@ export async function doWithdrawAll(
             const vault = Vault__factory.connect(vaultElement.address, user);
             const userShares = (await vault.callStatic.getUpdatedUser(vaultElement.strategies))[0];
 
-            await vault.withdraw(vaultElement.strategies, 0, true);
+            if (!userShares.isZero()) {
+                await vault.withdraw(vaultElement.strategies, 0, true);
 
-            const userVaultAction = getUserVaultAction(user.address, vaultName, userVaultActions);
-            userVaultAction.withdrawal = userVaultAction.withdrawal.add(userShares);
+                const userVaultAction = getUserVaultAction(user.address, vaultName, userVaultActions);
+                userVaultAction.withdrawal = userVaultAction.withdrawal.add(userShares);
+            }
         }
     }
 }
@@ -426,10 +443,6 @@ export async function doDeployVault(
     const administrator = context.accounts.administrator;
     const vaultAddress = await controller.callStatic.createVault(vaultCreation);
 
-    try {
-        await hre.ethers.provider.send("evm_setNextBlockTimestamp", [Math.floor(Date.now() / 1000)]);
-    } catch (e) {}
-
     const vaultCreate = await controller.connect(administrator).createVault(vaultCreation);
     await vaultCreate.wait();
 
@@ -474,6 +487,7 @@ export function assertDoHardWorkSnapshotsPrimitive(
     const userSnapshots2 = snapshot2.users;
     const userSnapshots3 = snapshot3.users;
 
+    console.log(context.scope + `\t>> ASSERT: Users`);
     for (const user in userSnapshots2) {
         const vaultsBeforeAction = userSnapshots1[user].vaults;
         const vaults = userSnapshots2[user].vaults;
@@ -483,13 +497,15 @@ export function assertDoHardWorkSnapshotsPrimitive(
         for (const vaultName in vaults) {
             const userVaultBeforeAction = vaultsBeforeAction[vaultName];
             const userVaultBefore = vaults[vaultName];
-            console.log(`\t\t>> ASSERT: UserVault: ${vaultName}`);
+            console.log(context.scope + `\t\t>> ASSERT: UserVault: ${vaultName}`);
             const userVaultAfter = userSnapshots3[user].vaults[vaultName];
+            console.log(context.scope + `\t\t\t>> ASSERT: UserVault shares: ${userVaultAfter.shares}`);
+            console.log(context.scope + `\t\t\t>> ASSERT: UserVault underlying: ${userVaultAfter.userTotalUnderlying}`);
 
             // check if we deposited
             const depositAmount1 = BigNumber.from(userVaultBefore.depositAmount1);
             if (!depositAmount1.isZero()) {
-                console.log(`\t\t\t>> ASSERT: DEPOSITED: ${depositAmount1.toString()}`);
+                console.log(context.scope + `\t\t\t>> ASSERT: DEPOSITED: ${depositAmount1.toString()}`);
 
                 const underlyingDiff = BigNumber.from(userVaultAfter.userTotalUnderlying).sub(
                     userVaultBefore.userTotalUnderlying
@@ -510,12 +526,12 @@ export function assertDoHardWorkSnapshotsPrimitive(
                     "Bad user active deposit difference"
                 );
                 expect(sharesDiff).to.beCloseTo(depositAmount1, BasisPoints.Basis_3, "Bad user shares difference");
-                console.log(`\t\t\t>> ASSERT: DEPOSITED OK`);
+                console.log(context.scope + `\t\t\t>> ASSERT: DEPOSITED OK`);
             }
 
             const withdrawShares1 = BigNumber.from(userVaultBefore.withdrawShares1);
             if (!withdrawShares1.isZero()) {
-                console.log(`\t\t\t>> ASSERT: WITHDRAWN SHARES: ${withdrawShares1.toString()}`);
+                console.log(context.scope + `\t\t\t>> ASSERT: WITHDRAWN SHARES: ${withdrawShares1.toString()}`);
                 const vaultDetails1 = snapshot1.vaults[vaultName];
 
                 const withdrawAmount = withdrawShares1
@@ -536,12 +552,14 @@ export function assertDoHardWorkSnapshotsPrimitive(
                     BasisPoints.Basis_3,
                     "Bad user underlying value difference"
                 );
+
                 expect(activeDepositDiff).to.beCloseTo(
                     withdrawAmount,
                     BasisPoints.Basis_3,
                     "Bad user active deposit difference"
                 );
-                expect(sharesDiff).to.beCloseTo(withdrawShares1, BasisPoints.Basis_3, "Bad user shares difference");
+
+                expect(sharesDiff).to.be.equal(withdrawShares1, "Bad user shares difference");
                 expect(owedDiff).to.beCloseTo(withdrawAmount, BasisPoints.Basis_3, "Bad user owed difference");
                 console.log(context.scope + `\t\t\t>> ASSERT: WITHDRAWN OK`);
             }
@@ -552,19 +570,16 @@ export function assertDoHardWorkSnapshotsPrimitive(
                     BasisPoints.Basis_1,
                     "Bad user underlying value difference"
                 );
-                expect(BigNumber.from(userVaultAfter.activeDeposit)).to.beCloseTo(
+                expect(BigNumber.from(userVaultAfter.activeDeposit)).to.be.equal(
                     userVaultBefore.activeDeposit,
-                    BasisPoints.Basis_1,
                     "Bad user active deposit difference"
                 );
-                expect(BigNumber.from(userVaultAfter.shares)).to.beCloseTo(
+                expect(BigNumber.from(userVaultAfter.shares)).to.be.equal(
                     userVaultBefore.shares,
-                    BasisPoints.Basis_1,
                     "Bad user shares difference"
                 );
-                expect(BigNumber.from(userVaultAfter.owed)).to.beCloseTo(
+                expect(BigNumber.from(userVaultAfter.owed)).to.be.equal(
                     userVaultBefore.owed,
-                    BasisPoints.Basis_1,
                     "Bad user owed difference"
                 );
             }
@@ -573,6 +588,15 @@ export function assertDoHardWorkSnapshotsPrimitive(
         }
     }
 
+    const vaultStratSum = context.strategies.All.reduce((strats, stratAddress) => {
+        strats[stratAddress] = {
+            balance: constants.Zero,
+            shares: constants.Zero,
+        };
+        return strats;
+    }, {} as { [keys: string]: { balance: BigNumber; shares: BigNumber } });
+
+    console.log(context.scope + `\t>> ASSERT: Vaults`);
     const vaultSnapshots = snapshot2.vaults;
     for (let vaultName in vaultSnapshots) {
         const vaultBefore = vaultSnapshots[vaultName];
@@ -581,7 +605,8 @@ export function assertDoHardWorkSnapshotsPrimitive(
         const vaultDetails = vaultSnapshots[vaultName];
 
         console.log(context.scope + `\t>> ASSERT: Vault: ${vaultName}`);
-        console.log(`\t\t>> ASSERT: Vault shares: ${vaultAfter.totalShares}`);
+        console.log(context.scope + `\t\t>> ASSERT: Vault shares: ${vaultAfter.totalShares}`);
+        console.log(context.scope + `\t\t>> ASSERT: total underlying: ${vaultAfter.totalUnderlying}`);
 
         let expectedUnderlyingDiff = constants.Zero;
         let expectedSharesDiff = constants.Zero;
@@ -624,6 +649,10 @@ export function assertDoHardWorkSnapshotsPrimitive(
             expect(sharesDiff).to.beCloseTo(expectedUnderlyingDiff, BasisPoints.Basis_3, "Bad vault share difference");
         }
 
+        console.log(
+            context.scope + `\t\t\t>> ASSERT: User Vault Shares Sum: ${userVaultSharesSum[vaultName].toString()}`
+        );
+
         if (!userVaultSharesSum[vaultName].isZero()) {
             expect(userVaultSharesSum[vaultName]).to.be.equalOrLowerCloseTo(
                 vaultAfter.totalShares,
@@ -631,14 +660,101 @@ export function assertDoHardWorkSnapshotsPrimitive(
                 "Bad total vault vs total user share amount"
             );
         } else {
-            // account for some dust of shres left in the vault from rounding errors
+            // account for some dust of shares left in the vault from rounding errors
             expect(BigNumber.from(vaultAfter.totalShares)).to.be.lt(
                 500,
                 "Bad total vault vs total user share amount when user sum is 0"
             );
         }
 
-        console.log(context.scope + `\t\t>> ASSERT: Vault: OK`);
+        // console.table(vaultStratSum);
+
+        vaultAfter.strategies.forEach((strat) => {
+            // console.log("vaultAfter.strategies", strat);
+            vaultStratSum[strat.address].balance = vaultStratSum[strat.address].balance.add(strat.balance);
+            vaultStratSum[strat.address].shares = vaultStratSum[strat.address].shares.add(strat.stratShares);
+        });
+
+        console.log(context.scope + `\t\t\t>> ASSERT: Vault: OK`);
+    }
+
+    console.log(context.scope + `\t>> ASSERT: Strategies`);
+    for (let stratAddress of context.strategies.All) {
+        console.log(context.scope + `\t\t>> ASSERT: Strategy: ${stratAddress}`);
+        console.log(
+            context.scope + `\t\t\t>> ASSERT: Strategy shares: ${snapshot3.strategies[stratAddress].totalShares}`
+        );
+        console.log(
+            context.scope +
+                `\t\t\t>> ASSERT: Strategy vault sum shares: ${vaultStratSum[stratAddress].shares.toString()}`
+        );
+        console.log(
+            context.scope +
+                `\t\t\t>> ASSERT: Strategy underlying: ${snapshot3.strategies[stratAddress].totalUnderlying}`
+        );
+        console.log(
+            context.scope +
+                `\t\t\t>> ASSERT: Strategy vault sum underlying: ${vaultStratSum[stratAddress].balance.toString()}`
+        );
+
+        const stratDecimals = getStratDecimals(context, stratAddress);
+        // 1_000_000 is the deposit amount recieved multiplier to calculate initial shares
+        // 100_000 is the locked share amount
+        // share and underlying tolerance is equal to approximately 1$
+        const shareTolerance = BigNumber.from(10).pow(stratDecimals).mul(1_000_000).add(100_000);
+        const underlyingTolerance = shareTolerance.div(100_000);
+
+        if (vaultStratSum[stratAddress].shares.gte(shareTolerance)) {
+            expect(vaultStratSum[stratAddress].shares).to.be.equalOrLowerCloseTo(
+                snapshot3.strategies[stratAddress].totalShares,
+                BasisPoints.Basis_01,
+                `Bad total strat vs total vault share amount. Strat: ${stratAddress}`
+            );
+            expect(vaultStratSum[stratAddress].balance).to.be.equalOrLowerCloseTo(
+                snapshot3.strategies[stratAddress].totalUnderlying,
+                BasisPoints.Basis_01,
+                `Bad total strat vs total vault underlying amount. Strat: ${stratAddress}`
+            );
+        } else {
+            // account for some dust of shares left in the vault from rounding errors
+            expect(BigNumber.from(snapshot3.strategies[stratAddress].totalShares)).to.be.lt(
+                shareTolerance,
+                `Bad total strat vs total vault share amount when user sum is 0. Strat: ${stratAddress}`
+            );
+            expect(BigNumber.from(snapshot3.strategies[stratAddress].totalUnderlying)).to.be.lt(
+                underlyingTolerance,
+                `Bad total strat vs total vault underlying amount when user sum is 0. Strat: ${stratAddress}`
+            );
+        }
+        console.log(context.scope + `\t\t\t>> ASSERT: Strategy: OK`);
+    }
+}
+
+function getStratDecimals(context: Context, strategy: string) {
+    const strats = context.strategies as any;
+
+    let stratAsset;
+    for (const stratName of Object.keys(context.strategies).filter((s) => s != "All")) {
+        stratAsset = Object.keys(strats[stratName]).find((asset: string) => strats[stratName][asset] == strategy);
+
+        if (stratAsset) {
+            break;
+        }
+    }
+
+    return getAssetDecimals(stratAsset);
+}
+
+function getAssetDecimals(asset?: string) {
+    switch (asset) {
+        case "DAI":
+            return 18;
+        case "USDC":
+            return 6;
+        case "USDT":
+            return 6;
+        default:
+            throw new Error(`No asset found: ${asset}`);
     }
 }
 
@@ -717,9 +833,9 @@ export function assertClaimSnapshotsPrimitive(
                 const asset2 = userSnapshots2[user].assets[assetName].balance;
                 const userErc20Diff = BigNumber.from(asset2).sub(asset1);
 
-                console.log(`\t\t>> ASSERT: asset1: ${asset1}`);
-                console.log(`\t\t>> ASSERT: asset2: ${asset2}`);
-                console.log(`\t\t>> ASSERT: userErc20Diff: ${userErc20Diff.toString()}`);
+                console.log(`\t\t>> ASSERT: User Asset: ${assetName}`);
+                console.log(`\t\t\t>> ASSERT: deposit: ${balances.deposit[assetName]}`);
+                console.log(`\t\t\t>> ASSERT: userErc20Diff: ${userErc20Diff.toString()}`);
 
                 expect(balances.deposit[assetName]).to.beCloseTo(
                     userErc20Diff,
@@ -741,6 +857,30 @@ export function assertClaimSnapshotsPrimitive(
     }
 }
 
+export function assertVaultStrategyProportions(snapshot: Snapshot, context: Context) {
+    console.log(context.scope + ">> ASSERT: Vault Strategy Proportions");
+    for (let vaultName in snapshot.vaults) {
+        console.log(`\t>> ASSERT: Vault Proportions: ${vaultName}`);
+        const vault = snapshot.vaults[vaultName];
+
+        const FULL_PERCENT = 100_00;
+
+        if (!BigNumber.from(vault.totalUnderlying).isZero()) {
+            vault.strategies.forEach((strat) => {
+                console.log(`\t\t>> ASSERT: Vault Proportions for Strat: ${strat.address}`);
+                const balanceProportion = BigNumber.from(strat.balance).mul(FULL_PERCENT).div(vault.totalUnderlying);
+                console.log(`\t\t\t>> ASSERT: Vault Proportion Actual: ${balanceProportion.toString()}`);
+
+                expect(balanceProportion).to.beCloseTo(
+                    strat.proportion,
+                    BasisPoints.Basis_50,
+                    "Bad vault strategy proportion"
+                );
+            });
+        }
+    }
+}
+
 export async function doBalanceSnapshot(
     context: Context,
     users: SignerWithAddress[],
@@ -749,27 +889,67 @@ export async function doBalanceSnapshot(
 ): Promise<Snapshot> {
     console.log(context.scope + ">> MAKING A SNAPSHOT");
     const snapshot: Snapshot = {
+        strategies: {},
         vaults: {},
         users: {},
     };
 
     const vaultSnapshots = snapshot.vaults;
-    for (let vaultName of vaults) {
-        const vaultDetails = context.vaults[vaultName];
-        const vault = Vault__factory.connect(vaultDetails.address, ethers.provider);
-        const balance = await getVaultBalance(vaultDetails.address);
-        const data = await vault.callStatic.getUpdatedVault(vaultDetails.strategies);
+    await Promise.all(
+        vaults.map(async (vaultName) => {
+            const vaultDetails = context.vaults[vaultName];
+            const vault = Vault__factory.connect(vaultDetails.address, ethers.provider);
+            await vault.connect(context.accounts.administrator).redeemVaultStrategies(vaultDetails.strategies);
+            const data = await vault.callStatic.getUpdatedVault(vaultDetails.strategies);
 
-        vaultSnapshots[vaultName] = {
-            totalUnderlying: data[0].toString(),
-            totalShares: data[1].toString(),
-            depositAmount1: data[2].toString(),
-            withdrawShares1: data[3].toString(),
-            depositAmount2: data[4].toString(),
-            withdrawShares2: data[5].toString(),
-            balance: balance.toString(),
-        };
-    }
+            const balance = await getVaultBalance(vaultDetails.address);
+
+            vaultSnapshots[vaultName] = {
+                totalUnderlying: data[0].toString(),
+                totalShares: data[1].toString(),
+                depositAmount1: data[2].toString(),
+                withdrawShares1: data[3].toString(),
+                depositAmount2: data[4].toString(),
+                withdrawShares2: data[5].toString(),
+                balance: balance.toString(),
+                strategies: [],
+            };
+
+            const bitwiseProportions = await vault.proportions();
+            const proportions = getProportionsFromBitwise(
+                bitwiseProportions,
+                context.vaults[vaultName].strategies.length
+            );
+
+            await Promise.all(
+                context.vaults[vaultName].strategies.map(async (strat, i) => {
+                    const stratBalance = await context.infra.spool
+                        .connect(ethers.provider)
+                        .callStatic.getUnderlying(strat, { from: context.vaults[vaultName].address });
+                    const stratShares = await context.infra.spool
+                        .connect(ethers.provider)
+                        .getStratVaultShares(strat, context.vaults[vaultName].address);
+                    vaultSnapshots[vaultName].strategies.push({
+                        address: strat,
+                        balance: stratBalance.toString(),
+                        stratShares: stratShares.toString(),
+                        proportion: proportions[i].toNumber(),
+                    });
+                })
+            );
+        })
+    );
+
+    await Promise.all(
+        context.strategies.All.map(async (strat) => {
+            const balance = await context.infra.spool.callStatic.getStratUnderlying(strat);
+            const strategy = await context.infra.spool.strategies(strat);
+            snapshot.strategies[strat] = {
+                totalUnderlying: balance.toString(),
+                totalShares: strategy[0].toString(),
+            };
+        })
+    );
 
     const userSnapshots = snapshot.users;
     await Promise.all(
@@ -813,8 +993,39 @@ async function getVaultBalance(vaultAddress: string) {
     const vault = IVault__factory.connect(vaultAddress, ethers.provider);
     const tokenAddress = await vault.underlying();
     const token = IERC20__factory.connect(tokenAddress, ethers.provider);
-    const balance = await token.balanceOf(vaultAddress);
-    return balance;
+    return await token.balanceOf(vaultAddress);
+}
+
+export async function printStrategyBalances(context: Context) {
+    console.log(`Printing strat balances`);
+    const underlyings: { [key: string]: string } = {};
+    for (const strat of context.strategies.All) {
+        console.log(`\t====== Getting ${strat} ======`);
+        const balance = await context.infra.spool.callStatic.getStratUnderlying(strat);
+        const strategy = await context.infra.spool.strategies(strat);
+        underlyings[strat] = balance.toString();
+        console.log(`\tStrategy ${strat} balance: ${balance.toString()}`);
+        console.log(`\tStrategy ${strat}  shares: ${strategy[0].toString()}`);
+    }
+}
+
+export function printReallocationTable(reallocationTable: BigNumber[][]) {
+    const rows = Array(reallocationTable.length).fill(BigNumber.from(0)) as BigNumber[];
+    const cols = Array(reallocationTable.length).fill(BigNumber.from(0)) as BigNumber[];
+    reallocationTable.forEach((rr, i) => {
+        rr.forEach((ss, j) => {
+            cols[j] = cols[j].add(ss);
+            rows[j] = rows[j].add(reallocationTable[j][i]);
+        });
+    });
+
+    // add row sum of shares
+    let rlctbl = reallocationTable.map((rr, i) => [...rr, rows[i]]);
+
+    // add column sum of shares
+    let rlctblHuman = [...rlctbl.map((rr) => rr.map((ss) => ss.toString())), cols.map((ss) => ss.toString())];
+
+    console.table(rlctblHuman);
 }
 
 export function getRandomItem<T>(items: Array<T>): T {
@@ -866,7 +1077,7 @@ export async function doEvmSnapshot() {
     return snapshotId;
 }
 
-export async function reallocateVaultEqual(context: Context, vaultNames: string[]) {
+export async function reallocateVaultsEqual(context: Context, vaultNames: string[]) {
     const vaults = [];
 
     for (let vaultName of vaultNames) {

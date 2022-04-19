@@ -8,7 +8,6 @@ import "./base/CurveStrategy3CoinsBase.sol";
 import "../../external/interfaces/curve/ILiquidityGauge.sol";
 import "../../external/interfaces/curve/IMinter.sol";
 
-
 /**
  * @notice Curve 3 pool strategy implementation
  */

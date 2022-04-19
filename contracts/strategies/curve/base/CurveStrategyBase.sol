@@ -56,6 +56,8 @@ abstract contract CurveStrategyBase is ProcessStrategy {
         uint256 newLp = lpToken.balanceOf(address(this)) - lpBefore;
         _resetAllowance(underlying, address(pool));
 
+        emit Slippage(self, underlying, true, amount, newLp);
+
         strategies[self].lpTokens += newLp;
 
         _handleDeposit(newLp);
@@ -76,10 +78,13 @@ abstract contract CurveStrategyBase is ProcessStrategy {
 
         // withdraw fTokens from vault
         uint256 undelyingBefore = underlying.balanceOf(address(this));
+        
         pool.remove_liquidity_one_coin(withdrawLp, nCoin, slippage);
-        uint256 undelyingWithdrawn = underlying.balanceOf(address(this)) - undelyingBefore;
+        uint256 underlyingWithdrawn = underlying.balanceOf(address(this)) - undelyingBefore;
 
-        return SafeCast.toUint128(undelyingWithdrawn);
+        emit Slippage(self, underlying, false, shares, underlyingWithdrawn);
+
+        return SafeCast.toUint128(underlyingWithdrawn);
     }
 
     /**
