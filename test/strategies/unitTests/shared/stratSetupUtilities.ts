@@ -1,7 +1,6 @@
-import { constants, BigNumber } from "ethers";
+import { BigNumber, constants } from "ethers";
 import { StrategySetupStructOutput } from "../../../../build/types/TestStrategySetup";
-import { IBaseStrategy } from "../../../../build/types/IBaseStrategy";
-import { TestStrategySetup__factory } from "../../../../build/types/factories/TestStrategySetup__factory";
+import { IBaseStrategy, TestStrategySetup__factory } from "../../../../build/types";
 
 const { Zero } = constants;
 
@@ -48,7 +47,7 @@ export function copyStrategyDetails(details: StrategySetupStructOutput | Strateg
         optimizedSharesWithdrawn: details.optimizedSharesWithdrawn,
         pendingReallocateDeposit: details.pendingReallocateDeposit,
         pendingReallocateOptimizedDeposit: details.pendingReallocateOptimizedDeposit,
-    }
+    };
 }
 
 export function getStrategySetupObject(): StrategySetupStructBN {
@@ -57,15 +56,15 @@ export function getStrategySetupObject(): StrategySetupStructBN {
         index: Zero,
         pendingUser: {
             deposit: Zero,
-            sharesToWithdraw: Zero
+            sharesToWithdraw: Zero,
         },
         pendingUserNext: {
             deposit: Zero,
-            sharesToWithdraw: Zero
+            sharesToWithdraw: Zero,
         },
         pendingDepositReward: Zero,
         optimizedSharesWithdrawn: Zero,
         pendingReallocateDeposit: Zero,
-        pendingReallocateOptimizedDeposit: Zero
-    }
+        pendingReallocateOptimizedDeposit: Zero,
+    };
 }

@@ -1,24 +1,27 @@
 import { expect, use } from "chai";
-import { constants, BigNumber } from "ethers";
-import { solidity, MockProvider, createFixtureLoader, MockContract, deployMockContract } from "ethereum-waffle";
-import { IBaseStrategy } from "../../../build/types/IBaseStrategy";
-import { IERC20 } from "../../../build/types/IERC20";
-import { TestStrategySetup__factory } from "../../../build/types/factories/TestStrategySetup__factory";
-import { ConvexSharedStrategy__factory } from "../../../build/types/factories/ConvexSharedStrategy__factory";
-import { ConvexBoosterContractHelper__factory } from "../../../build/types/factories/ConvexBoosterContractHelper__factory";
-import { underlyingTokensFixture, mainnetConst, TokensFixture, AccountsFixture } from "../../shared/fixtures";
+import { BigNumber, constants } from "ethers";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
+import {
+    ConvexBoosterContractHelper__factory,
+    ConvexSharedStrategy__factory,
+    IBaseStrategy,
+    IERC20,
+    TestStrategySetup__factory,
+    TransparentUpgradeableProxy__factory,
+} from "../../../build/types";
+import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
 import { Tokens } from "../../shared/constants";
 
 import {
-    reset,
-    mineBlocks,
-    SECS_DAY,
     BasisPoints,
+    encodeDepositSlippage,
     getMillionUnits,
     getRewardSwapPathV3Direct,
     getRewardSwapPathV3Weth,
+    mineBlocks,
+    reset,
+    SECS_DAY,
     UNISWAP_V3_FEE,
-    encodeDepositSlippage,
 } from "../../shared/utilities";
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
@@ -71,8 +74,8 @@ const strategyAssets: ConvexStratSetup[] = [
 
 const depositSlippage = encodeDepositSlippage(0);
 
-const depositSlippages = [0, MaxUint256, depositSlippage]
-const withdrawSlippages = [0, MaxUint256, 0]
+const depositSlippages = [0, MaxUint256, depositSlippage];
+const withdrawSlippages = [0, MaxUint256, 0];
 
 describe("Strategies Unit Test: Convex 3pool", () => {
     let accounts: AccountsFixture;
@@ -101,7 +104,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
             let token: IERC20;
 
             before(async () => {
-                const {tokens} = await loadFixture(underlyingTokensFixture);
+                const { tokens } = await loadFixture(underlyingTokensFixture);
                 token = tokens[name];
             });
 
@@ -136,13 +139,21 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                         AddressZero
                     );
 
-                    const convexBoosterHelper = await new ConvexBoosterContractHelper__factory()
+                    let convexBoosterHelper = await new ConvexBoosterContractHelper__factory()
                         .connect(accounts.administrator)
                         .deploy(
                             convexStrategyProxy.address,
                             mainnetConst.convex.Booster.address,
                             mainnetConst.convex._3pool.boosterPoolId
                         );
+
+                    const helperProxy = await new TransparentUpgradeableProxy__factory()
+                        .connect(accounts.administrator)
+                        .deploy(convexBoosterHelper.address, "0x0000000000000000000000000000000000000001", "0x");
+                    convexBoosterHelper = ConvexBoosterContractHelper__factory.connect(
+                        helperProxy.address,
+                        accounts.administrator
+                    );
 
                     const convexStrategyImpl = await new ConvexSharedStrategy__factory()
                         .connect(accounts.administrator)

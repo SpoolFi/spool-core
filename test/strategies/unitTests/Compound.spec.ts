@@ -1,22 +1,25 @@
 import { expect, use } from "chai";
-import { constants, BigNumber } from "ethers";
-import { solidity, MockProvider, createFixtureLoader } from "ethereum-waffle";
-import { IBaseStrategy } from "../../../build/types/IBaseStrategy";
-import { IERC20 } from "../../../build/types/IERC20";
-import { TestStrategySetup__factory } from "../../../build/types/factories/TestStrategySetup__factory";
-import { CompoundStrategy__factory } from "../../../build/types/factories/CompoundStrategy__factory";
-import { CompoundContractHelper__factory } from "../../../build/types/factories/CompoundContractHelper__factory";
-import { underlyingTokensFixture, mainnetConst, TokensFixture, AccountsFixture } from "../../shared/fixtures";
+import { BigNumber, constants } from "ethers";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
+import {
+    CompoundContractHelper__factory,
+    CompoundStrategy__factory,
+    IBaseStrategy,
+    IERC20,
+    TestStrategySetup__factory,
+    TransparentUpgradeableProxy__factory,
+} from "../../../build/types";
+import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
 import { Tokens } from "../../shared/constants";
 
 import {
-    reset,
-    mineBlocks,
-    SECS_DAY,
-    getRewardSwapPathV3Weth,
     BasisPoints,
-    UNISWAP_V3_FEE,
     getMillionUnits,
+    getRewardSwapPathV3Weth,
+    mineBlocks,
+    reset,
+    SECS_DAY,
+    UNISWAP_V3_FEE,
 } from "../../shared/utilities";
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
@@ -92,13 +95,17 @@ describe("Strategies Unit Test: Compound", () => {
         it("Should fail deploying Compound Strategy with the wrong strategy helper", async () => {
             const { tokens } = await loadFixture(underlyingTokensFixture);
 
-            const compoundHelper = await new CompoundContractHelper__factory().connect(accounts.administrator).deploy(
+            let compoundHelper = await new CompoundContractHelper__factory().connect(accounts.administrator).deploy(
                 "0x0000000000000000000000000000000000000001",
                 strategyAssets[0].cToken, // DAI cToken address
                 mainnetConst.compound.COMPtroller.delegator.address,
                 tokens.DAI.address,
                 "0x0000000000000000000000000000000000000001"
             );
+            const helperProxy = await new TransparentUpgradeableProxy__factory()
+                .connect(accounts.administrator)
+                .deploy(compoundHelper.address, "0x0000000000000000000000000000000000000001", "0x");
+            compoundHelper = CompoundContractHelper__factory.connect(helperProxy.address, accounts.administrator);
 
             const CompoundStrategy = new CompoundStrategy__factory().connect(accounts.administrator);
             await expect(
@@ -129,7 +136,7 @@ describe("Strategies Unit Test: Compound", () => {
                         AddressZero
                     );
 
-                    const compoundHelper = await new CompoundContractHelper__factory()
+                    let compoundHelper = await new CompoundContractHelper__factory()
                         .connect(accounts.administrator)
                         .deploy(
                             mainnetConst.compound.COMP.address,
@@ -138,6 +145,14 @@ describe("Strategies Unit Test: Compound", () => {
                             token.address,
                             compoundStrategyProxy.address
                         );
+
+                    const helperProxy = await new TransparentUpgradeableProxy__factory()
+                        .connect(accounts.administrator)
+                        .deploy(compoundHelper.address, "0x0000000000000000000000000000000000000001", "0x");
+                    compoundHelper = CompoundContractHelper__factory.connect(
+                        helperProxy.address,
+                        accounts.administrator
+                    );
 
                     const compStrategy = await new CompoundStrategy__factory()
                         .connect(accounts.administrator)
@@ -167,7 +182,7 @@ describe("Strategies Unit Test: Compound", () => {
                         AddressZero
                     );
 
-                    const compoundHelper = await new CompoundContractHelper__factory()
+                    let compoundHelper = await new CompoundContractHelper__factory()
                         .connect(accounts.administrator)
                         .deploy(
                             mainnetConst.compound.COMP.address,
@@ -176,6 +191,14 @@ describe("Strategies Unit Test: Compound", () => {
                             token.address,
                             compoundStrategyProxy.address
                         );
+
+                    const helperProxy = await new TransparentUpgradeableProxy__factory()
+                        .connect(accounts.administrator)
+                        .deploy(compoundHelper.address, "0x0000000000000000000000000000000000000001", "0x");
+                    compoundHelper = CompoundContractHelper__factory.connect(
+                        helperProxy.address,
+                        accounts.administrator
+                    );
 
                     const compStrategy = await new CompoundStrategy__factory()
                         .connect(accounts.administrator)

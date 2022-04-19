@@ -1,24 +1,21 @@
 import { expect, use } from "chai";
-import { constants, BigNumber } from "ethers";
-import { solidity, MockProvider, createFixtureLoader } from "ethereum-waffle";
-import { IBaseStrategy } from "../../../build/types/IBaseStrategy";
-import { TestStrategySetup__factory } from "../../../build/types/factories/TestStrategySetup__factory";
-import { AaveStrategy__factory } from "../../../build/types/factories/AaveStrategy__factory";
-import { underlyingTokensFixture, mainnetConst, TokensFixture, AccountsFixture } from "../../shared/fixtures";
+import { BigNumber, constants } from "ethers";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
+import { AaveStrategy__factory, IBaseStrategy, IERC20, TestStrategySetup__factory } from "../../../build/types";
+import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
 import { Tokens } from "../../shared/constants";
 
 import {
-    reset,
-    mineBlocks,
-    getMillionUnits,
-    SECS_DAY,
-    getRewardSwapPathV3Custom,
-    UNISWAP_V3_FEE,
     BasisPoints,
+    getMillionUnits,
+    getRewardSwapPathV3Custom,
+    mineBlocks,
+    reset,
+    SECS_DAY,
+    UNISWAP_V3_FEE,
 } from "../../shared/utilities";
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
-import { IERC20 } from "../../../build/types/IERC20";
 
 const { Zero, AddressZero } = constants;
 
@@ -44,7 +41,7 @@ describe("Strategies Unit Test: AAVE", () => {
         ({ accounts } = await loadFixture(underlyingTokensFixture));
     });
 
-    describe(`Deployment Gatekeeping`, () => {        
+    describe(`Deployment Gatekeeping`, () => {
         it("Should fail deploying Aave with stkAave address 0", async () => {
             const AaveStrategy = new AaveStrategy__factory().connect(accounts.administrator);
             await expect(
@@ -87,7 +84,7 @@ describe("Strategies Unit Test: AAVE", () => {
             let token: IERC20;
 
             before(async () => {
-                const {tokens} = await loadFixture(underlyingTokensFixture);
+                const { tokens } = await loadFixture(underlyingTokensFixture);
                 token = tokens[name];
             });
 
