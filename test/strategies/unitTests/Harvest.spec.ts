@@ -157,8 +157,9 @@ describe("Strategies Unit Test: Harvest", () => {
 
                     const strategyDetails = await getStrategyState(harvestContract);
 
-                    expect(strategyDetails.totalShares).to.beCloseTo(depositAmount, BasisPoints.Basis_100);
-                    expect(strategyDetails.totalShares).to.beCloseTo(balance, BasisPoints.Basis_100);
+                    expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_1);
+                    const totalShares = balance.mul(10**6).sub(10**5);
+                    expect(strategyDetails.totalShares).to.beCloseTo(totalShares, BasisPoints.Basis_01);
                 });
 
                 it("Process deposit twice, should redeposit rewards", async () => {
@@ -187,11 +188,9 @@ describe("Strategies Unit Test: Harvest", () => {
                     const balance = await harvestContract.getStrategyBalance();
                     expect(balance).to.be.greaterWithTolerance(depositAmount.mul(2), BasisPoints.Basis_1);
 
+                    const totalShares = balance.mul(10**6).mul(2).sub(10**5);
                     const strategyDetails = await getStrategyState(harvestContract);
-                    expect(strategyDetails.totalShares).to.be.greaterWithTolerance(
-                        depositAmount.mul(2),
-                        BasisPoints.Basis_1
-                    );
+                    expect(strategyDetails.totalShares).to.be.lte(totalShares);
                 });
 
                 it("Process withraw, should withdraw from strategy", async () => {

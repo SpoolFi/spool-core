@@ -4,6 +4,7 @@ import { Context } from "../../scripts/infrastructure";
 import {
     assertClaimSnapshotsPrimitive,
     assertDoHardWorkSnapshotsPrimitive,
+    assertVaultStrategyProportions,
     buildContext,
     doBalanceSnapshot,
     doClaim,
@@ -13,9 +14,12 @@ import {
     doWithdrawAll,
     getRandomAmount,
     getRandomItems,
-    getUserVaultActions
+    getUserVaultActions,
+    printReallocationTable,
+    printStrategyBalances,
+    reallocateVaultsEqual,
 } from "../shared/toolkit";
-import { doHardWork } from "../shared/toolkit.dhw";
+import { doHardWork, doHardWorkReallocation } from "../shared/toolkit.dhw";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 use(solidity);
@@ -97,6 +101,23 @@ describe("Flow 0", function () {
             await testVaultDepositWithdrawClaim(context, vaults, users);
         });
     });
+
+    describe("Scenario 4.1", function () {
+        it("Should deposit and reallocate (single vault)", async function () {
+            context.scope = "Scenario 4.1";
+            const vaults = getRandomItems(VAULT_NAMES, 1);
+            const users = getRandomItems(context.users, 10);
+            await testVaultDepositReallocateWithdrawClaim(context, vaults, users);
+        });
+    });
+
+    describe("Scenario 4.2", function () {
+        it("Should deposit and reallocate (all vaults)", async function () {
+            context.scope = "Scenario 4.2";
+            const users = getRandomItems(context.users, 20);
+            await testVaultDepositReallocateWithdrawClaim(context, VAULT_NAMES, users);
+        });
+    });
 });
 
 async function testVaultDepositWithdrawClaimSimple(
@@ -128,12 +149,7 @@ async function testVaultDepositWithdrawClaimSimple(
     await doHardWork(context, true);
     const s3 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
     assertDoHardWorkSnapshotsPrimitive(s1, s2, s3, userVaultActions, context);
-
-    // NOTE: for now assert claim works only for withdraw all
-    // for (let i = 0; i < users.length; i++) {
-    //     withdrawals[i] = getRandomAmountBN(10**8, s3.users[users[i].address].vaults[vaultName].shares);
-    //     await doWithdraw(context, users[i], vaultName, withdrawals[i], userVaultActions);
-    // }
+    assertVaultStrategyProportions(s3, context);
 
     await doWithdrawAll(context, users, vaults, userVaultActions);
 
@@ -167,6 +183,7 @@ async function testVaultDepositWithdrawClaim(context: Context, vaults: string[],
     await doHardWork(context, false);
     const s3 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
     assertDoHardWorkSnapshotsPrimitive(s1, s2, s3, userVaultActions, context);
+    assertVaultStrategyProportions(s3, context);
 
     const balances2 = users.map(() => getRandomAmount(100, 100_000).toString());
 
@@ -180,6 +197,7 @@ async function testVaultDepositWithdrawClaim(context: Context, vaults: string[],
     await doHardWork(context, false);
     const s5 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
     assertDoHardWorkSnapshotsPrimitive(s3, s4, s5, userVaultActions, context);
+    assertVaultStrategyProportions(s5, context);
 
     await doWithdrawAll(context, users, vaults, userVaultActions);
 
@@ -193,4 +211,49 @@ async function testVaultDepositWithdrawClaim(context: Context, vaults: string[],
     const s8 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
 
     assertClaimSnapshotsPrimitive(s7, s8, userVaultActions, context);
+}
+
+async function testVaultDepositReallocateWithdrawClaim(context: Context, vaults: string[], users: SignerWithAddress[]) {
+    // ARRANGE
+    const userVaultActions = getUserVaultActions();
+
+    const s1 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
+
+    // ACT
+    for (const vaultName of vaults) {
+        for (let i = 0; i < users.length; i++) {
+            const deposit = getRandomAmount(1_000, 100_000).toString();
+            await doDeposit(context, users[i], vaultName, deposit, userVaultActions);
+        }
+    }
+
+    const s2 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
+    await doHardWork(context, false);
+    const s3 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
+    assertDoHardWorkSnapshotsPrimitive(s1, s2, s3, userVaultActions, context);
+    assertVaultStrategyProportions(s3, context);
+
+    const reallocationTable = await reallocateVaultsEqual(context, vaults);
+    printReallocationTable(reallocationTable);
+
+    await doHardWorkReallocation(context, false, reallocationTable);
+    const s4 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
+    // reallocation DHW
+    assertDoHardWorkSnapshotsPrimitive(s3, s3, s4, userVaultActions, context);
+    assertVaultStrategyProportions(s4, context);
+    await printStrategyBalances(context);
+
+    await doWithdrawAll(context, users, vaults, userVaultActions);
+
+    const s5 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
+    await doHardWork(context, false);
+    const s6 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
+
+    assertDoHardWorkSnapshotsPrimitive(s4, s5, s6, userVaultActions, context);
+
+    await doClaim(context, users, vaults, userVaultActions);
+
+    const s7 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
+
+    assertClaimSnapshotsPrimitive(s6, s7, userVaultActions, context);
 }

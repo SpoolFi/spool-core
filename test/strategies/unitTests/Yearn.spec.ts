@@ -132,8 +132,9 @@ describe("Strategies Unit Test: Yearn", () => {
 
                     const strategyDetails = await getStrategyState(yearnContract);
 
-                    expect(strategyDetails.totalShares).to.beCloseTo(depositAmount, BasisPoints.Basis_100);
-                    expect(strategyDetails.totalShares).to.beCloseTo(balance, BasisPoints.Basis_100);
+                    expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_1);
+                    const totalShares = balance.mul(10**6).sub(10**5);
+                    expect(strategyDetails.totalShares).to.beCloseTo(totalShares, BasisPoints.Basis_01);
                 });
 
                 it("Process deposit twice, should deposit the second time and get the same number of shares", async () => {
@@ -162,13 +163,14 @@ describe("Strategies Unit Test: Yearn", () => {
                     const balance = await yearnContract.getStrategyBalance();
                     expect(balance).to.beCloseTo(depositAmount.mul(2), BasisPoints.Basis_1);
 
+                    const totalShares = balance.mul(10**6).sub(10**5);
                     const strategyDetails = await getStrategyState(yearnContract);
-                    expect(strategyDetails.totalShares).to.beCloseTo(depositAmount.mul(2), BasisPoints.Basis_1);
+                    expect(strategyDetails.totalShares).to.beCloseTo(totalShares, BasisPoints.Basis_01);
 
                     const shares1 = stratSetup2.totalShares;
                     const shares2 = strategyDetails.totalShares.sub(shares1);
 
-                    expect(shares1).to.beCloseTo(shares2, BasisPoints.Basis_1);
+                    expect(shares1).to.beCloseTo(shares2, BasisPoints.Basis_01);
                 });
 
                 it("Process withraw, should withdraw from strategy", async () => {
