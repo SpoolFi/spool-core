@@ -23,6 +23,8 @@
         "@types/mocha": "9.0.0",
         "@types/node": "16.11.11",
         "@types/seedrandom": "^3.0.2",
+        "@uniswap/sdk-core": "^3.0.1",
+        "@uniswap/smart-order-router": "^2.5.26",
         "axios": "^0.26.1",
         "chai": "4.3.4",
         "dotenv": "10.0.0",
