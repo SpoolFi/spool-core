@@ -149,7 +149,11 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
             // Enforce minimum shares size to avoid loss of share due to computation precision
             newShares = (0 < totalReceived && totalReceived < MIN_SHARES) ? MIN_SHARES : totalReceived;
         } else {
-            newShares = _getProportion128(totalReceived, _totalShares, totalUnderlyingAtIndex);
+            if (totalReceived < totalUnderlyingAtIndex) {
+                newShares = _getProportion128(totalReceived, _totalShares, totalUnderlyingAtIndex - totalReceived);
+            } else {
+                newShares = _totalShares;
+            }
         }
 
         // add new deposit shares
