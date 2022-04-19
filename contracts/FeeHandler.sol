@@ -60,7 +60,8 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
     address public ecosystemFeeCollector;
     /// @notice Current Treasury Fee to the collector
     address public treasuryFeeCollector;
-
+    /// @notice Boolean signaling if the contract was initialized yet
+    bool private _initialized;
 
     /// @notice ecosystem and treasury collected fees
     mapping(IERC20 => PlatformCollectedFees) public platformCollectedFees;
@@ -82,29 +83,42 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
      * @param _spoolOwner the spool owner contract that owns this contract
      * @param _controller responsible for creating new vaults
      * @param _riskProviderRegistry responsible for handling risk providers
-     * @param _ecosystemFee fee to ecosystem
-     * @param _treasuryFee fee to treasury
-     * @param _ecosystemFeeCollector address of ecosystem fee collector
-     * @param _treasuryFeeCollector address of treasury fee collector
      */
     constructor(
         ISpoolOwner _spoolOwner,
         IController _controller,
-        address _riskProviderRegistry,
-        uint16 _ecosystemFee,
-        uint16 _treasuryFee,
-        address _ecosystemFeeCollector,
-        address _treasuryFeeCollector
+        address _riskProviderRegistry
     )
         SpoolOwnable(_spoolOwner)
     {
         require(address(_controller) != address(0), "FeeHandler::constructor: Controller address cannot be 0");
         require(_riskProviderRegistry != address(0), "FeeHandler::constructor: Risk Provider Registry address cannot be 0");
-        require(_ecosystemFeeCollector != address(0), "FeeHandler::constructor: Ecosystem Fee Collector cannot be 0");
-        require(_treasuryFeeCollector != address(0), "FeeHandler::constructor: Treasury Fee Collector address cannot be 0");
 
         controller = _controller;
         riskProviderRegistry = _riskProviderRegistry;
+    }
+
+    /* ========== MUTATIVE FUNCTIONS ========== */
+
+    /*
+     * @notice Set mutable initial values
+     * @param _ecosystemFee Ecosystem fee
+     * @param _treasuryFee Treasury fee
+     * @param _ecosystemFeeCollector Ecosystem fee collector address
+     * @param _treasuryFeeCollector Treasury fee collector address
+     */
+    function initialize(
+        uint16 _ecosystemFee,
+        uint16 _treasuryFee,
+        address _ecosystemFeeCollector,
+        address _treasuryFeeCollector
+    )
+        onlyOwner
+        initializer
+        external
+    {
+        require(_ecosystemFeeCollector != address(0), "FeeHandler::constructor: Ecosystem Fee Collector cannot be 0");
+        require(_treasuryFeeCollector != address(0), "FeeHandler::constructor: Treasury Fee Collector address cannot be 0");
 
         _setEcosystemFee(_ecosystemFee);
         _setTreasuryFee(_treasuryFee);
@@ -112,8 +126,6 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
         _setEcosystemCollector(_ecosystemFeeCollector);
         _setTreasuryCollector(_treasuryFeeCollector);
     }
-
-    /* ========== MUTATIVE FUNCTIONS ========== */
 
     /**
      * @notice Collect vault owner and risk provider fees
@@ -473,5 +485,14 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
     modifier onlyRiskProviderRegistry() {
         _onlyRiskProviderRegistry();
         _;
+    }
+
+    /**
+     * @notice Ensures the vault has not been initialized before
+     */
+    modifier initializer() {
+        require(!_initialized, "FeeHandler::initializer: Can only be initialized once");
+        _;
+        _initialized = true;
     }
 }

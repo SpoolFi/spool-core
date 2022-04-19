@@ -14,6 +14,7 @@ import "../libraries/Hash.sol";
 // other imports
 import "../interfaces/IController.sol";
 import "../shared/SpoolPausable.sol";
+import "../interfaces/IStrategyRegistry.sol";
 
 /**
  * @notice Implementation of the {ISpoolBase} interface.
@@ -37,6 +38,12 @@ abstract contract SpoolBase is
     /// @notice The fast withdraw contract that is used to quickly remove shares
     address internal immutable fastWithdraw;
 
+    /// @notice Strategy implementation registry
+    IStrategyRegistry internal immutable strategyRegistry;
+
+    /// @notice Boolean signaling if the contract was initialized yet
+    bool private _initialized;
+
     /* ========== CONSTRUCTOR ========== */
 
     /**
@@ -51,11 +58,13 @@ abstract contract SpoolBase is
      *
      * @param _spoolOwner the spool owner contract address 
      * @param _controller the controller contract address
+     * @param _strategyRegistry the strategy registry contract address
      * @param _fastWithdraw the fast withdraw contract address
      */
     constructor(
         ISpoolOwner _spoolOwner,
         IController _controller,
+        IStrategyRegistry _strategyRegistry,
         address _fastWithdraw
     ) 
         SpoolOwnable(_spoolOwner)
@@ -67,7 +76,10 @@ abstract contract SpoolBase is
         );
 
         fastWithdraw = _fastWithdraw;
-        
+        strategyRegistry = _strategyRegistry;
+    }
+
+    function initialize() onlyOwner initializer external {
         globalIndex = 1;
     }
 
@@ -166,7 +178,8 @@ abstract contract SpoolBase is
         internal
         returns (bytes memory)
     {
-        (bool success, bytes memory data) = strategy.delegatecall(payload);
+        address implementation = strategyRegistry.strategyImplementations(strategy);
+        (bool success, bytes memory data) = implementation.delegatecall(payload);
         if (!success) revert(_getRevertMsg(data));
         return data;
     }
@@ -436,5 +449,14 @@ abstract contract SpoolBase is
     modifier onlyRemoved(address strat) {
         _onlyRemoved(strat);
         _;
+    }
+
+    /**
+     * @notice Ensures the vault has not been initialized before
+     */
+    modifier initializer() {
+        require(!_initialized, "SpoolBase::initializer: Can only be initialized once");
+        _;
+        _initialized = true;
     }
 }
