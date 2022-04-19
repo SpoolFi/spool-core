@@ -28,16 +28,19 @@ contract Spool is SpoolExternal {
      *
      * @param _spoolOwner the spool owner contract
      * @param _controller responsible for providing the source of truth
+     * @param _strategyRegistry the strategy registry contract address
      * @param _fastWithdraw allows fast withdraw of user shares
      */
     constructor(
         ISpoolOwner _spoolOwner,
         IController _controller,
+        IStrategyRegistry _strategyRegistry,
         address _fastWithdraw
     )
         SpoolBase(
             _spoolOwner,
             _controller,
+            _strategyRegistry,
             _fastWithdraw
         )
     {}
