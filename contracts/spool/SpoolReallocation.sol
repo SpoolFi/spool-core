@@ -46,7 +46,7 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
         VaultData[] memory vaults,
         address[] memory strategies,
         uint256[][] memory reallocationTable
-    ) external onlyAllocationProvider {
+    ) external onlyAllocationProvider returns(uint256[][] memory) {
         require(vaults.length > 0, "NOVRLC");
 
         uint24 activeGlobalIndex = getActiveGlobalIndex();
@@ -81,7 +81,7 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
         }
 
         // loop over vaults
-        for (uint128 i = 0; i < vaults.length; i++) {
+        for (uint256 i = 0; i < vaults.length; i++) {
             // check if address is a valid vault
             _isVault(vaults[i].vault);
 
@@ -95,11 +95,11 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
                     activeGlobalIndex);
 
             // withdraw and deposit from vault strategies
-            for (uint128 j = 0; j < vaults[i].strategiesCount; j++) {
+            for (uint256 j = 0; j < vaults[i].strategiesCount; j++) {
                 if (withdrawProportions[j] > 0) {
                     uint256 withdrawStratIndex = vaults[i].strategiesBitwise.get8BitUintByIndex(j);
 
-                    (uint128 newSharesWithdrawn) = 
+                    (uint256 newSharesWithdrawn) = 
                         _reallocateVaultStratWithdraw(
                             vaults[i].vault,
                             strategies[withdrawStratIndex],
@@ -119,6 +119,8 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
 
         // Hash reallocation proportions
         _hashReallocationTable(reallocationTable);
+
+        return reallocationTable;
     }
 
     /**
@@ -181,23 +183,23 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
      * @param stratReallocationTable Strategy reallocation table
      */
     function _updateDepositReallocationForStrat(
-        uint128 sharesWithdrawn,
+        uint256 sharesWithdrawn,
         VaultData memory vaultData,
         uint256 depositProportions,
         uint256[] memory stratReallocationTable
     ) private pure {
         // sharesToDeposit = sharesWithdrawn * deposit_strat%
-        uint128 sharesWithdrawnleft = sharesWithdrawn;
-        uint128 lastDepositedIndex = 0;
-        for (uint128 i = 0; i < vaultData.strategiesCount; i++) {
+        uint256 sharesWithdrawnleft = sharesWithdrawn;
+        uint256 lastDepositedIndex = 0;
+        for (uint256 i = 0; i < vaultData.strategiesCount; i++) {
 
             uint256 stratDepositProportion = depositProportions.get14BitUintByIndex(i);
             if (stratDepositProportion > 0) {
                 uint256 globalStratIndex = vaultData.strategiesBitwise.get8BitUintByIndex(i);
-                uint128 withdrawnSharesForStrat = Math.getProportion128(sharesWithdrawn, stratDepositProportion, FULL_PERCENT);
+                uint256 withdrawnSharesForStrat = Math.getProportion128(sharesWithdrawn, stratDepositProportion, FULL_PERCENT);
                 stratReallocationTable[globalStratIndex] += withdrawnSharesForStrat;
                 sharesWithdrawnleft -= withdrawnSharesForStrat;
-                lastDepositedIndex = i;
+                lastDepositedIndex = globalStratIndex;
             }
         }
 
@@ -218,12 +220,12 @@ abstract contract SpoolReallocation is ISpoolReallocation, SpoolDoHardWork {
      */
     function _buildVaultStrategiesArray(
         uint256 bitwiseAddressIndexes,
-        uint8 strategiesCount,
+        uint256 strategiesCount,
         address[] memory strategies
     ) private pure returns(address[] memory vaultStrategies) {
         vaultStrategies = new address[](strategiesCount);
 
-        for (uint128 i = 0; i < strategiesCount; i++) {
+        for (uint256 i = 0; i < strategiesCount; i++) {
             uint256 stratIndex = bitwiseAddressIndexes.get8BitUintByIndex(i);
             vaultStrategies[i] = strategies[stratIndex];
         }

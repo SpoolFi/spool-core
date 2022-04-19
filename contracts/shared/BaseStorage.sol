@@ -24,11 +24,11 @@ struct Strategy {
     /// @dev Usually a temp variable when compounding
     mapping(address => uint256) pendingRewards;
 
-    /// @dev Usually a temp variable when compounding
-    uint128 pendingDepositReward;
-
     /// @notice Amount of lp tokens the strategy holds, NOTE: not all strategies use it
     uint256 lpTokens;
+
+    /// @dev Usually a temp variable when compounding
+    uint128 pendingDepositReward;
 
     // ----- REALLOCATION VARIABLES -----
 
@@ -39,6 +39,7 @@ struct Strategy {
     uint128 optimizedSharesWithdrawn;
 
     /// @dev Underlying amount pending to be deposited from other strategies at reallocation 
+    /// @dev Actual amount needed to be deposited and was withdrawn from others for reallocation
     /// @dev resets after the strategy reallocation DHW is finished
     uint128 pendingReallocateDeposit;
 
@@ -46,6 +47,11 @@ struct Strategy {
     /// @dev resets after the strategy reallocation DHW is finished
     /// @dev This is "virtual" amount that was matched between this strategy and others when reallocating
     uint128 pendingReallocateOptimizedDeposit;
+
+    /// @notice Average oprimized and non-optimized deposit
+    /// @dev Deposit from all strategies by taking the average of optimizedna dn non-optimized deposit
+    /// @dev Used as reallocation deposit recieved
+    uint128 pendingReallocateAverageDeposit;
 
     // ------------------------------------
 
@@ -162,8 +168,8 @@ struct AdditionalStorage {
 
 /// @notice Strategy total underlying slippage, to verify validity of the strategy state
 struct StratUnderlyingSlippage {
-    uint128 min;
-    uint128 max;
+    uint256 min;
+    uint256 max;
 }
 
 /// @notice Containig information if and how to swap strategy rewards at the DHW
@@ -176,8 +182,8 @@ struct RewardSlippages {
 /// @notice Helper struct to compare strategy share between eachother
 /// @dev Used for reallocation optimization of shares (strategy matching deposits and withdrawals between eachother when reallocating)
 struct PriceData {
-    uint128 totalValue;
-    uint128 totalShares;
+    uint256 totalValue;
+    uint256 totalShares;
 }
 
 /// @notice Strategy reallocation values after reallocation optimization of shares was calculated 
@@ -185,6 +191,7 @@ struct ReallocationShares {
     uint128[] optimizedWithdraws;
     uint128[] optimizedShares;
     uint128[] totalSharesWithdrawn;
+    uint256[][] optimizedReallocationTable;
 }
 
 /// @notice Shared storage for multiple strategies
