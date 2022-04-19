@@ -194,15 +194,9 @@ export async function getSlippages(context: Context) {
     const strategies = context.strategies;
     const allStrategies = await context.infra.controller.getAllStrategies();
 
-    console.log("*********SLIPPAGE RESULTS*********");
+    console.log("*********CALCULATING SLIPPAGES*********");
     const slippages = await getDhwSlippages(context);
-    console.log("*********SLIPPAGE RESULTS*********");
-
-    // console.log("*********SLIPPAGE ARGUMENTS*********");
-    // for (let i = 0; i < slippages.length; i++) {
-    //     console.log("slippage: " + slippages[i].map(s => decodeSlippageIfDeposit(s).toString()));
-    // }
-    // console.log("*********SLIPPAGE ARGUMENTS*********");
+    console.log("*********SLIPPAGE CALCULATED*********");
 
     let indexes = allStrategies.map((strat) => {
         return strategies.All.findIndex((s) => s == strat);
@@ -241,12 +235,25 @@ async function doHardWorkReallocationHelper(context: Context, reallocationTable:
         stratIndexes: stratIndexes,
     };
 
-    const reallocationWithdrawnShares = await SpoolDoHardWorkReallocationHelper__factory.connect(
+    const reallocationHelper = SpoolDoHardWorkReallocationHelper__factory.connect(
         context.helperContracts.reallocationHelper,
         context.accounts.doHardWorker
-    ).callStatic.batchDoHardWorkReallocationHelper(withdrawData, context.strategies.All);
+    );
 
-    return reallocationWithdrawnShares;
+    const encodedData = reallocationHelper.interface.encodeFunctionData("batchDoHardWorkReallocationHelper", [
+        withdrawData,
+        context.strategies.All,
+    ]);
+
+    const rawResult = await context.infra.spool
+        .connect(context.infra.spool.provider)
+        .callStatic.relay(context.helperContracts.reallocationHelper, encodedData, {
+            from: ADDRESS_ONE,
+        });
+
+    const result = reallocationHelper.interface.decodeFunctionResult("batchDoHardWorkReallocationHelper", rawResult);
+
+    return result[0] as BigNumber[];
 }
 
 export async function getReallocationSlippages(context: Context, reallocationTable: BigNumber[][]) {
@@ -303,11 +310,6 @@ export async function getReallocationSlippages(context: Context, reallocationTab
     const stratNames = Object.keys(context.strategies)
         .filter((s) => s != "All")
         .flatMap((s) => Object.keys((context.strategies as any)[s]).map((st) => s + st));
-    console.table(
-        Object.keys(context.strategies)
-            .filter((s) => s != "All")
-            .flatMap((s) => Object.keys((context.strategies as any)[s]).map((st) => s + st))
-    );
 
     console.table(stratNames.map((stratName, i) => [stratName, context.strategies.All[i]]));
 

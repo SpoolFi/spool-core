@@ -128,6 +128,8 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
         _resetAllowance(underlying, provider);
 
         uint256 bbAmount = yield.balanceOf(address(this));
+
+        emit Slippage(self, underlying, true, amount, bbAmount);
         
         // deposit junior tokens to reward pool
         yield.approve(address(rewardPool), bbAmount);
@@ -151,7 +153,7 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
 
         uint256 bbAmount = rewardPool.balances(address(this));
 
-        // // withdraw from reward pool
+        // withdraw from reward pool
         uint256 poolShares = (shares * bbAmount) / strategies[self].totalShares;
         rewardPool.withdraw(poolShares);
 
@@ -159,6 +161,8 @@ contract BarnBridgeMultiRewardStrategy is MultipleRewardStrategy {
         uint256 underlyingBefore = underlying.balanceOf(address(this));
         yield.sellTokens(poolShares, slippage, block.timestamp);
         uint256 underlyingWithdrawn = underlying.balanceOf(address(this)) - underlyingBefore;
+
+        emit Slippage(self, underlying, false, shares, underlyingWithdrawn);
 
         return SafeCast.toUint128(underlyingWithdrawn);
     }
