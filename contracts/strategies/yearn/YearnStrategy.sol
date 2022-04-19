@@ -74,6 +74,8 @@ contract YearnStrategy is NoRewardStrategy {
             "YearnStrategy::_deposit: Insufficient Yearn Amount Minted"
         );
 
+        emit Slippage(self, underlying, true, amount, yearnTokenNew);
+
         return SafeCast.toUint128(_getYearnTokenValue(yearnTokenNew));
     }
 
@@ -91,11 +93,13 @@ contract YearnStrategy is NoRewardStrategy {
         uint256 yearnTokenWithdraw = (yearnTokenBalance * shares) / strategies[self].totalShares;
 
         // withdraw idle tokens from vault
-        uint256 undelyingBefore = underlying.balanceOf(address(this));
+        uint256 underlyingBefore = underlying.balanceOf(address(this));
         vault.withdraw(yearnTokenWithdraw, address(this), slippage);
-        uint256 undelyingWithdrawn = underlying.balanceOf(address(this)) - undelyingBefore;
+        uint256 underlyingWithdrawn = underlying.balanceOf(address(this)) - underlyingBefore;
+        
+        emit Slippage(self, underlying, false, shares, underlyingWithdrawn);
 
-        return SafeCast.toUint128(undelyingWithdrawn);
+        return SafeCast.toUint128(underlyingWithdrawn);
     }
 
     /**

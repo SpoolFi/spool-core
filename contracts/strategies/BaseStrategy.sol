@@ -26,7 +26,11 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
     /* ========== CONSTANTS ========== */
 
     /// @notice minimum shares size to avoid loss of share due to computation precision
-    uint128 private constant MIN_SHARES = 10**8;
+    uint128 private constant SHARES_MULTIPLIER = 10**6;
+    
+    /// @notice number of locked shares when initial shares are added
+    /// @dev This is done to prevent rounding errors and share manipulation
+    uint128 private constant INITIAL_SHARES_LOCKED = 10**5;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -148,8 +152,7 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      * @param processReallocationData Data containing amuont of optimized and not optimized shares to withdraw
      * @return withdrawnReallocationReceived actual amount recieveed from peforming withdraw
      */
-    function processReallocation(uint256[] calldata slippages, ProcessReallocationData calldata processReallocationData) external override returns(uint128)
-    {   
+    function processReallocation(uint256[] calldata slippages, ProcessReallocationData calldata processReallocationData) external override returns(uint128) {
         slippages = _validateStrategyBalance(slippages);
 
         if (reallocationSlippageSlots != 0)
@@ -194,7 +197,6 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
 
         if (depositSlippageSlots != 0)
             _validateDepositSlippage(slippages);
-
         _processDeposit(slippages);
     }
 
@@ -405,7 +407,7 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      * @param stratTotalUnderlying Total underlying for strategy
      * @return newShares New shares calculated
      */
-    function _getNewSharesAfterWithdraw(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal pure returns(uint128 newShares){
+    function _getNewSharesAfterWithdraw(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal returns(uint128 newShares){
         uint128 oldUnderlying;
         if (stratTotalUnderlying > depositAmount) {
             oldUnderlying = stratTotalUnderlying - depositAmount;
@@ -413,7 +415,14 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         
         if (strategyTotalShares == 0 || oldUnderlying == 0) {
             // Enforce minimum shares size to avoid loss of share due to computation precision
-            newShares = (0 < depositAmount && depositAmount < MIN_SHARES) ? MIN_SHARES : depositAmount;
+            newShares = depositAmount * SHARES_MULTIPLIER;
+
+            if (strategyTotalShares == 0 && depositAmount > 0) {
+                strategies[self].totalShares = INITIAL_SHARES_LOCKED;
+
+                // substract the initial locked share amount
+                newShares -= INITIAL_SHARES_LOCKED;
+            }
         } else {
             newShares = Math.getProportion128(depositAmount, strategyTotalShares, oldUnderlying);
         }
@@ -426,10 +435,17 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      * @param stratTotalUnderlying Total underlying
      * @return newShares New shares calculated
      */
-    function _getNewShares(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal pure returns(uint128 newShares){
+    function _getNewShares(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal returns(uint128 newShares){
         if (strategyTotalShares == 0 || stratTotalUnderlying == 0) {
             // Enforce minimum shares size to avoid loss of share due to computation precision
-            newShares = (0 < depositAmount && depositAmount < MIN_SHARES) ? MIN_SHARES : depositAmount;
+            newShares = depositAmount * SHARES_MULTIPLIER;
+
+            if (strategyTotalShares == 0 && depositAmount > 0) {
+                strategies[self].totalShares = INITIAL_SHARES_LOCKED;
+
+                // substract the initial locked share amount
+                newShares -= INITIAL_SHARES_LOCKED;
+            }
         } else {
             newShares = Math.getProportion128(depositAmount, strategyTotalShares, stratTotalUnderlying);
         }

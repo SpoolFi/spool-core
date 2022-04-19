@@ -170,6 +170,7 @@ abstract contract ProcessStrategy is BaseStrategy {
         Strategy storage strategy = strategies[self];
         
         uint128 depositOptimizedAmount = strategy.pendingReallocateOptimizedDeposit;
+        uint128 depositAverageAmount = strategy.pendingReallocateAverageDeposit;
         uint128 optimizedSharesWithdrawn = strategy.optimizedSharesWithdrawn;
         uint128 depositAmount = strategy.pendingReallocateDeposit;
 
@@ -177,6 +178,7 @@ abstract contract ProcessStrategy is BaseStrategy {
         if (
             depositOptimizedAmount == 0 &&
             optimizedSharesWithdrawn == 0 &&
+            depositAverageAmount == 0 &&
             depositAmount == 0
         ) {
             return;
@@ -187,7 +189,7 @@ abstract contract ProcessStrategy is BaseStrategy {
         
         uint128 strategyTotalShares = strategy.totalShares;
         
-        // get shares from optimized deposit
+        // add shares from optimized deposit
         if (depositOptimizedAmount > 0) {
             uint128 stratTotalUnderlying = getStrategyBalance();
             uint128 newShares = _getNewShares(strategyTotalShares, stratTotalUnderlying, depositOptimizedAmount);
@@ -195,14 +197,18 @@ abstract contract ProcessStrategy is BaseStrategy {
             // add new shares
             strategyTotalShares += newShares;
 
-            // update reallocation batch
-            reallocationBatch.depositedReallocation = depositOptimizedAmount;
+            // update reallocation batch deposit shares
             reallocationBatch.depositedReallocationSharesReceived = newShares;
 
             strategy.totalUnderlying[processingIndex].amount = stratTotalUnderlying;
 
             // reset
             strategy.pendingReallocateOptimizedDeposit = 0;
+        }
+
+        if (depositAverageAmount > 0) {
+            reallocationBatch.depositedReallocation += depositAverageAmount;
+            strategy.pendingReallocateAverageDeposit = 0;
         }
 
         // remove optimized withdraw shares
@@ -213,7 +219,7 @@ abstract contract ProcessStrategy is BaseStrategy {
             strategy.optimizedSharesWithdrawn = 0;
         }
 
-        // get shares from actual deposit
+        // add shares from actual deposit
         if (depositAmount > 0) {
             // deposit
             uint128 depositReceived = _deposit(depositAmount, slippages);
@@ -221,14 +227,15 @@ abstract contract ProcessStrategy is BaseStrategy {
             // NOTE: might return it from _deposit (only certain strategies need it)
             uint128 stratTotalUnderlying = getStrategyBalance();
 
-            uint128 newShares = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, depositReceived);
+            if (depositReceived > 0) {
+                uint128 newShares = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, depositReceived);
 
-            // add new shares
-            strategyTotalShares += newShares;
+                // add new shares to total shares
+                strategyTotalShares += newShares;
 
-            // update reallocation batch
-            reallocationBatch.depositedReallocation += depositReceived;
-            reallocationBatch.depositedReallocationSharesReceived += newShares;
+                // update reallocation batch deposit shares
+                reallocationBatch.depositedReallocationSharesReceived += newShares;
+            }
 
             strategy.totalUnderlying[processingIndex].amount = stratTotalUnderlying;
 
