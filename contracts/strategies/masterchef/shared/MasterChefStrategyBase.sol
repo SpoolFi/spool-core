@@ -155,9 +155,10 @@ abstract contract MasterChefStrategyBase is RewardStrategy {
      * @return Withdrawn shares
      */
     function _withdraw(uint128 shares, uint256[] memory) internal virtual override returns(uint128) {
-        chef.withdraw(pid, _getSharesToAmount(shares));
+        uint128 withdrawAmount = _getSharesToAmount(shares);
+        chef.withdraw(pid, withdrawAmount);
 
-        return SafeCast.toUint128(shares);
+        return withdrawAmount;
     }
 
     /**

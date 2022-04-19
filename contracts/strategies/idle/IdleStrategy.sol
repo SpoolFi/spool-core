@@ -83,6 +83,8 @@ contract IdleStrategy is MultipleRewardStrategy {
             "IdleStrategy::_deposit: Insufficient Idle Amount Minted"
         );
 
+        emit Slippage(self, underlying, true, amount, mintedIdleAmount);
+
         return SafeCast.toUint128(_getIdleTokenValue(mintedIdleAmount));
     }
 
@@ -103,14 +105,16 @@ contract IdleStrategy is MultipleRewardStrategy {
         // withdraw idle tokens from vault
         uint256 undelyingBefore = underlying.balanceOf(address(this));
         idleToken.redeemIdleToken(redeemIdleAmount);
-        uint256 undelyingWithdrawn = underlying.balanceOf(address(this)) - undelyingBefore;
+        uint256 underlyingWithdrawn = underlying.balanceOf(address(this)) - undelyingBefore;
 
         require(
-            undelyingWithdrawn >= slippage,
+            underlyingWithdrawn >= slippage,
             "IdleStrategy::_withdraw: Insufficient withdrawn amount"
         );
 
-        return SafeCast.toUint128(undelyingWithdrawn);
+        emit Slippage(self, underlying, false, shares, underlyingWithdrawn);
+
+        return SafeCast.toUint128(underlyingWithdrawn);
     }
 
     /**
