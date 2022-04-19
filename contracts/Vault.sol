@@ -449,41 +449,61 @@ contract Vault is VaultRestricted {
 
     /**
      * @notice Redeem vault and user and return the user state
-     * @dev This function should be called as static and act as view
+     * @dev Intended to be called as a static call for view purposes
      *
      * Requirements:
      *
      * - the provided strategies must be valid
      *
-     * @param vaultStrategies vault stratigies
+     * @param vaultStrategies vault strategies
      *
-     * @return user state after reedeem
+     * @return userShares current user shares
+     * @return activeDeposit user active deposit (already processed by the DHW)
+     * @return userOwed user total unclaimed amount
+     * @return userWithdrawnDeposits unclaimed withdrawn deposit amount
+     * @return userTotalUnderlying current user total underlying
+     * @return pendingDeposit1 pending user deposit for the next index 
+     * @return pendingWithdrawalShares1 pending user withdrawal shares for the next index 
+     * @return pendingDeposit2 pending user deposit for the index after the next one 
+     * @return pendingWithdrawalShares2 pending user withdrawal shares for the after the next one 
      */
     function getUpdatedUser(address[] memory vaultStrategies)
         external
-        verifyStrategies(vaultStrategies)
-        redeemVaultStrategiesModifier(vaultStrategies)
-        redeemUserModifier
-        returns(uint256, uint256, uint256, uint256, uint256)
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
     {
-        User memory user = users[msg.sender];
+        (uint256 totalUnderlying, , , , , ) = getUpdatedVault(vaultStrategies);
+        _redeemUser();
 
-        uint256 totalUnderlying = 0;
-        for (uint256 i; i < vaultStrategies.length; i++) {
-            totalUnderlying += spool.getUnderlying(vaultStrategies[i]);
-        }
+        User storage user = users[msg.sender];
 
         uint256 userTotalUnderlying;
         if (totalShares > 0 && user.shares > 0) {
             userTotalUnderlying = (totalUnderlying * user.shares) / totalShares;
         }
 
+        IndexAction storage indexAction1 = userIndexAction[msg.sender][userLastInteractions[msg.sender].index1];
+        IndexAction storage indexAction2 = userIndexAction[msg.sender][userLastInteractions[msg.sender].index2];
+
         return (
             user.shares,
             user.activeDeposit, // amount of user deposited underlying token
             user.owed, // underlying token claimable amount
             user.withdrawnDeposits, // underlying token withdrawn amount
-            userTotalUnderlying
+            userTotalUnderlying,
+            indexAction1.depositAmount,
+            indexAction1.withdrawShares,
+            indexAction2.depositAmount,
+            indexAction2.withdrawShares
         );
     }
 
@@ -504,26 +524,50 @@ contract Vault is VaultRestricted {
 
     /**
      * @notice Redeem vault strategy deposits and withdrawals after do hard work.
+     * @dev Intended to be called as a static call for view purposes
      *
      * Requirements:
      *
      * - the provided strategies must be valid
      *
      * @param vaultStrategies vault strategies
+     *
      * @return totalUnderlying total vault underlying
-     * @return totalShares underlying and shares after redeem
+     * @return totalShares total vault shares
+     * @return pendingDeposit1 pending vault deposit for the next index 
+     * @return pendingWithdrawalShares1 pending vault withdrawal shares for the next index 
+     * @return pendingDeposit2 pending vault deposit for the index after the next one 
+     * @return pendingWithdrawalShares2 pending vault withdrawal shares for the after the next one 
      */
     function getUpdatedVault(address[] memory vaultStrategies)
-        external
+        public
         verifyStrategies(vaultStrategies)
         redeemVaultStrategiesModifier(vaultStrategies)
-        returns(uint256, uint256)
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
     {
         uint256 totalUnderlying = 0;
         for (uint256 i; i < vaultStrategies.length; i++) {
             totalUnderlying += spool.getUnderlying(vaultStrategies[i]);
         }
-        return (totalUnderlying, totalShares);
+
+        IndexAction storage indexAction1 = vaultIndexAction[lastIndexInteracted.index1];
+        IndexAction storage indexAction2 = vaultIndexAction[lastIndexInteracted.index2];
+
+        return (
+            totalUnderlying,
+            totalShares,
+            indexAction1.depositAmount,
+            indexAction1.withdrawShares,
+            indexAction2.depositAmount,
+            indexAction2.withdrawShares
+        );
     }
 
     /**

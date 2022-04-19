@@ -85,5 +85,6 @@ The primary license for Spool is the Business Source License 1.1 (`BUSL-1.1`), s
 
 - All files in `contracts/external/` are licensed under the license they were originally published with (as indicated in their SPDX headers)
 - All files in `contracts/mocks/` are licensed under `MIT`.
-- All files in `libraries` are licensed under `MIT`.
+- All files in `contracts/libraries` are licensed under `MIT`.
+- All files in `contracts/utils` are licensed under `MIT`.
 - All files in `test` remain unlicensed.

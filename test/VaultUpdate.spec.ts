@@ -1,7 +1,7 @@
 import { expect, use } from "chai";
 import { Wallet } from "ethers";
 import { solidity } from "ethereum-waffle";
-import { VaultDetailsStruct, createVault, getProportionsFromBitwise, reset, customConstants } from "./shared/utilities";
+import { createVault, customConstants, getProportionsFromBitwise, reset, VaultDetailsStruct } from "./shared/utilities";
 import {
     AccountsFixture,
     deploymentFixture,
@@ -10,8 +10,7 @@ import {
     TokensFixture,
 } from "./shared/fixtures";
 import { ethers, waffle } from "hardhat";
-import { Vault } from "../build/types/Vault";
-import { IVault__factory } from "../build/types/factories/IVault__factory";
+import { IVault__factory, Vault } from "../build/types";
 
 use(solidity);
 
@@ -135,7 +134,7 @@ describe("VaultUpdate", () => {
 
             let vaultLitAfter = await vault.lastIndexInteracted();
             let userLitAfter = await vault.userLastInteractions(accounts.user0.address);
-            let activeGlobalIndex = await spool.spool.getActiveGlobalIndex();;
+            let activeGlobalIndex = await spool.spool.getActiveGlobalIndex();
             expect(vaultLitAfter.index1).to.equal(activeGlobalIndex);
             expect(userLitAfter.index1).to.equal(activeGlobalIndex);
             expect(vaultLitAfter.index2).to.equal(0);
@@ -194,7 +193,7 @@ describe("VaultUpdate", () => {
             expect(vaultLitAfter.index2).to.equal(0);
             expect(userLitAfter.index2).to.equal(0);
         });
-        
+
         it("Should perform DHW again and then withdraw", async () => {
             await spool.spool
                 .connect(accounts.doHardWorker)
@@ -204,8 +203,7 @@ describe("VaultUpdate", () => {
 
             const vaultLitAfter = await vault.lastIndexInteracted();
             const userLitAfter = await vault.userLastInteractions(accounts.user0.address);
-            let activeGlobalIndex = await spool.spool.getActiveGlobalIndex();;
-
+            let activeGlobalIndex = await spool.spool.getActiveGlobalIndex();
             expect(vaultLitAfter.index1).to.equal(activeGlobalIndex);
             expect(userLitAfter.index1).to.equal(activeGlobalIndex);
             expect(vaultLitAfter.index2).to.equal(0);
