@@ -289,7 +289,7 @@ contract Vault is VaultRestricted {
         
         // check if withdraw all flag was set or user requested
         // withdraw of all shares in `sharesToWithdraw`
-        if (withdrawAll || userShares == sharesToWithdraw) {
+        if (withdrawAll || (userShares > 0 && userShares == sharesToWithdraw)) {
             sharesToWithdraw = userShares;
             // set user shares to 0
             user.shares = 0;
@@ -316,7 +316,9 @@ contract Vault is VaultRestricted {
             // NOTE: vault shares will be substracted when the at the redeem
             // for the current active index is processed. This way we substract it
             // only once for all the users.
-            user.shares = userShares - sharesToWithdraw;
+            unchecked {
+                user.shares = userShares - sharesToWithdraw;
+            }
         }
         
         return sharesToWithdraw;
@@ -483,7 +485,7 @@ contract Vault is VaultRestricted {
     {
         (uint256 totalUnderlying, , , , , ) = getUpdatedVault(vaultStrategies);
         _redeemUser();
-
+        
         User storage user = users[msg.sender];
 
         uint256 userTotalUnderlying;
