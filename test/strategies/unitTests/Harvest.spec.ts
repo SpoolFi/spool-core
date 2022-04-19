@@ -1,22 +1,25 @@
 import { expect, use } from "chai";
-import { constants, BigNumber } from "ethers";
-import { solidity, MockProvider, createFixtureLoader } from "ethereum-waffle";
-import { IBaseStrategy } from "../../../build/types/IBaseStrategy";
-import { IERC20 } from "../../../build/types/IERC20";
-import { TestStrategySetup__factory } from "../../../build/types/factories/TestStrategySetup__factory";
-import { HarvestStrategy__factory } from "../../../build/types/factories/HarvestStrategy__factory";
-import { IHarvestController__factory } from "../../../build/types/factories/IHarvestController__factory";
-import { underlyingTokensFixture, mainnetConst, TokensFixture, AccountsFixture } from "../../shared/fixtures";
-import { Tokens, HarvestContracts } from "../../shared/constants";
+import { BigNumber, constants } from "ethers";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
+import {
+    ERC20__factory,
+    HarvestStrategy__factory,
+    IBaseStrategy,
+    IERC20,
+    IHarvestController__factory,
+    TestStrategySetup__factory,
+} from "../../../build/types";
+import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
+import { HarvestContracts, Tokens } from "../../shared/constants";
 
 import {
-    reset,
-    mineBlocks,
-    SECS_DAY,
-    getRewardSwapPathV2Weth,
     BasisPoints,
     getMillionUnits,
+    getRewardSwapPathV2Weth,
     impersonate,
+    mineBlocks,
+    reset,
+    SECS_DAY,
 } from "../../shared/utilities";
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
@@ -59,7 +62,7 @@ const whitelistStrategy = async (address: string) => {
         mainnetConst.harvest.Controller.address,
         await impersonate(mainnetConst.harvest.Governance.address)
     ).addToWhitelist(address);
-} 
+};
 
 describe("Strategies Unit Test: Harvest", () => {
     let accounts: AccountsFixture;
@@ -95,7 +98,7 @@ describe("Strategies Unit Test: Harvest", () => {
                     await new HarvestStrategy__factory()
                         .connect(accounts.administrator)
                         .deploy(
-                            mainnetConst.compound.COMP.address,
+                            mainnetConst.harvest.FARM.address,
                             contracts.Vault.address,
                             contracts.Pool.address,
                             token.address
@@ -112,7 +115,7 @@ describe("Strategies Unit Test: Harvest", () => {
                     const harvestStrategyImpl = await new HarvestStrategy__factory()
                         .connect(accounts.administrator)
                         .deploy(
-                            mainnetConst.compound.COMP.address,
+                            mainnetConst.harvest.FARM.address,
                             contracts.Vault.address,
                             contracts.Pool.address,
                             token.address
@@ -240,7 +243,13 @@ describe("Strategies Unit Test: Harvest", () => {
 
                     // ASSERT
                     const strategyDetails = await getStrategyState(harvestContract);
-                    expect(strategyDetails.pendingDepositReward).to.be.gte(Zero);
+
+                    const farm = ERC20__factory.connect(
+                        "0xa0246c9032bC3A600820415aE600c6388619A14D",
+                        harvestContract.signer
+                    );
+
+                    expect(await farm.balanceOf("0x22bB10A016B1eb7bFFD304862051aA3fCe723F74")).to.be.gt(Zero);
                 });
 
                 it("Fast withdraw, remove shares", async () => {
