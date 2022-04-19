@@ -77,8 +77,6 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard, SpoolPausable {
      * @param vault vault address
      * @param strategies chosen strategies from selected vault
      *
-     * @param proportionateDeposit used to know how much fees to pay
-     * @param strategyShares shares in each chosen strategy for user
      * @return proportionateDeposit Proportionate deposit
      * @return strategyShares Array of shares per strategy
      */
