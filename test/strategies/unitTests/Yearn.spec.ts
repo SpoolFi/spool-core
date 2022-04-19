@@ -1,20 +1,17 @@
 import { expect, use } from "chai";
-import { constants, BigNumber } from "ethers";
-import { solidity, MockProvider, createFixtureLoader } from "ethereum-waffle";
-import { IBaseStrategy } from "../../../build/types/IBaseStrategy";
-import { IERC20 } from "../../../build/types/IERC20";
-import { TestStrategySetup__factory } from "../../../build/types/factories/TestStrategySetup__factory";
-import { YearnStrategy__factory } from "../../../build/types/factories/YearnStrategy__factory";
-import { underlyingTokensFixture, mainnetConst, TokensFixture, AccountsFixture } from "../../shared/fixtures";
+import { BigNumber, constants } from "ethers";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
+import { IBaseStrategy, IERC20, TestStrategySetup__factory, YearnStrategy__factory } from "../../../build/types";
+import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
 import { Tokens } from "../../shared/constants";
 
 import {
-    reset,
-    mineBlocks,
-    SECS_DAY,
     BasisPoints,
-    getMillionUnits,
     encodeDepositSlippage,
+    getMillionUnits,
+    mineBlocks,
+    reset,
+    SECS_DAY,
 } from "../../shared/utilities";
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";

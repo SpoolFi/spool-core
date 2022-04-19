@@ -1,25 +1,26 @@
 import { expect, use } from "chai";
 import { BigNumber, constants } from "ethers";
-import { solidity, MockProvider, createFixtureLoader } from "ethereum-waffle";
-import { IBaseStrategy } from "../../../build/types/IBaseStrategy";
-import { IERC20 } from "../../../build/types/IERC20";
-import { TestStrategySetup__factory } from "../../../build/types/factories/TestStrategySetup__factory";
-import { BarnBridgeMultiRewardStrategy__factory } from "../../../build/types/factories/BarnBridgeMultiRewardStrategy__factory";
-import { BarnBridgeMultiContracts } from "../../shared/constants";
-import { underlyingTokensFixture, mainnetConst, TokensFixture, AccountsFixture } from "../../shared/fixtures";
-import { Tokens } from "../../shared/constants";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
+import {
+    BarnBridgeMultiRewardStrategy__factory,
+    IBaseStrategy,
+    IERC20,
+    TestStrategySetup__factory,
+} from "../../../build/types";
+import { BarnBridgeMultiContracts, Tokens } from "../../shared/constants";
+import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
 
 import {
-    reset,
-    mineBlocks,
-    SECS_DAY,
-    getRewardSwapPathV2Direct,
-    getRewardSwapPathV2Custom,
-    getRewardSwapPathV3Custom,
+    BasisPoints,
     encodeDepositSlippage,
     getMillionUnits,
+    getRewardSwapPathV2Custom,
+    getRewardSwapPathV2Direct,
+    getRewardSwapPathV3Custom,
+    mineBlocks,
+    reset,
+    SECS_DAY,
     UNISWAP_V3_FEE,
-    BasisPoints,
 } from "../../shared/utilities";
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
@@ -62,7 +63,7 @@ const strategyAssets: BBStratSetup[] = [
     {
         name: "DAI",
         contracts: mainnetConst.barnBridge.aDAI,
-        swapData: swapData
+        swapData: swapData,
     },
     {
         name: "USDC",
@@ -86,7 +87,9 @@ describe("Strategies Unit Test: BarnBridge multi reward", () => {
 
     describe(`Deployment: Gatekeeping`, () => {
         it("Should fail deploying Barn Bridge Multi Reward Strategy with smart yeild address 0", async () => {
-            const BarnBridgeMultiRewardStrategy = new BarnBridgeMultiRewardStrategy__factory().connect(accounts.administrator);
+            const BarnBridgeMultiRewardStrategy = new BarnBridgeMultiRewardStrategy__factory().connect(
+                accounts.administrator
+            );
             await expect(
                 BarnBridgeMultiRewardStrategy.deploy(
                     AddressZero,
@@ -97,7 +100,9 @@ describe("Strategies Unit Test: BarnBridge multi reward", () => {
         });
 
         it("Should fail deploying Barn Bridge Multi Reward Strategy with smart pool address 0", async () => {
-            const BarnBridgeMultiRewardStrategy = new BarnBridgeMultiRewardStrategy__factory().connect(accounts.administrator);
+            const BarnBridgeMultiRewardStrategy = new BarnBridgeMultiRewardStrategy__factory().connect(
+                accounts.administrator
+            );
             await expect(
                 BarnBridgeMultiRewardStrategy.deploy(
                     "0x0000000000000000000000000000000000000001",
@@ -113,7 +118,7 @@ describe("Strategies Unit Test: BarnBridge multi reward", () => {
             let token: IERC20;
 
             before(async () => {
-                const {tokens} = await loadFixture(underlyingTokensFixture);
+                const { tokens } = await loadFixture(underlyingTokensFixture);
                 token = tokens[name];
             });
 
@@ -204,7 +209,10 @@ describe("Strategies Unit Test: BarnBridge multi reward", () => {
                     expect(balance).to.be.greaterWithTolerance(depositAmount.mul(2), BasisPoints.Basis_100);
 
                     const strategyDetails = await getStrategyState(barnBridgeContract);
-                    expect(strategyDetails.totalShares).to.be.greaterWithTolerance(depositAmount.mul(2), BasisPoints.Basis_100);
+                    expect(strategyDetails.totalShares).to.be.greaterWithTolerance(
+                        depositAmount.mul(2),
+                        BasisPoints.Basis_100
+                    );
                 });
 
                 it("Process withraw, should withdraw from strategy", async () => {

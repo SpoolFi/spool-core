@@ -1,13 +1,18 @@
 import { expect, use } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-import { solidity, MockProvider, createFixtureLoader } from "ethereum-waffle";
+import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
 import { deploymentFixture } from "./shared/fixtures";
-import { VaultDetailsStruct, createVault, getProportionsFromBitwise, TEN_UNITS_E8, reset, customConstants } from "./shared/utilities";
-import { Vault } from "../build/types/Vault";
-import { IVault__factory } from "../build/types/factories/IVault__factory";
+import {
+    createVault,
+    customConstants,
+    getProportionsFromBitwise,
+    reset,
+    TEN_UNITS_E8,
+    VaultDetailsStruct,
+} from "./shared/utilities";
+import { IVault__factory, Vault, Vault__factory } from "../build/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Vault__factory } from "../build/types/factories/Vault__factory";
 
 use(solidity);
 
@@ -26,10 +31,8 @@ describe("Vault", () => {
         let owner: SignerWithAddress;
 
         before(async () => {
-            [
-                owner
-            ] = await ethers.getSigners();
-        })
+            [owner] = await ethers.getSigners();
+        });
 
         it("Should fail deploying the Vault with address 0", async () => {
             await expect(
@@ -96,10 +99,11 @@ describe("Vault", () => {
 
             await tokens.USDC.transfer(accounts.user0.address, TEN_UNITS_E8);
             await tokens.USDC.connect(accounts.user0).approve(vault.address, TEN_UNITS_E8);
-            
+
             // expect failure with 0 deposit amount
-            await expect(vault.connect(accounts.user0).deposit(vaultCreation.strategies, 0, true))
-            .to.be.revertedWith("NDP");
+            await expect(vault.connect(accounts.user0).deposit(vaultCreation.strategies, 0, true)).to.be.revertedWith(
+                "NDP"
+            );
 
             await vault.connect(accounts.user0).deposit(vaultCreation.strategies, TEN_UNITS_E8, true);
 
@@ -301,8 +305,7 @@ describe("Vault", () => {
             await tokens.USDC.transfer(accounts.user1.address, user2DepositAmount);
             await tokens.USDC.connect(accounts.user1).approve(spool.controller.address, user2DepositAmount);
 
-            const deposit = vault.connect(accounts.user1)
-                .deposit(vaultCreation.strategies, user2DepositAmount, false);
+            const deposit = vault.connect(accounts.user1).deposit(vaultCreation.strategies, user2DepositAmount, false);
 
             await expect(deposit).to.revertedWith("Pausable: paused");
             await spool.controller.unpause();

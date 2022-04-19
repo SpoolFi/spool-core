@@ -1,12 +1,9 @@
 import { expect, use } from "chai";
-import { BigNumber, utils, constants } from "ethers";
+import { BigNumber, constants, utils } from "ethers";
 import { ethers } from "hardhat";
-import { solidity, MockProvider, createFixtureLoader, deployMockContract, MockContract } from "ethereum-waffle";
+import { createFixtureLoader, deployMockContract, MockContract, MockProvider, solidity } from "ethereum-waffle";
 import { underlyingTokensFixture } from "./shared/fixtures";
-import { IController__factory } from "../build/types/factories/IController__factory";
-import { ISpoolOwner__factory } from "../build/types/factories/ISpoolOwner__factory";
-import { FeeHandler__factory } from "../build/types/factories/FeeHandler__factory";
-import { FeeHandler } from "../build/types/FeeHandler";
+import { FeeHandler, FeeHandler__factory, IController__factory, ISpoolOwner__factory } from "../build/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import { getPercentageTwoDecimal, reset } from "./shared/utilities";
@@ -22,6 +19,7 @@ describe("Fee Handler unit tests", () => {
     const riskProviderFee = BigNumber.from(1_00);
     const vaultFee = BigNumber.from(5_00);
     let mockController: MockContract;
+    let mockSpoolOwner: MockContract;
     let feeHandler: FeeHandler;
     let owner: SignerWithAddress;
     let vault: SignerWithAddress;
@@ -53,22 +51,20 @@ describe("Fee Handler unit tests", () => {
             await mockController.mock.validVault.returns(false);
             await mockController.mock.validVault.withArgs(vault.address).returns(true);
 
-            const mockSpoolOwner = await deployMockContract(owner, ISpoolOwner__factory.abi);
+            mockSpoolOwner = await deployMockContract(owner, ISpoolOwner__factory.abi);
             await mockSpoolOwner.mock.isSpoolOwner.returns(false);
             await mockSpoolOwner.mock.isSpoolOwner.withArgs(owner.address).returns(true);
 
             feeHandler = await new FeeHandler__factory()
                 .connect(owner)
-                .deploy(
-                    mockSpoolOwner.address,
-                    mockController.address,
-                    riskProviderRegistry.address,
-                    ecosystemFee,
-                    treasuryFee,
-                    ecosystemFeeCollector.address,
-                    treasuryFeeCollector.address
-                );
+                .deploy(mockSpoolOwner.address, mockController.address, riskProviderRegistry.address);
             feeHandler = feeHandler.connect(owner);
+            await feeHandler.initialize(
+                ecosystemFee,
+                treasuryFee,
+                ecosystemFeeCollector.address,
+                treasuryFeeCollector.address
+            );
 
             await feeHandler.connect(riskProviderRegistry).setRiskProviderFee(riskProvider.address, riskProviderFee);
         });
@@ -313,23 +309,20 @@ describe("Fee Handler unit tests", () => {
             await mockController.mock.validVault.returns(false);
             await mockController.mock.validVault.withArgs(vault.address).returns(true);
 
-            const mockSpoolOwner = await deployMockContract(owner, ISpoolOwner__factory.abi);
+            mockSpoolOwner = await deployMockContract(owner, ISpoolOwner__factory.abi);
             await mockSpoolOwner.mock.isSpoolOwner.returns(false);
             await mockSpoolOwner.mock.isSpoolOwner.withArgs(owner.address).returns(true);
 
             feeHandler = await new FeeHandler__factory()
                 .connect(owner)
-                .deploy(
-                    mockSpoolOwner.address,
-                    mockController.address,
-                    riskProviderRegistry.address,
-                    ecosystemFee,
-                    treasuryFee,
-                    ecosystemFeeCollector.address,
-                    treasuryFeeCollector.address
-                );
+                .deploy(mockSpoolOwner.address, mockController.address, riskProviderRegistry.address);
             feeHandler = feeHandler.connect(owner);
-
+            await feeHandler.initialize(
+                ecosystemFee,
+                treasuryFee,
+                ecosystemFeeCollector.address,
+                treasuryFeeCollector.address
+            );
             await feeHandler.connect(riskProviderRegistry).setRiskProviderFee(riskProvider.address, riskProviderFee);
         });
 
@@ -337,15 +330,7 @@ describe("Fee Handler unit tests", () => {
             await expect(
                 new FeeHandler__factory()
                     .connect(owner)
-                    .deploy(
-                        owner.address,
-                        constants.AddressZero,
-                        riskProviderRegistry.address,
-                        ecosystemFee,
-                        treasuryFee,
-                        ecosystemFeeCollector.address,
-                        treasuryFeeCollector.address
-                    )
+                    .deploy(mockSpoolOwner.address, constants.AddressZero, riskProviderRegistry.address)
             ).to.be.revertedWith("FeeHandler::constructor: Controller address cannot be 0");
         });
 
@@ -353,50 +338,27 @@ describe("Fee Handler unit tests", () => {
             await expect(
                 new FeeHandler__factory()
                     .connect(owner)
-                    .deploy(
-                        owner.address,
-                        mockController.address,
-                        constants.AddressZero,
-                        ecosystemFee,
-                        treasuryFee,
-                        ecosystemFeeCollector.address,
-                        treasuryFeeCollector.address
-                    )
+                    .deploy(owner.address, mockController.address, constants.AddressZero)
             ).to.be.revertedWith("FeeHandler::constructor: Risk Provider Registry address cannot be 0");
         });
 
         it("Should revert if initialized with Ecosystem Fee Collector as 0 address", async () => {
+            const feeHandler = await new FeeHandler__factory()
+                .connect(owner)
+                .deploy(mockSpoolOwner.address, mockController.address, riskProviderRegistry.address);
             await expect(
-                new FeeHandler__factory()
-                    .connect(owner)
-                    .deploy(
-                        owner.address,
-                        mockController.address,
-                        riskProviderRegistry.address,
-                        ecosystemFee,
-                        treasuryFee,
-                        constants.AddressZero,
-                        treasuryFeeCollector.address
-                    )
+                feeHandler.initialize(ecosystemFee, treasuryFee, constants.AddressZero, treasuryFeeCollector.address)
             ).to.be.revertedWith("FeeHandler::constructor: Ecosystem Fee Collector cannot be 0");
         });
 
         it("Should revert if initialized with Treasury Fee Collecter as 0 address", async () => {
+            const feeHandler = await new FeeHandler__factory()
+                .connect(owner)
+                .deploy(mockSpoolOwner.address, mockController.address, riskProviderRegistry.address);
             await expect(
-                new FeeHandler__factory()
-                    .connect(owner)
-                    .deploy(
-                        owner.address,
-                        mockController.address,
-                        riskProviderRegistry.address,
-                        ecosystemFee,
-                        treasuryFee,
-                        ecosystemFeeCollector.address,
-                        constants.AddressZero,
-                    )
+                feeHandler.initialize(ecosystemFee, treasuryFee, ecosystemFeeCollector.address, constants.AddressZero)
             ).to.be.revertedWith("FeeHandler::constructor: Treasury Fee Collector address cannot be 0");
         });
-
 
         it("Should revert if non-vault tries to pay fees", async () => {
             const { accounts, tokens } = await loadFixture(underlyingTokensFixture);
