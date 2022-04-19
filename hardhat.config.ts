@@ -14,7 +14,6 @@ import { task, types } from "hardhat/config";
 
 import * as glob from "glob";
 import * as path from "path";
-import { main as passDays } from "./scripts/passTime";
 
 dotenvConfig();
 
@@ -126,12 +125,6 @@ task("coverage-local", "Runs mocha tests locally with coverage").setAction(async
     await hre.run("coverage", { testfiles: "test/*.spec.ts" });
 });
 
-task("pass-time", "Increase blockchain time in days")
-    .addParam("days", "Number of days to pass", 1, types.int)
-    .setAction(async (taskArgs, hre) => {
-        const days = parseInt(taskArgs.days);
-        await passDays(days, hre.ethers);
-    });
 
 export default {
     paths: {
