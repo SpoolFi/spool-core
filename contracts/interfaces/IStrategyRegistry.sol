@@ -6,10 +6,10 @@ interface IStrategyRegistry {
 
     /* ========== FUNCTIONS ========== */
 
-    function upgradeToAndCall(address newImpl, bytes calldata data) external;
+    function upgradeToAndCall(address strategy, bytes calldata data) external;
     function changeAdmin(address newAdmin) external;
-    function addStrategy(address strat) external;
-    function strategyImplementations(address strategy) view external returns (address);
+    function addStrategy(address strategy) external;
+    function getImplementation(address strategy) view external returns (address);
 
     /* ========== EVENTS ========== */
 
