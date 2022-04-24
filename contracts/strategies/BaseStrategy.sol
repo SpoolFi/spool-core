@@ -25,12 +25,16 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
 
     /* ========== CONSTANTS ========== */
 
-    /// @notice minimum shares size to avoid loss of share due to computation precision
+    /// @notice Value to multiply new deposit recieved to get the share amount
     uint128 private constant SHARES_MULTIPLIER = 10**6;
     
     /// @notice number of locked shares when initial shares are added
     /// @dev This is done to prevent rounding errors and share manipulation
-    uint128 private constant INITIAL_SHARES_LOCKED = 10**5;
+    uint128 private constant INITIAL_SHARES_LOCKED = 10**11;
+
+    /// @notice minimum shares size to avoid loss of share due to computation precision
+    /// @dev If total shares go unders this value, new deposit is multiplied by the `SHARES_MULTIPLIER` again
+    uint256 private constant MIN_SHARES_FOR_ACCURACY = INITIAL_SHARES_LOCKED * 10;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -405,27 +409,18 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      * @dev Calculates shares before they are added to the total shares
      * @param strategyTotalShares Total shares for strategy
      * @param stratTotalUnderlying Total underlying for strategy
+     * @param depositAmount Deposit amount recieved
      * @return newShares New shares calculated
      */
-    function _getNewSharesAfterWithdraw(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal returns(uint128 newShares){
+    function _getNewSharesAfterWithdraw(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal pure returns(uint128, uint128){
         uint128 oldUnderlying;
         if (stratTotalUnderlying > depositAmount) {
-            oldUnderlying = stratTotalUnderlying - depositAmount;
-        }
-        
-        if (strategyTotalShares == 0 || oldUnderlying == 0) {
-            // Enforce minimum shares size to avoid loss of share due to computation precision
-            newShares = depositAmount * SHARES_MULTIPLIER;
-
-            if (strategyTotalShares == 0 && depositAmount > 0) {
-                strategies[self].totalShares = INITIAL_SHARES_LOCKED;
-
-                // substract the initial locked share amount
-                newShares -= INITIAL_SHARES_LOCKED;
+            unchecked {
+                oldUnderlying = stratTotalUnderlying - depositAmount;
             }
-        } else {
-            newShares = Math.getProportion128(depositAmount, strategyTotalShares, oldUnderlying);
         }
+
+        return _getNewShares(strategyTotalShares, oldUnderlying, depositAmount);
     }
 
     /**
@@ -433,22 +428,50 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      *
      * @param strategyTotalShares Total shares
      * @param stratTotalUnderlying Total underlying
+     * @param depositAmount Deposit amount recieved
      * @return newShares New shares calculated
      */
-    function _getNewShares(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal returns(uint128 newShares){
-        if (strategyTotalShares == 0 || stratTotalUnderlying == 0) {
-            // Enforce minimum shares size to avoid loss of share due to computation precision
-            newShares = depositAmount * SHARES_MULTIPLIER;
-
-            if (strategyTotalShares == 0 && depositAmount > 0) {
-                strategies[self].totalShares = INITIAL_SHARES_LOCKED;
-
-                // substract the initial locked share amount
-                newShares -= INITIAL_SHARES_LOCKED;
-            }
+    function _getNewShares(uint128 strategyTotalShares, uint128 stratTotalUnderlying, uint128 depositAmount) internal pure returns(uint128 newShares, uint128){
+        if (strategyTotalShares <= MIN_SHARES_FOR_ACCURACY || stratTotalUnderlying == 0) {
+            (newShares, strategyTotalShares) = _setNewShares(strategyTotalShares, depositAmount);
         } else {
             newShares = Math.getProportion128(depositAmount, strategyTotalShares, stratTotalUnderlying);
         }
+
+        strategyTotalShares += newShares;
+
+        return (newShares, strategyTotalShares);
+    }
+
+    /**
+     * @notice Sets new shares if strategy does not have enough locked shares and calculated new shares based on deposit recieved
+     * @dev
+     * This is used when a strategy is new and does not have enough shares locked.
+     * Shares are locked to prevent rounding errors and to keep share to underlying amount
+     * ratio correct, to ensure the normal working of the share system._awaitingEmergencyWithdraw
+     * We always want to have more shares than the underlying value of the strategy.
+     *
+     * @param strategyTotalShares Total shares
+     * @param depositAmount Deposit amount recieved
+     * @return newShares New shares calculated
+     */
+    function _setNewShares(uint128 strategyTotalShares, uint128 depositAmount) private pure returns(uint128, uint128) {
+        // Enforce minimum shares size to avoid loss of share due to computation precision
+        uint128 newShares = depositAmount * SHARES_MULTIPLIER;
+
+        if (strategyTotalShares < INITIAL_SHARES_LOCKED) {
+            if (newShares + strategyTotalShares >= INITIAL_SHARES_LOCKED) {
+                unchecked {
+                    uint128 newLockedShares = INITIAL_SHARES_LOCKED - strategyTotalShares;
+                    strategyTotalShares += newLockedShares;
+                    newShares -= newLockedShares;
+                }
+            } else {
+                newShares = 0;
+            }
+        }
+
+        return (newShares, strategyTotalShares);
     }
 
     /**

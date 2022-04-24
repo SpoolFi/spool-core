@@ -21,8 +21,16 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
 
     /* ========== CONSTANTS ========== */
 
+    /// @notice Value to multiply new deposit recieved to get the share amount
+    uint128 private constant SHARES_MULTIPLIER = 10**6;
+    
+    /// @notice number of locked shares when initial shares are added
+    /// @dev This is done to prevent rounding errors and share manipulation
+    uint128 private constant INITIAL_SHARES_LOCKED = 10**11;
+
     /// @notice minimum shares size to avoid loss of share due to computation precision
-    uint128 private constant MIN_SHARES = 10**8;
+    /// @dev If total shares go unders this value, new deposit is multiplied by the `SHARES_MULTIPLIER` again
+    uint256 private constant MIN_SHARES_FOR_ACCURACY = INITIAL_SHARES_LOCKED * 10;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -145,12 +153,29 @@ abstract contract VaultIndexActions is IVaultIndexActions, RewardDrip {
 
         // calculate new deposit shares
         uint128 newShares = 0;
-        if (_totalShares == 0 || totalUnderlyingAtIndex == 0) {
+        if (_totalShares <= MIN_SHARES_FOR_ACCURACY || totalUnderlyingAtIndex == 0) {
             // Enforce minimum shares size to avoid loss of share due to computation precision
-            newShares = (0 < totalReceived && totalReceived < MIN_SHARES) ? MIN_SHARES : totalReceived;
+            newShares = totalReceived * SHARES_MULTIPLIER;
+
+            if (_totalShares < INITIAL_SHARES_LOCKED) {
+                if (newShares + _totalShares >= INITIAL_SHARES_LOCKED) {
+                    unchecked {
+                        uint128 newLockedShares = INITIAL_SHARES_LOCKED - _totalShares;
+                        _totalShares += newLockedShares;
+                        newShares -= newLockedShares;
+                    }
+                } else {
+                    unchecked {
+                        _totalShares += newShares;
+                    }
+                    newShares = 0;
+                }
+            }
         } else {
             if (totalReceived < totalUnderlyingAtIndex) {
-                newShares = _getProportion128(totalReceived, _totalShares, totalUnderlyingAtIndex - totalReceived);
+                unchecked {
+                    newShares = _getProportion128(totalReceived, _totalShares, totalUnderlyingAtIndex - totalReceived);
+                }
             } else {
                 newShares = _totalShares;
             }
