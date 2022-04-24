@@ -143,12 +143,12 @@ abstract contract ProcessStrategy is BaseStrategy {
 
             // Update deposit batch
             if (userDeposit > 0) {
-                uint128 newShares = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, processInfo.userDepositReceived);
+                uint128 newShares;
+                (newShares, strategyTotalShares) = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, processInfo.userDepositReceived);
 
                 batch.deposited = userDeposit;
                 batch.depositedReceived = processInfo.userDepositReceived;
                 batch.depositedSharesReceived = newShares;
-                strategyTotalShares += newShares;
             }
 
             // Update shares
@@ -192,10 +192,8 @@ abstract contract ProcessStrategy is BaseStrategy {
         // add shares from optimized deposit
         if (depositOptimizedAmount > 0) {
             uint128 stratTotalUnderlying = getStrategyBalance();
-            uint128 newShares = _getNewShares(strategyTotalShares, stratTotalUnderlying, depositOptimizedAmount);
-
-            // add new shares
-            strategyTotalShares += newShares;
+            uint128 newShares;
+            (newShares, strategyTotalShares) = _getNewShares(strategyTotalShares, stratTotalUnderlying, depositOptimizedAmount);
 
             // update reallocation batch deposit shares
             reallocationBatch.depositedReallocationSharesReceived = newShares;
@@ -228,10 +226,8 @@ abstract contract ProcessStrategy is BaseStrategy {
             uint128 stratTotalUnderlying = getStrategyBalance();
 
             if (depositReceived > 0) {
-                uint128 newShares = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, depositReceived);
-
-                // add new shares to total shares
-                strategyTotalShares += newShares;
+                uint128 newShares;
+                (newShares, strategyTotalShares) = _getNewSharesAfterWithdraw(strategyTotalShares, stratTotalUnderlying, depositReceived);
 
                 // update reallocation batch deposit shares
                 reallocationBatch.depositedReallocationSharesReceived += newShares;
