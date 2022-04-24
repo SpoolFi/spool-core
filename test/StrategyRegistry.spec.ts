@@ -26,7 +26,7 @@ describe("Strategy Registry", () => {
         const strategyAddress = strategies.strategyAddresses[0];
 
         // ACT
-        const implementation = await spool.strategyRegistry.strategyImplementations(strategyAddress);
+        const implementation = await spool.strategyRegistry.getImplementation(strategyAddress);
 
         // ASSERT
         expect(implementation).to.equal(strategyAddress);
@@ -43,7 +43,7 @@ describe("Strategy Registry", () => {
         // ACT
         const tx = await spool.proxyAdmin.upgradeAndCall(registryAddress, strategyAddress, encodedImplementation);
         await tx.wait();
-        const implementation = await spool.strategyRegistry.strategyImplementations(strategyAddress);
+        const implementation = await spool.strategyRegistry.getImplementation(strategyAddress);
 
         // ASSERT
         expect(implementation).to.equal(newImplementation);

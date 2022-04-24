@@ -9,6 +9,7 @@ import {
     SpoolDoHardWorkReallocationHelper__factory,
     Vault__factory,
 } from "../../build/types";
+import { FastWithdrawParamsStruct } from "../../build/types/Vault";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "ethers/lib/utils";
 import {
@@ -94,7 +95,7 @@ type UserVaultSnapshot = {
     withdrawShares2: string;
 };
 
-type UserVaultActions = {
+export type UserVaultActions = {
     [key: string]: {
         [key: string]: {
             deposit: BigNumber;
@@ -152,21 +153,6 @@ export async function buildContext(): Promise<Context> {
         vaults: await loadVaults(hre),
     };
 
-    const abiCoder = new hre.ethers.utils.AbiCoder();
-    let data = abiCoder.encode(["address"], [reallocationHelper.address]);
-    await context.infra.proxyAdmin.upgradeAndCall(
-        context.infra.strategyRegistry.address,
-        reallocationHelper.address,
-        data
-    );
-
-    data = abiCoder.encode(["address"], [slippagesHelper.address]);
-    await context.infra.proxyAdmin.upgradeAndCall(
-        context.infra.strategyRegistry.address,
-        slippagesHelper.address,
-        data
-    );
-
     const strategyNames: any = {
         Aave: "Aave",
         Compound: "Compound",
@@ -200,6 +186,21 @@ export async function buildContext(): Promise<Context> {
     return context;
 }
 
+export async function doDeposits(
+    context: Context,
+    users: SignerWithAddress[],
+    vaults: string[],
+    amounts: BigNumberish[],
+    userVaultActions: UserVaultActions,
+    transferFromVault: boolean = true
+) {
+    for (const vaultName of vaults) {
+        for (let i = 0; i < users.length; i++) {
+            await doDeposit(context, users[i], vaultName, amounts[i].toString(), userVaultActions, transferFromVault);
+        }
+    }
+}
+
 export async function doDeposit(
     context: Context,
     user: Wallet | SignerWithAddress,
@@ -214,7 +215,8 @@ export async function doDeposit(
     const vault = Vault__factory.connect(vaultElement.address, hre.ethers.provider);
     const underlying_ = context.tokens[vaultElement.underlying];
     const underlying = ERC20__factory.connect(underlying_.address, hre.ethers.provider);
-    const decimals = await underlying.decimals();
+
+    const decimals = getVaultDecimals(vaultName);
     const amountInWei = parseUnits(amount, decimals);
 
     await underlying.connect(user).approve(vault.address, amountInWei);
@@ -371,6 +373,27 @@ export async function doWithdraw(
     userVaultAction.withdrawal = userVaultAction.withdrawal.add(shares);
 }
 
+export async function doWithdrawRandom(
+    context: Context,
+    users: SignerWithAddress[],
+    vaults: string[],
+    userVaultActions: UserVaultActions
+) {
+    for (const vaultName of vaults) {
+        for (const user of users) {
+            const vaultElement = getVaultElement(context, vaultName);
+            const vault = Vault__factory.connect(vaultElement.address, user);
+            const userShares = (await vault.callStatic.getUpdatedUser(vaultElement.strategies))[0];
+
+            const percent = getRandomAmount(1, 10_000);
+
+            const withdrawShares = userShares.mul(percent).div(10_000);
+
+            await doWithdraw(context, user, vaultName, withdrawShares, userVaultActions);
+        }
+    }
+}
+
 export async function doWithdrawAll(
     context: Context,
     users: SignerWithAddress[],
@@ -388,6 +411,9 @@ export async function doWithdrawAll(
             const userShares = (await vault.callStatic.getUpdatedUser(vaultElement.strategies))[0];
 
             if (!userShares.isZero()) {
+                console.log(
+                    context.scope + `>> Withdrawing vault: ${vaultName}, user: ${user.address}, amount: ${userShares.toString()}`
+                );
                 await vault.withdraw(vaultElement.strategies, 0, true);
 
                 const userVaultAction = getUserVaultAction(user.address, vaultName, userVaultActions);
@@ -525,7 +551,12 @@ export function assertDoHardWorkSnapshotsPrimitive(
                     BasisPoints.Basis_3,
                     "Bad user active deposit difference"
                 );
-                expect(sharesDiff).to.beCloseTo(depositAmount1, BasisPoints.Basis_3, "Bad user shares difference");
+
+                expect(shareToUnderlying(sharesDiff)).to.beCloseTo(
+                    depositAmount1,
+                    BasisPoints.Basis_3,
+                    "Bad user shares difference"
+                );
                 console.log(context.scope + `\t\t\t>> ASSERT: DEPOSITED OK`);
             }
 
@@ -549,25 +580,25 @@ export function assertDoHardWorkSnapshotsPrimitive(
 
                 expect(underlyingDiff).to.beCloseTo(
                     withdrawAmount,
-                    BasisPoints.Basis_3,
+                    BasisPoints.Basis_5,
                     "Bad user underlying value difference"
                 );
 
                 expect(activeDepositDiff).to.beCloseTo(
                     withdrawAmount,
-                    BasisPoints.Basis_3,
+                    BasisPoints.Basis_5,
                     "Bad user active deposit difference"
                 );
 
                 expect(sharesDiff).to.be.equal(withdrawShares1, "Bad user shares difference");
-                expect(owedDiff).to.beCloseTo(withdrawAmount, BasisPoints.Basis_3, "Bad user owed difference");
+                expect(owedDiff).to.beCloseTo(withdrawAmount, BasisPoints.Basis_5, "Bad user owed difference");
                 console.log(context.scope + `\t\t\t>> ASSERT: WITHDRAWN OK`);
             }
 
             if (depositAmount1.isZero() && withdrawShares1.isZero()) {
                 expect(BigNumber.from(userVaultAfter.userTotalUnderlying)).to.beCloseTo(
                     userVaultBefore.userTotalUnderlying,
-                    BasisPoints.Basis_1,
+                    BasisPoints.Basis_5,
                     "Bad user underlying value difference"
                 );
                 expect(BigNumber.from(userVaultAfter.activeDeposit)).to.be.equal(
@@ -615,38 +646,53 @@ export function assertDoHardWorkSnapshotsPrimitive(
         const depositAmount1 = BigNumber.from(vaultDetails.depositAmount1);
         if (!depositAmount1.isZero()) {
             expectedUnderlyingDiff = expectedUnderlyingDiff.add(depositAmount1);
-            expectedSharesDiff = expectedSharesDiff.add(depositAmount1);
+            expectedSharesDiff = expectedSharesDiff.add(underlyingToShares(depositAmount1));
+            console.log(context.scope + `\t\t>> ASSERT: expectedUnderlyingDiff: ${expectedUnderlyingDiff.toString()}`);
+            console.log(context.scope + `\t\t>> ASSERT: expectedSharesDiff: ${expectedSharesDiff.toString()}`);
         }
 
         const withdrawShares1 = BigNumber.from(vaultDetails.withdrawShares1);
         let withdrawAmount = constants.Zero;
         if (!withdrawShares1.isZero()) {
             withdrawAmount = withdrawShares1.mul(vaultDetails.totalUnderlying).div(vaultDetails.totalShares);
+            console.log(context.scope + `\t\t>> ASSERT: withdrawShares1: ${withdrawShares1.toString()}`);
+            console.log(
+                context.scope +
+                    `\t\t>> ASSERT: vaultDetails.totalUnderlying: ${vaultDetails.totalUnderlying.toString()}`
+            );
+            console.log(context.scope + `\t\t>> ASSERT: withdrawAmount: ${withdrawAmount.toString()}`);
 
             expectedUnderlyingDiff = expectedUnderlyingDiff.sub(withdrawAmount);
             expectedSharesDiff = expectedSharesDiff.sub(withdrawShares1);
         }
+        console.log(context.scope + `\t\t>> ASSERT: expectedUnderlyingDiff: ${expectedUnderlyingDiff.toString()}`);
 
         if (depositAmount1.isZero() && withdrawShares1.isZero()) {
             expect(BigNumber.from(vaultAfter.totalUnderlying)).to.beCloseTo(
                 vaultBefore.totalUnderlying,
-                BasisPoints.Basis_1,
+                BasisPoints.Basis_5,
                 "Bad vault underlying value difference after reallocation"
             );
             expect(BigNumber.from(vaultAfter.totalShares)).to.beCloseTo(
                 vaultBefore.totalShares,
-                BasisPoints.Basis_1,
+                BasisPoints.Basis_5,
                 "Bad vault share difference after reallocation"
             );
         } else {
             const underlyingDiff = BigNumber.from(vaultAfter.totalUnderlying).sub(vaultBefore.totalUnderlying);
+            console.log(
+                context.scope + `\t\t>> ASSERT: vaultAfter.totalUnderlying: ${vaultAfter.totalUnderlying.toString()}`
+            );
+            console.log(
+                context.scope + `\t\t>> ASSERT: vaultBefore.totalUnderlying: ${vaultBefore.totalUnderlying.toString()}`
+            );
             const sharesDiff = BigNumber.from(vaultAfter.totalShares).sub(vaultBefore.totalShares);
             expect(underlyingDiff).to.beCloseTo(
                 expectedUnderlyingDiff,
-                BasisPoints.Basis_3,
+                BasisPoints.Basis_50,
                 "Bad vault underlying value difference"
             );
-            expect(sharesDiff).to.beCloseTo(expectedUnderlyingDiff, BasisPoints.Basis_3, "Bad vault share difference");
+            expect(sharesDiff).to.beCloseTo(expectedSharesDiff, BasisPoints.Basis_50, "Bad vault share difference");
         }
 
         console.log(
@@ -662,7 +708,7 @@ export function assertDoHardWorkSnapshotsPrimitive(
         } else {
             // account for some dust of shares left in the vault from rounding errors
             expect(BigNumber.from(vaultAfter.totalShares)).to.be.lt(
-                500,
+                BigNumber.from(10).pow(11).add(500),
                 "Bad total vault vs total user share amount when user sum is 0"
             );
         }
@@ -698,11 +744,10 @@ export function assertDoHardWorkSnapshotsPrimitive(
         );
 
         const stratDecimals = getStratDecimals(context, stratAddress);
-        // 1_000_000 is the deposit amount recieved multiplier to calculate initial shares
-        // 100_000 is the locked share amount
-        // share and underlying tolerance is equal to approximately 1$
-        const shareTolerance = BigNumber.from(10).pow(stratDecimals).mul(1_000_000).add(100_000);
-        const underlyingTolerance = shareTolerance.div(100_000);
+        // 10**12 is the deposit amount recieved multiplier to calculate initial shares
+        // allow for $1 tolerance
+        const shareTolerance = BigNumber.from(10).pow(12);
+        const underlyingTolerance = BigNumber.from(10).pow(stratDecimals);
 
         if (vaultStratSum[stratAddress].shares.gte(shareTolerance)) {
             expect(vaultStratSum[stratAddress].shares).to.be.equalOrLowerCloseTo(
@@ -730,6 +775,14 @@ export function assertDoHardWorkSnapshotsPrimitive(
     }
 }
 
+function shareToUnderlying(shares: BigNumberish) {
+    return BigNumber.from(shares).div(1_000_000);
+}
+
+function underlyingToShares(shares: BigNumberish) {
+    return BigNumber.from(shares).mul(1_000_000);
+}
+
 function getStratDecimals(context: Context, strategy: string) {
     const strats = context.strategies as any;
 
@@ -743,6 +796,20 @@ function getStratDecimals(context: Context, strategy: string) {
     }
 
     return getAssetDecimals(stratAsset);
+}
+
+function getVaultDecimals(vaultName: string) {
+    let vaultAsset;
+    if (vaultName.includes("DAI")) {
+        vaultAsset = "DAI";
+    } else if (vaultName.includes("USDC")) {
+        vaultAsset = "USDC";
+    }
+    if (vaultName.includes("USDT")) {
+        vaultAsset = "USDT";
+    }
+
+    return getAssetDecimals(vaultAsset);
 }
 
 function getAssetDecimals(asset?: string) {
@@ -819,12 +886,17 @@ export function assertClaimSnapshotsPrimitive(
                     );
 
                     balances["deposit"][assetName] = balances["deposit"][assetName].add(deposit);
-                    balances["withdrawal"][assetName] = balances["withdrawal"][assetName].add(
-                        userVaultAction.withdrawal
-                    );
+                    
                     balances["owed"][assetName] = balances["owed"][assetName].add(vaultBefore.owed);
 
                     expect(BigNumber.from(vaultAfter.owed)).to.be.equal(0, "Owed amount not 0");
+
+                    // reset after we assert the user
+                    userVaultActions[user][vaultName] = {
+                        deposit: constants.Zero,
+                        withdrawal: constants.Zero,
+                        claim: false,
+                    }
                 }
             }
 
@@ -834,22 +906,110 @@ export function assertClaimSnapshotsPrimitive(
                 const userErc20Diff = BigNumber.from(asset2).sub(asset1);
 
                 console.log(`\t\t>> ASSERT: User Asset: ${assetName}`);
-                console.log(`\t\t\t>> ASSERT: deposit: ${balances.deposit[assetName]}`);
+                console.log(`\t\t\t>> ASSERT: deposit: ${balances.deposit[assetName].toString()}`);
                 console.log(`\t\t\t>> ASSERT: userErc20Diff: ${userErc20Diff.toString()}`);
 
                 expect(balances.deposit[assetName]).to.beCloseTo(
                     userErc20Diff,
-                    BasisPoints.Basis_3,
+                    BasisPoints.Basis_5,
                     "Bad user claim deposit amount"
-                );
-                expect(balances.withdrawal[assetName]).to.beCloseTo(
-                    userErc20Diff,
-                    BasisPoints.Basis_3,
-                    "Bad user claim withdraw amount"
-                );
+                );                
+
                 expect(balances.owed[assetName]).to.beCloseTo(
                     userErc20Diff,
-                    BasisPoints.Basis_3,
+                    BasisPoints.Basis_5,
+                    "Bad user claim owed amount"
+                );
+            }
+        }
+    }
+}
+
+export function assertFastWithdrawPrimitive(
+    snapshot1: Snapshot,
+    snapshot2: Snapshot,
+    userVaultActions: UserVaultActions,
+    context: Context
+) {
+    console.log(context.scope + ">> ASSERT: FastWithdraw");
+    const userSnapshots1 = snapshot1.users;
+    const userSnapshots2 = snapshot2.users;
+
+    for (const user in userVaultActions) {
+        console.log(context.scope + `\t>> ASSERT: User: ${user}`);
+
+        const balances: any = {
+            deposit: { DAI: constants.Zero, USDT: constants.Zero, USDC: constants.Zero },
+            withdrawal: { DAI: constants.Zero, USDT: constants.Zero, USDC: constants.Zero },
+            owed: { DAI: constants.Zero, USDT: constants.Zero, USDC: constants.Zero },
+        };
+
+        if (userVaultActions[user]) {
+            for (const vaultName in userVaultActions[user]) {
+                console.log(`\t\t>> ASSERT: UserVault: ${vaultName}`);
+                const userVaultAction = userVaultActions[user][vaultName];
+                console.log(`\t\t\t>> ASSERT: did claim: ${userVaultAction.claim}`);
+
+                if (userVaultAction.claim) {
+                    const userVaultAction = userVaultActions[user][vaultName];
+                    let deposit = userVaultAction.deposit;
+                    const vaultBefore = userSnapshots1[user].vaults[vaultName];
+                    const vaultAfter = userSnapshots2[user].vaults[vaultName];
+
+                    // remove deposit from previous DHW, it was not claimed
+                    const userTotalUnderlying = BigNumber.from(vaultBefore.userTotalUnderlying);
+
+                    const assetName = context.vaults[vaultName].underlying;
+
+                    console.log(`\t\t\t>> ASSERT: assetName: ${assetName}`);
+                    console.log(`\t\t\t>> ASSERT: deposit: ${deposit.toString()}`);
+                    console.log(`\t\t\t>> ASSERT: userVaultAction.deposit: ${userVaultAction.deposit.toString()}`);
+                    console.log(`\t\t\t>> ASSERT: userTotalUnderlyingBefore: ${userTotalUnderlying.toString()}`);
+                    console.log(
+                        `\t\t\t>> ASSERT: userTotalUnderlyingaAfter: ${BigNumber.from(
+                            vaultAfter.userTotalUnderlying
+                        ).toString()}`
+                    );
+
+                    balances["deposit"][assetName] = balances["deposit"][assetName].add(deposit);
+                    
+                    // balances["withdrawal"][assetName] = balances["withdrawal"][assetName]
+                    //     .add(userVaultAction.withdrawal
+                    //         .mul(snapshot1.vaults[vaultName].totalUnderlying)
+                    //         .div(snapshot1.vaults[vaultName].totalShares)
+                    //     );
+                    
+                    balances["owed"][assetName] = balances["owed"][assetName].add(vaultBefore.owed);
+
+                    expect(BigNumber.from(vaultAfter.owed)).to.be.equal(0, "Owed amount not 0");
+
+                    // reset after we assert the user
+                    userVaultActions[user][vaultName] = {
+                        deposit: constants.Zero,
+                        withdrawal: constants.Zero,
+                        claim: false,
+                    }
+                }
+            }
+
+            for (const assetName of ["DAI", "USDC", "USDT"]) {
+                const asset1 = userSnapshots1[user].assets[assetName].balance;
+                const asset2 = userSnapshots2[user].assets[assetName].balance;
+                const userErc20Diff = BigNumber.from(asset2).sub(asset1);
+
+                console.log(`\t\t>> ASSERT: User Asset: ${assetName}`);
+                console.log(`\t\t\t>> ASSERT: deposit: ${balances.deposit[assetName].toString()}`);
+                console.log(`\t\t\t>> ASSERT: userErc20Diff: ${userErc20Diff.toString()}`);
+
+                expect(balances.deposit[assetName]).to.beCloseTo(
+                    userErc20Diff,
+                    BasisPoints.Basis_5,
+                    "Bad user claim deposit amount"
+                );
+                
+                expect(balances.owed[assetName]).to.beCloseTo(
+                    userErc20Diff,
+                    BasisPoints.Basis_5,
                     "Bad user claim owed amount"
                 );
             }
@@ -1053,7 +1213,7 @@ export function getRandomItems<T>(items: Array<T>, count: number): T[] {
 }
 
 export function getRandomAmount(min: number, max: number) {
-    return Math.floor(Math.random() * max) + min;
+    return Math.floor(Math.random() * (max - min)) + min;
 }
 
 export function getRandomAmountBN(min: BigNumberish, max: BigNumberish) {
@@ -1062,6 +1222,13 @@ export function getRandomAmountBN(min: BigNumberish, max: BigNumberish) {
         .mul(Math.floor(Math.random() * 1000))
         .div(1000)
         .add(min);
+}
+
+export function sliceElements<T>(elements: T[], count: number) {
+    const slicedElements = elements.slice(0, count);
+    const elementsLeft = elements.slice(count);
+
+    return [slicedElements, elementsLeft];
 }
 
 export async function doEvmRevert(snapshotId: string) {
@@ -1078,12 +1245,23 @@ export async function doEvmSnapshot() {
 }
 
 export async function reallocateVaultsEqual(context: Context, vaultNames: string[]) {
+    return reallocateVaults(context, vaultNames, [1429, 1429, 1429, 1429, 1428, 1428, 1428]);
+}
+
+export async function reallocateVaults(context: Context, vaultNames: string[], newProportions: number[]) {
+    const sum = newProportions.reduce((s, v) => s + v, 0);
+
+    if (sum != 100_00) {
+        throw new Error(`Bad vault strats proportions (${newProportions}) sum ${sum}`);
+    }
+    
     const vaults = [];
 
     for (let vaultName of vaultNames) {
+        console.log(`>> Set new vault "${vaultName}" Proportions: ${newProportions}`);
+
         const vault = context.vaults[vaultName];
         const vaultStratIndexes = getStrategyIndexes(vault.strategies, context.strategies.All);
-        const newProportions = [1429, 1429, 1429, 1429, 1428, 1428, 1428];
 
         vaults.push({
             vault: vault.address,
@@ -1128,4 +1306,144 @@ export async function addRewards(
         await rewardToken.connect(user).approve(vault.address, rewardAmount);
         await vault.addToken(rewardToken.address, rewardDuration, rewardAmount);
     }
+}
+
+
+export async function doWithdrawFastRandom(
+    context: Context,
+    users: SignerWithAddress[],
+    vaults: string[],
+    userVaultActions: UserVaultActions
+) {
+    for (const vaultName of vaults) {
+        for (const user of users) {
+            const vaultElement = getVaultElement(context, vaultName);
+            const vault = Vault__factory.connect(vaultElement.address, user);
+            const userShares = (await vault.callStatic.getUpdatedUser(vaultElement.strategies))[0];
+
+            const percent = getRandomAmount(10, 10_000);
+
+            const withdrawShares = userShares.mul(percent).div(10_000);
+
+            await doWithdrawFast(context, user, vaultName, withdrawShares, userVaultActions);
+        }
+    }
+}
+
+export async function doWithdrawFastAll(
+    context: Context,
+    users: SignerWithAddress[],
+    vaults: string[],
+    userVaultActions: UserVaultActions
+) {
+    for (const vaultName of vaults) {
+        for (const user of users) {
+            const vaultElement = getVaultElement(context, vaultName);
+            const vault = Vault__factory.connect(vaultElement.address, user);
+            const userShares = (await vault.callStatic.getUpdatedUser(vaultElement.strategies))[0];
+
+            await doWithdrawFast(context, user, vaultName, userShares, userVaultActions);
+        }
+    }
+}
+
+export async function doWithdrawFast(
+    context: Context,
+    user: Wallet | SignerWithAddress,
+    vaultName: string,
+    shares: BigNumberish,
+    userVaultActions: UserVaultActions
+) {
+    console.log(
+        context.scope + `>> Withdrawing vault: ${vaultName}, user: ${user.address}, amount: ${shares.toString()}`
+    );
+
+    const vaultElement = getVaultElement(context, vaultName);
+    const vault = Vault__factory.connect(vaultElement.address, user);
+
+    // const rewardSlippages = Array.from(Array(context.strategies.All.length), () => {
+    //     return { doClaim: false, swapData: [] };
+    // });
+
+    const swapData = Array.from(Array(context.vaults[vaultName].strategies.length), () => []);
+
+    const fastWithdrawParams: FastWithdrawParamsStruct = {
+        doExecuteWithdraw: true,
+        slippages: getFastWithdrawSlippages(context, vaultName),
+        swapData: swapData
+    }
+    console.log("fastWithdrawParams");
+    console.table(fastWithdrawParams);
+    console.table(fastWithdrawParams.slippages);
+
+    const tx = await vault.withdrawFast(vaultElement.strategies, shares, false, fastWithdrawParams);
+    await tx.wait();
+
+    const userVaultAction = getUserVaultAction(user.address, vaultName, userVaultActions);
+    userVaultAction.withdrawal = userVaultAction.withdrawal.add(shares);
+    userVaultAction.claim = true;
+}
+
+function getFastWithdrawSlippages(context: Context, vaultName: string) {
+    const slippages = new Array<BigNumberish[]>();
+
+    const asset = context.vaults[vaultName].underlying;
+    const vaultStrats = context.vaults[vaultName].strategies;
+    console.log("vaultStrats");
+    console.table(vaultStrats);
+
+    const stratsWithAssets = Object.keys(context.strategies).filter(s => s != "All").map(s => {
+        (context.strategies as any)[s]
+
+        return {
+            name: s,
+            address: (context.strategies as any)[s][asset] as string
+        }
+    })
+    console.log("stratsWithAssets");
+    console.table(stratsWithAssets);
+
+    for (const stratAddress of vaultStrats) {
+        console.log("stratAddress");
+        console.log(stratAddress);
+        const stratName = stratsWithAssets.find(swa => swa.address == stratAddress)?.name;
+        console.log("stratName");
+        console.log(stratName);
+        switch (stratName) {
+            case "Aave": {
+                slippages.push([]);
+                continue;
+            }
+            case "Compound": {
+                slippages.push([]);
+                continue;
+            }
+            case "Convex": {
+                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                continue;
+            }
+            case "Curve": {
+                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                continue;
+            }
+            case "Harvest": {
+                slippages.push([]);
+                continue;
+            }
+            case "Idle": {
+                slippages.push([0]);
+                continue;
+            }
+            case "Yearn": {
+                slippages.push([0]);
+                continue;
+            }
+            default: {
+                console.table(stratsWithAssets);
+                throw new Error(`No strat ${stratAddress} for asset ${asset}`);
+            }
+        }
+    }
+
+    return slippages;
 }

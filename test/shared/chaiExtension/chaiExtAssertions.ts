@@ -1,5 +1,6 @@
 import { Assertion, expect } from "chai";
 import { BigNumber, BigNumberish } from "ethers";
+import { formatUnits } from "ethers/lib/utils";
 
 export enum BasisPoints {
     Basis_1000 = 10_00, // 10%
@@ -30,7 +31,7 @@ Assertion.addMethod("beCloseTo", function (shouldBeish: BigNumberish, precision:
     const resultLow = shouldBe.sub(resultErrorMargin);
     const resultHigh = shouldBe.add(resultErrorMargin);
 
-    let errorMessage = `Expected ${result.toString()} to be within ${resultLow.toString()} and ${resultHigh.toString()}`;
+    let errorMessage = `Expected ${result.toString()} to be within ${resultLow.toString()} and ${resultHigh.toString()}. ${getRelativeDiffErrorMessage(result, shouldBe)}.`;
     if (message) {
         errorMessage = `${message}. ${errorMessage}`;
     }
@@ -58,7 +59,7 @@ Assertion.addMethod("equalOrLowerCloseTo", function (shouldBeish: BigNumberish, 
 
     const resultLow = shouldBe.sub(resultErrorMargin);
 
-    let errorMessage = `Expected ${result.toString()} to be equal or lower than ${shouldBe.toString()}, but more or equal than ${resultLow.toString()}.`;
+    let errorMessage = `Expected ${result.toString()} to be equal or lower than ${shouldBe.toString()}, but more or equal than ${resultLow.toString()}. ${getRelativeDiffErrorMessage(result, shouldBe)}.`;
     if (message) {
         errorMessage = `${message}. ${errorMessage}`;
     }
@@ -86,7 +87,7 @@ Assertion.addMethod("greaterWithTolerance", function (shouldBeish: BigNumberish,
 
     const resultLow = shouldBe.sub(resultErrorMargin);
 
-    let errorMessage = `${message}. Expected ${result.toString()} to be greater than ${resultLow.toString()}`;
+    let errorMessage = `${message}. Expected ${result.toString()} to be greater than ${resultLow.toString()}. ${getRelativeDiffErrorMessage(result, shouldBe)}.`;
     if (message) {
         errorMessage = `${message}. ${errorMessage}`;
     }
@@ -101,3 +102,16 @@ Assertion.addMethod("greaterWithTolerance", function (shouldBeish: BigNumberish,
         result.toString()
     );
 });
+
+function getRelativeDiffErrorMessage(result: BigNumber, shouldBe: BigNumber) {
+    let errorMessageRelative = "";
+    const absoluteDiff = shouldBe.sub(result).abs();
+    if (!shouldBe.isZero()) {
+        const percentageDifference = formatUnits(absoluteDiff.mul(1_000_000_000).div(shouldBe), 7);
+        errorMessageRelative = `Relative diff is ${percentageDifference.toString()}%`;
+    } else {
+        errorMessageRelative = `Absolute diff is ${absoluteDiff.toString()}`;
+    }
+
+    return errorMessageRelative;
+}

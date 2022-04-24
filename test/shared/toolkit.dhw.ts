@@ -1,5 +1,5 @@
 import { Context } from "../../scripts/infrastructure";
-import { BigNumber, constants } from "ethers";
+import { BigNumber, constants, ContractTransaction } from "ethers";
 import { pack } from "@ethersproject/solidity";
 import { encodeDepositSlippage } from "./utilities";
 import { ethers } from "hardhat";
@@ -42,14 +42,32 @@ function getRewardSwapPathV3Weth(fee1: FeeValue, fee2: FeeValue) {
     return pack(types, values);
 }
 
-const swapPath = getRewardSwapPathV3Custom(UNISWAP_V3_FEE._3000, [
+const swapPathStkAave = getRewardSwapPathV3Custom(UNISWAP_V3_FEE._3000, [
     // AAVE
     { address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9", fee: UNISWAP_V3_FEE._3000 },
     // WETH
     { address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", fee: UNISWAP_V3_FEE._500 },
 ]);
 
-const swapPathWeth = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
+const swapPath3000Weth500 = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
+
+
+// const swapPathCvxWeth = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
+const swapPathWeth10000 = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._10000, UNISWAP_V3_FEE._500);
+
+const swapDataConvex = [
+    { slippage: 1, path: swapPath3000Weth500 },
+    { slippage: 1, path: swapPathWeth10000 },
+];
+
+const swapPath_COMP = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
+const swapPath_IDLE = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
+
+const swapSlippages = [
+    { slippage: 1, path: swapPath_COMP },
+    { slippage: 1, path: swapPathStkAave },
+    { slippage: 1, path: swapPath_IDLE },
+];
 
 function getRewardSlippages(strategies: any) {
     return Object.keys(strategies)
@@ -63,10 +81,19 @@ function getRewardSlippages(strategies: any) {
 function getRewardSlippage(stratName: string) {
     switch (stratName) {
         case "Aave": {
-            return { doClaim: true, swapData: [{ slippage: 1, path: swapPath }] };
+            return { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] };
         }
         case "Compound": {
-            return { doClaim: true, swapData: [{ slippage: 1, path: swapPathWeth }] };
+            return { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] };
+        }
+        case "Convex": {
+            return { doClaim: true, swapData: swapDataConvex };
+        }
+        case "Curve": {
+            return { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] };
+        }
+        case "Idle": {
+            return { doClaim: true, swapData: swapSlippages };
         }
         default: {
             return { doClaim: false, swapData: [] };
@@ -116,21 +143,21 @@ function getDhwSlippage(stratName: string, type: ActionType) {
     }
 }
 
-export async function doHardWork(context: Context, getRewards: boolean) {
+export async function doHardWork(context: Context, getRewards: boolean): Promise<ContractTransaction> {
     console.log(`>> Do hard work, get rewards: ${getRewards}`);
+
+    if (getRewards) {
+        await ethers.provider.send("evm_increaseTime", [BigNumber.from(100_000).toNumber()]);
+        await ethers.provider.send("hardhat_mine", [BigNumber.from(7000).toHexString(), "0x0"]);
+    }
 
     const strategies = context.strategies!.All;
     const rewardSlippages = getRewardSlippages(context.strategies);
 
-    if (getRewards) {
-        await ethers.provider.send("evm_increaseTime", [BigNumber.from(1_691_800).toNumber()]);
-    }
-
     const { indexes, slippages } = await getSlippages(context);
-    await context.infra.spool
+    return context.infra.spool
         .connect(context.accounts.doHardWorker)
         .batchDoHardWork(indexes, slippages, rewardSlippages, strategies);
-    console.log(">> DoHardWork finished.");
 }
 
 export async function doHardWorkReallocation(context: Context, getRewards: boolean, reallocationTable: BigNumber[][]) {

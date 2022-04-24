@@ -164,13 +164,13 @@ describe("Vault Reallocation", () => {
             const totalDepositS0 = totalDeposit.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
             const totalDepositS1 = totalDeposit.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
 
-            expect(await spool.spool.callStatic.getStratUnderlying(vaultCreation.strategies[0])).to.be.closeTo(
+            expect(await spool.spool.callStatic.getStratUnderlying(vaultCreation.strategies[0])).to.beCloseTo(
                 totalDepositS0,
-                10
+                BasisPoints.Basis_1
             );
-            expect(await spool.spool.callStatic.getStratUnderlying(vaultCreation.strategies[1])).to.be.closeTo(
+            expect(await spool.spool.callStatic.getStratUnderlying(vaultCreation.strategies[1])).to.beCloseTo(
                 totalDepositS1,
-                10
+                BasisPoints.Basis_1
             );
         });
 
@@ -192,10 +192,10 @@ describe("Vault Reallocation", () => {
             const totalDeposit0 = totalDeposit.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
             const totalDeposit1 = totalDeposit.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
 
-            expect(strat0.totalShares).to.be.equal(vaultStratShares0);
-            expect(strat1.totalShares).to.be.equal(vaultStratShares1);
-            expect(stratUnderlying0).to.beCloseTo(totalDeposit0, BasisPoints.Basis_01);
-            expect(stratUnderlying1).to.beCloseTo(totalDeposit1, BasisPoints.Basis_01);
+            expect(strat0.totalShares).to.beCloseTo(vaultStratShares0, BasisPoints.Basis_3);
+            expect(strat1.totalShares).to.beCloseTo(vaultStratShares1, BasisPoints.Basis_3);
+            expect(stratUnderlying0).to.beCloseTo(totalDeposit0, BasisPoints.Basis_1);
+            expect(stratUnderlying1).to.beCloseTo(totalDeposit1, BasisPoints.Basis_1);
         });
     });
 
@@ -394,8 +394,8 @@ describe("Vault Reallocation", () => {
             const totalVaultShares0 = strat0.totalShares.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
             const totalVaultShares1 = strat1.totalShares.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
 
-            expect(vaultStratShares0).to.beCloseTo(totalVaultShares0, BasisPoints.Basis_01);
-            expect(vaultStratShares1).to.beCloseTo(totalVaultShares1, BasisPoints.Basis_01);
+            expect(vaultStratShares0).to.beCloseTo(totalVaultShares0, BasisPoints.Basis_1);
+            expect(vaultStratShares1).to.beCloseTo(totalVaultShares1, BasisPoints.Basis_1);
         });
 
         it("should claim vault1 shares after dhw", async () => {
@@ -418,8 +418,8 @@ describe("Vault Reallocation", () => {
             const totalVaultShares0 = strat0.totalShares.mul(BigNumber.from(6000)).div(BigNumber.from(10000));
             const totalVaultShares1 = strat1.totalShares.mul(BigNumber.from(4000)).div(BigNumber.from(10000));
 
-            expect(vaultStratShares0).to.beCloseTo(totalVaultShares0, BasisPoints.Basis_01);
-            expect(vaultStratShares1).to.beCloseTo(totalVaultShares1, BasisPoints.Basis_01);
+            expect(vaultStratShares0).to.beCloseTo(totalVaultShares0, BasisPoints.Basis_1);
+            expect(vaultStratShares1).to.beCloseTo(totalVaultShares1, BasisPoints.Basis_1);
         });
     });
 });

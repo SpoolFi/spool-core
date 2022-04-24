@@ -367,8 +367,7 @@ async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: B
             }
         }
     }
-
-    console.warn("#####", slippages);
+    
     return slippages;
 }
 

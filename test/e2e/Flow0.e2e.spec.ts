@@ -1,4 +1,4 @@
-import { use } from "chai";
+import { expect, use } from "chai";
 import { solidity } from "ethereum-waffle";
 import { Context } from "../../scripts/infrastructure";
 import {
@@ -21,6 +21,9 @@ import {
 } from "../shared/toolkit";
 import { doHardWork, doHardWorkReallocation } from "../shared/toolkit.dhw";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { createFixtureLoader, deployMockContract, MockContract, MockProvider } from "ethereum-waffle";
+import { AaveStrategy__factory } from "../../build/types";
+import hre from "hardhat";
 
 use(solidity);
 
@@ -52,7 +55,7 @@ describe("Flow 0", function () {
         it("Should deposit and withdraw (single vault, simple)", async function () {
             context.scope = "Scenario 1.1";
             //const vaults = getRandomItems(VAULT_NAMES, 1);
-            const vaults = [VAULT_NAMES[0]];
+            const vaults = [VAULTS.DAIHigherRisk, VAULTS.DAILowerRisk];
             const users = getRandomItems(context.users, 20);
             await testVaultDepositWithdrawClaimSimple(context, vaults, users, false);
         });
@@ -147,6 +150,7 @@ async function testVaultDepositWithdrawClaimSimple(
 
     const s2 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
     await doHardWork(context, true);
+
     const s3 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
     assertDoHardWorkSnapshotsPrimitive(s1, s2, s3, userVaultActions, context);
     assertVaultStrategyProportions(s3, context);

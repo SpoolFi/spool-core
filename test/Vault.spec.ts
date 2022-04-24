@@ -4,10 +4,12 @@ import { ethers } from "hardhat";
 import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
 import { deploymentFixture } from "./shared/fixtures";
 import {
+    BasisPoints,
     createVault,
     customConstants,
     getProportionsFromBitwise,
     reset,
+    TEN_POW_6,
     TEN_UNITS_E8,
     VaultDetailsStruct,
 } from "./shared/utilities";
@@ -213,11 +215,10 @@ describe("Vault", () => {
             expect(vaultTotalShares.gt("0")).to.be.true;
             expect(user0.shares.gt("0")).to.be.true;
             expect(user1.shares.gt("0")).to.be.true;
-            expect(vaultTotalShares).to.equal(user0.shares.add(user1.shares));
+            expect(vaultTotalShares).to.beCloseTo(user0.shares.add(user1.shares), BasisPoints.Basis_1);
 
             const totalAmount = TEN_UNITS_E8.add(TEN_UNITS_E8);
-            expect(totalAmount).to.equal(vaultTotalShares);
-
+            expect(totalAmount).to.beCloseTo(vaultTotalShares.div(TEN_POW_6), BasisPoints.Basis_1);
             expect(user0.activeDeposit).to.equal(TEN_UNITS_E8);
             expect(user1.activeDeposit).to.equal(TEN_UNITS_E8);
         });
@@ -262,7 +263,7 @@ describe("Vault", () => {
             const user0 = await vault.users(accounts.user0.address);
             const user1 = await vault.users(accounts.user1.address);
 
-            expect(vaultTotalShares).to.equal("0");
+            expect(vaultTotalShares).to.equal(BigNumber.from(10).pow(11));
             expect(user0.owed).to.be.gt("0");
             expect(user1.owed).to.be.gt("0");
 
@@ -289,7 +290,7 @@ describe("Vault", () => {
             const user0 = await vault.users(accounts.user0.address);
             const user1 = await vault.users(accounts.user1.address);
 
-            expect(vaultTotalShares).to.equal("0");
+            expect(vaultTotalShares).to.equal(BigNumber.from(10).pow(11));
             expect(user0.owed).to.equal("0");
             expect(user1.owed).to.equal("0");
 
