@@ -264,7 +264,7 @@ export async function spoolFixture(accounts: AccountsFixture): Promise<SpoolFixt
 
     const strategyRegistry = await (await new StrategyRegistry__factory())
         .connect(accounts.administrator)
-        .deploy(proxyAdmin.address, controllerProxyAdd, spoolOwner.address);
+        .deploy(proxyAdmin.address, controllerProxyAdd);
 
     // Deploy Risk Registry
     let riskProviderRegistry = await new RiskProviderRegistry__factory()

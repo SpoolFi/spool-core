@@ -1,5 +1,5 @@
 import { expect, use } from "chai";
-import { constants, ethers } from "ethers";
+import { BigNumber, constants, ethers } from "ethers";
 import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
 import { deploymentFixture } from "./shared/fixtures";
 import { FastWithdraw__factory, Vault } from "../build/types";
@@ -12,8 +12,9 @@ import {
     reset,
     setReallocationTable,
     TEN_UNITS_E8,
+    TEN_POW_6,
     TestContext,
-    VaultDetailsStruct,
+    VaultDetailsStruct, BasisPoints,
 } from "./shared/utilities";
 
 const { Zero } = constants;
@@ -127,7 +128,7 @@ describe("Vault Fast Withdraw", () => {
             expect(user0.shares).to.equal(Zero);
             expect(user0BalanceAfter).to.be.gt(user0BalanceBefore);
 
-            expect(vaultTotalShares).to.equal(TEN_UNITS_E8.mul(2));
+            expect(vaultTotalShares.div(TEN_POW_6)).to.beCloseTo(TEN_UNITS_E8.mul(2), BasisPoints.Basis_1);
 
             expect(user0.activeDeposit).to.equal(Zero);
         });
@@ -144,9 +145,9 @@ describe("Vault Fast Withdraw", () => {
             const user1 = await vault.users(accounts.user1.address);
 
             expect(user1.shares).to.be.gt(Zero);
-            expect(vaultTotalShares).to.equal(user1.shares.mul(2));
+            expect(vaultTotalShares).to.beCloseTo(user1.shares.mul(2), BasisPoints.Basis_1);
 
-            expect(vaultTotalShares).to.equal(TEN_UNITS_E8.mul(2));
+            expect(vaultTotalShares.div(TEN_POW_6)).to.beCloseTo(TEN_UNITS_E8.mul(2), BasisPoints.Basis_1);
 
             expect(user1.activeDeposit).to.equal(TEN_UNITS_E8);
         });
@@ -178,7 +179,7 @@ describe("Vault Fast Withdraw", () => {
             const user1 = await vault.users(accounts.user1.address);
 
             expect(user1.shares).to.equal(Zero);
-            expect(vaultTotalShares).to.equal(TEN_UNITS_E8);
+            expect(vaultTotalShares.div(TEN_POW_6)).to.beCloseTo(TEN_UNITS_E8, BasisPoints.Basis_1);
         });
 
         it("user 1 should have fast withdraw strategy shares", async () => {
