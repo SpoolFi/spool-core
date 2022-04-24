@@ -33,8 +33,6 @@ use(solidity);
 const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
 
-// reward order: COMP, stkAAVE, IDLE
-
 const swapPathWeth = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
 const swapPathWeth10000 = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._10000, UNISWAP_V3_FEE._500);
 const swapPathDirect3000 = getRewardSwapPathV3Direct(UNISWAP_V3_FEE._3000);

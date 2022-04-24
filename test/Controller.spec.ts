@@ -393,7 +393,7 @@ describe("Controller", () => {
             expect(await spool.controller.validStrategy(strategies.chefStrategies[1].address)).to.be.true;
 
             await expect(spool.controller.addStrategy(strategies.chefStrategies[0].address, [])).to.be.revertedWith(
-                "OKSTRT"
+                "StrategyRegistry::addStrategy: Can not add if already registered"
             );
         });
 
@@ -408,7 +408,7 @@ describe("Controller", () => {
 
             await expect(
                 spool.controller.addStrategy(strategies.chefStrategiesNoRewards[1].address, [])
-            ).to.be.revertedWith("OKSTRT");
+            ).to.be.revertedWith("StrategyRegistry::addStrategy: Can not add if already registered'");
         });
 
         it("should prevent removal of an inexistent strategy", async () => {

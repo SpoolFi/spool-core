@@ -25,6 +25,7 @@ export const SECS_DAY: number = 86400;
 export const parseUnits = ethers.utils.parseUnits;
 export const TEN_UNITS = parseUnits("10");
 export const TEN_UNITS_E8 = TEN_UNITS.div(parseUnits("1", 10));
+export const TEN_POW_6 = BigNumber.from(10).pow(6);
 export const BINANCE_WALLET = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0";
 export const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
 
