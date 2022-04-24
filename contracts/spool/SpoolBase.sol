@@ -165,7 +165,9 @@ abstract contract SpoolBase is
      */
     function relay(address implementation, bytes memory payload) external returns(bytes memory) {
         require(msg.sender == address(1));
-        return _relay(implementation, payload);
+        (bool success, bytes memory data) = implementation.delegatecall(payload);
+        if (!success) revert(_getRevertMsg(data));
+        return data;
     }
 
     /**
@@ -178,7 +180,7 @@ abstract contract SpoolBase is
         internal
         returns (bytes memory)
     {
-        address implementation = strategyRegistry.strategyImplementations(strategy);
+        address implementation = strategyRegistry.getImplementation(strategy);
         (bool success, bytes memory data) = implementation.delegatecall(payload);
         if (!success) revert(_getRevertMsg(data));
         return data;
