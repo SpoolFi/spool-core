@@ -32,6 +32,7 @@ import { BigNumber } from "ethers";
 import { VaultDetailsStruct } from "../build/types/Controller";
 import { HelperContracts, NamedVault, SpoolFixture } from "./infrastructure";
 import { existsSync } from "fs";
+import { ethers } from "hardhat";
 
 const constants = mainnet();
 
@@ -184,7 +185,7 @@ export async function accountsFixture(hre: HardhatRuntimeEnvironment): Promise<A
     const signers = await hre.ethers.getSigners();
     console.log("done..");
     const administrator = signers[0];
-    console.log("administratorrrrr.address: " + administrator.address);
+    console.log("administrator.address: " + administrator.address);
 
     return { administrator };
 }
@@ -260,17 +261,6 @@ export async function loadVaults(hre: HardhatRuntimeEnvironment): Promise<{ [nam
     return contracts.vaults;
 }
 
-export async function loadHelperContracts(hre: HardhatRuntimeEnvironment): Promise<HelperContracts> {
-    const helperContracts = JSON.parse((await readFile("scripts/data/contracts_helpers.json")).toString());
-
-    if (!helperContracts.slippagesHelper) {
-        const sh = await new SlippagesHelper__factory().connect((await hre.ethers.getSigners())[0]).deploy();
-        helperContracts.slippagesHelper = sh.address;
-    }
-
-    return helperContracts;
-}
-
 export async function writeContracts(hre: HardhatRuntimeEnvironment, contracts: any): Promise<HelperContracts> {
     const storedContracts = await loadContracts(hre);
     const newValue = { ...storedContracts, ...contracts };
@@ -322,7 +312,7 @@ export async function deploySpoolInfra(
      * Strategy registry
      */
     console.log("Deploy Strategy Registry... ");
-    const strategyRegistryArgs = [proxyAdmin.address, controllerProxyAdd, spoolOwnerAddress];
+    const strategyRegistryArgs = [proxyAdmin.address, controllerProxyAdd];
     const strategyRegistry = await deploy(hre, accounts, "StrategyRegistry", { args: strategyRegistryArgs });
     assert.equal(strategyRegistry.address, strategyRegistryAdd);
 
@@ -592,7 +582,7 @@ export async function DeployConvex(
         );
 
         await writeContracts(hre, {
-            convexHelper: {
+            [`convexHelper${name}`]: {
                 proxy: convexHelperProxy.address,
                 implementation: convexBoosterHelper.address,
             },
@@ -605,6 +595,7 @@ export async function DeployConvex(
             mainnetConst.curve._3pool.lpToken.address,
             token.address,
             convexHelperProxy.address,
+            ethers.constants.AddressZero
         ];
         const strat = await deploy(hre, accounts, `ConvexSharedStrategy${name}`, {
             contract: "ConvexSharedStrategy",

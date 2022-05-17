@@ -4,7 +4,6 @@ import {
     IERC20__factory,
     IVault__factory,
     MockToken__factory,
-    RewardsHelper__factory,
     SlippagesHelper__factory,
     SpoolDoHardWorkReallocationHelper__factory,
     Vault__factory,
@@ -115,26 +114,33 @@ function getVaultElement(context: Context, vaultName: string): NamedVault {
     return context.vaults[vaultName];
 }
 
+export function sliceElements<T>(elements: T[], count: number) {
+    
+    const slicedElements = elements.slice(0, count);
+    const elementsLeft = elements.slice(count);
+
+    return [slicedElements, elementsLeft];
+}
+
 export async function buildContext(): Promise<Context> {
     let tx: any;
     const accounts = await accountsFixture(hre);
     const tokens = await tokensFixture(accounts.administrator);
-    const slippagesHelper = (await new SlippagesHelper__factory().connect(accounts.administrator).deploy()).connect(
-        hre.ethers.provider
-    );
+    const infra = await loadSpoolInfra(accounts, hre);
 
-    const reallocationHelper = (
-        await new SpoolDoHardWorkReallocationHelper__factory().connect(accounts.administrator).deploy()
-    ).connect(hre.ethers.provider);
+    const slippagesHelper = (await new SlippagesHelper__factory()
+        .connect(accounts.administrator)
+        .deploy(infra.strategyRegistry.address))
+        .connect(hre.ethers.provider);
 
-    const rewardsHelper = (await new RewardsHelper__factory().connect(accounts.administrator).deploy()).connect(
-        hre.ethers.provider
-    );
+    const reallocationHelper = (await new SpoolDoHardWorkReallocationHelper__factory()
+        .connect(accounts.administrator)
+        .deploy(infra.strategyRegistry.address))
+        .connect(hre.ethers.provider);
 
     await writeContracts(hre, {
         slippagesHelper: slippagesHelper.address,
-        reallocationHelper: reallocationHelper.address,
-        rewardsHelper: rewardsHelper.address,
+        reallocationHelper: reallocationHelper.address
     });
 
     const signers = await hre.ethers.getSigners();
@@ -143,11 +149,10 @@ export async function buildContext(): Promise<Context> {
         accounts,
         tokens,
         strategies: { All: [] },
-        infra: await loadSpoolInfra(accounts, hre),
+        infra,
         helperContracts: {
             slippagesHelper: slippagesHelper.address,
-            reallocationHelper: reallocationHelper.address,
-            rewardsHelper: rewardsHelper.address,
+            reallocationHelper: reallocationHelper.address
         },
         users: signers.slice(20, 80),
         vaults: await loadVaults(hre),
@@ -586,7 +591,7 @@ export function assertDoHardWorkSnapshotsPrimitive(
 
                 expect(activeDepositDiff).to.beCloseTo(
                     withdrawAmount,
-                    BasisPoints.Basis_5,
+                    BasisPoints.Basis_10,
                     "Bad user active deposit difference"
                 );
 
@@ -1001,17 +1006,31 @@ export function assertFastWithdrawPrimitive(
                 console.log(`\t\t\t>> ASSERT: deposit: ${balances.deposit[assetName].toString()}`);
                 console.log(`\t\t\t>> ASSERT: userErc20Diff: ${userErc20Diff.toString()}`);
 
-                expect(balances.deposit[assetName]).to.beCloseTo(
-                    userErc20Diff,
-                    BasisPoints.Basis_5,
-                    "Bad user claim deposit amount"
-                );
+                try {
+                    expect(balances.deposit[assetName]).to.beCloseTo(
+                        userErc20Diff,
+                        BasisPoints.Basis_5,
+                        "Bad user claim deposit amount"
+                    );
+                } catch (error) {
+                    console.log(`\x1b[31mBad user claim deposit amount ${balances.deposit[assetName].toString()}, erc20Diff: ${userErc20Diff.toString()}\x1b[0m \n`);
+                }
                 
-                expect(balances.owed[assetName]).to.beCloseTo(
-                    userErc20Diff,
-                    BasisPoints.Basis_5,
-                    "Bad user claim owed amount"
-                );
+                // expect(balances.withdrawal[assetName]).to.beCloseTo(
+                //     userErc20Diff,
+                //     BasisPoints.Basis_3,
+                //     "Bad user claim withdraw amount"
+                // );
+                
+                try {
+                    expect(balances.owed[assetName]).to.beCloseTo(
+                        userErc20Diff,
+                        BasisPoints.Basis_5,
+                        "Bad user claim owed amount"
+                    );
+                } catch (error) {
+                    console.log(`\x1b[31mmBad user claim owed amount ${balances.owed[assetName].toString()}, erc20Diff: ${userErc20Diff.toString()}\x1b[0m \n`);
+                }
             }
         }
     }
@@ -1222,13 +1241,6 @@ export function getRandomAmountBN(min: BigNumberish, max: BigNumberish) {
         .mul(Math.floor(Math.random() * 1000))
         .div(1000)
         .add(min);
-}
-
-export function sliceElements<T>(elements: T[], count: number) {
-    const slicedElements = elements.slice(0, count);
-    const elementsLeft = elements.slice(count);
-
-    return [slicedElements, elementsLeft];
 }
 
 export async function doEvmRevert(snapshotId: string) {

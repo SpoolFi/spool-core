@@ -15,7 +15,6 @@ import { BaseContract } from "@ethersproject/contracts";
 import { pack } from "@ethersproject/solidity";
 import { mainnet } from "./constants";
 import { SlippageStruct } from "../../build/types/SlippagesHelper";
-import { RewardDataStruct } from "../../build/types/RewardsHelper";
 
 export { BasisPoints } from "./chaiExtension/chaiExtAssertions";
 export { VaultDetailsStruct };
@@ -314,27 +313,12 @@ export function convertBPToPercentage(bp: number): number {
     return (bp / 10000) * 100;
 }
 
-export function convertToRewardDataStruct(raw: string[], _path: string): RewardDataStruct {
-    let rewardData: RewardDataStruct = {
-        from: raw[0].toString(),
-        to: raw[1].toString(),
-        amount: BigNumber.from(raw[2].toString()),
-        swapData: {
-            slippage: 0,
-            path: _path,
-        },
-        atRouter: Boolean(raw[4]),
-    };
-    return rewardData;
-}
-
 export function convertToSlippageStruct(raw: any): SlippageStruct {
     let slippage: SlippageStruct = {
         slippage: BigNumber.from(raw[0].toString()),
         isDeposit: Boolean(raw[1]),
         canProcess: Boolean(raw[2]),
-        basisPoints: Number(raw[3]),
-        balance: BigNumber.from(raw[4].toString()),
+        balance: BigNumber.from(raw[3].toString()),
     };
     printSlippage(slippage);
     return slippage;
@@ -343,11 +327,6 @@ export function convertToSlippageStruct(raw: any): SlippageStruct {
 export function printSlippage(slippage: SlippageStruct) {
     console.log("Slippage argument: " + ethers.utils.formatUnits(slippage.slippage.toString()));
     console.log("Is it a deposit? : " + slippage.isDeposit);
-    console.log(
-        "Percentage difference between output and input to slippage function: " +
-            convertBPToPercentage(Number(slippage.basisPoints)) +
-            "%"
-    );
     console.log("Will it have deposits/withdrawals processed by DoHardWork? " + slippage.canProcess);
     console.log("");
 }

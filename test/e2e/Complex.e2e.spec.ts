@@ -69,7 +69,7 @@ describe("Complex Ent to End Tests", function () {
     });
 
     describe("Scenario Complex 2.1", function () {
-        it("The James of Spool", async function () {
+        it("Should deposit, withdraw and reallocate simultaneously", async function () {
             context.scope = "Scenario Complex 2.1";
             await depositWithdrawReallocateSimultaniously(context, VAULT_NAMES);
         });
