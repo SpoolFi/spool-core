@@ -10,12 +10,19 @@ import "../libraries/Math.sol";
 
 // other imports
 import "../interfaces/IBaseStrategy.sol";
+import "../interfaces/IStrategyRegistry.sol";
 
 /**
  * @notice Spool part of implementation dealing with strategy related processing
  */
 abstract contract SpoolStrategyHelper is BaseStorage {
     
+    IStrategyRegistry private immutable strategyRegistry;
+
+    constructor (IStrategyRegistry _strategyRegistry) {
+        strategyRegistry = _strategyRegistry;
+    }
+
     /**
      * @notice Yields the total underlying funds of a strategy.
      *
@@ -83,7 +90,8 @@ abstract contract SpoolStrategyHelper is BaseStorage {
         internal
         returns (bytes memory)
     {
-        (bool success, bytes memory data) = strategy.delegatecall(payload);
+        address stratImpl = strategyRegistry.getImplementation(address(strategy));
+        (bool success, bytes memory data) = stratImpl.delegatecall(payload);
         if (!success) revert(_getRevertMsg(data));
         return data;
     }
