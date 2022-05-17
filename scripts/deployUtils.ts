@@ -35,6 +35,7 @@ import { existsSync } from "fs";
 import { ethers } from "hardhat";
 
 const constants = mainnet();
+const AddressZero = ethers.constants.AddressZero;
 
 export const mainnetConst = constants;
 
@@ -488,6 +489,7 @@ export async function DeployAave(
             mainnetConst.aave.LendingPoolAddressesProvider.address,
             mainnetConst.aave.IncentiveController.delegator.address,
             token.address,
+            AddressZero
         ];
 
         const strat = await deploy(hre, accounts, `AaveStrategy${name}`, { contract: "AaveStrategy", args });
@@ -514,7 +516,7 @@ export async function DeployCompound(
             cToken,
             mainnetConst.compound.COMPtroller.delegator.address,
             token.address,
-            spool.spool.address,
+            spool.spool.address
         ];
 
         const compoundHelper = await deploy(hre, accounts, `CompoundContractHelper${name}`, {
@@ -543,6 +545,7 @@ export async function DeployCompound(
             mainnetConst.compound.COMPtroller.delegator.address,
             token.address,
             compoundHelperProxy.address,
+            AddressZero
         ];
 
         const strat = await deploy(hre, accounts, `CompoundStrategy${name}`, { contract: "CompoundStrategy", args });
@@ -621,6 +624,7 @@ export async function DeployCurve(
             mainnetConst.curve._3pool.pool.address,
             mainnetConst.curve._3pool.LiquidityGauge.address,
             token.address,
+            AddressZero
         ];
         const strat = await deploy(hre, accounts, `Curve3poolStrategy${name}`, {
             contract: "Curve3poolStrategy",
@@ -648,6 +652,7 @@ export async function DeployHarvest(
             contracts.Vault.address,
             contracts.Pool.address,
             token.address,
+            AddressZero
         ];
         const strat = await deploy(hre, accounts, `HarvestStrategy${name}`, { contract: "HarvestStrategy", args });
 
@@ -667,7 +672,7 @@ export async function DeployIdle(
     for (let { name, idleTokenYield } of Idle) {
         let token: IERC20 = tokens[name];
         console.log("Deploying Idle Strategy for token: " + name + "...");
-        const args = [idleTokenYield, token.address];
+        const args = [idleTokenYield, token.address, AddressZero];
         const strat = await deploy(hre, accounts, `IdleStrategy${name}`, { contract: "IdleStrategy", args });
 
         implementation[name] = strat.address;
@@ -689,7 +694,7 @@ export async function DeployYearn(
         let token: IERC20 = tokens[name];
         console.log("Deploying Yearn Strategy for token: " + name + "...");
 
-        const args = [yVault, token.address];
+        const args = [yVault, token.address, AddressZero];
         const strat = await deploy(hre, accounts, `YearnStrategy${name}`, { contract: "YearnStrategy", args });
         implementation[name] = strat.address;
     }

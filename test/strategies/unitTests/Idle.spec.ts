@@ -85,7 +85,7 @@ describe("Strategies Unit Test: Idle", () => {
 
     it("Should fail deploying Idle Strategy with underlying address 0", async () => {
         const IdleStrategy = await new IdleStrategy__factory().connect(accounts.administrator);
-        await expect(IdleStrategy.deploy(idleMock.address, AddressZero)).to.be.revertedWith(
+        await expect(IdleStrategy.deploy(idleMock.address, AddressZero, AddressZero)).to.be.revertedWith(
             "BaseStrategy::constructor: Underlying address cannot be 0"
         );
     });
@@ -103,7 +103,7 @@ describe("Strategies Unit Test: Idle", () => {
                 it("Should deploy", async () => {
                     await new IdleStrategy__factory()
                         .connect(accounts.administrator)
-                        .deploy(idleTokenYield, token.address);
+                        .deploy(idleTokenYield, token.address, AddressZero);
                 });
             });
 
@@ -115,7 +115,7 @@ describe("Strategies Unit Test: Idle", () => {
                 before(async () => {
                     const harvestStrategyImpl = await new IdleStrategy__factory()
                         .connect(accounts.administrator)
-                        .deploy(idleTokenYield, token.address);
+                        .deploy(idleTokenYield, token.address, AddressZero);
 
                     implAddress = harvestStrategyImpl.address;
 

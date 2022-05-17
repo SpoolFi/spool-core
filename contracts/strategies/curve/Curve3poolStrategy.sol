@@ -34,9 +34,10 @@ contract Curve3poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy3Coin
     constructor(
         IStableSwap3Pool _pool,
         ILiquidityGauge _liquidityGauge,
-        IERC20 _underlying
+        IERC20 _underlying,
+        address _self
     )
-        BaseStrategy(_underlying, 1, 1, 1, 1, false, true, address(0))
+        BaseStrategy(_underlying, 1, 1, 1, 1, false, true, _self)
         CurveStrategyBase(_pool, IERC20(_liquidityGauge.lp_token()))
         ClaimFullSingleRewardStrategy(IERC20(_liquidityGauge.crv_token()))
     {

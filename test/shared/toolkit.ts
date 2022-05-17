@@ -916,7 +916,7 @@ export function assertClaimSnapshotsPrimitive(
 
                 expect(balances.deposit[assetName]).to.beCloseTo(
                     userErc20Diff,
-                    BasisPoints.Basis_5,
+                    BasisPoints.Basis_10,
                     "Bad user claim deposit amount"
                 );                
 

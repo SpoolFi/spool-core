@@ -38,14 +38,16 @@ contract AaveStrategy is RewardStrategy, SwapHelperMainnet {
      * @param _provider Lending pool addresses provider contract address
      * @param _incentive Incentives controller contract address
      * @param _underlying Underlying asset
+     * @param _underlying Underlying asset
      */
     constructor(
         IERC20 _stkAave,
         ILendingPoolAddressesProvider _provider,
         IAaveIncentivesController _incentive,
-        IERC20 _underlying
+        IERC20 _underlying,
+        address _self
     )
-        BaseStrategy(_underlying, 1, 0, 0, 0, false, false, address(0))
+        BaseStrategy(_underlying, 1, 0, 0, 0, false, false, _self)
     {
         require(
             _stkAave != IERC20(address(0)),
