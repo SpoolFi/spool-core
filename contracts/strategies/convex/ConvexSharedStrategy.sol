@@ -55,9 +55,10 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         IStableSwap3Pool _pool,
         IERC20 _lpToken,
         IERC20 _underlying,
-        IStrategyContractHelper _boosterDeposit
+        IStrategyContractHelper _boosterDeposit,
+        address _self
     )
-        BaseStrategy(_underlying, 0, 1, 1, 1, false, true)
+        BaseStrategy(_underlying, 0, 1, 1, 1, false, true, _self)
         CurveStrategyBase(_pool, _lpToken)
     {
         require(address(_booster) != address(0), "ConvexSharedStrategy::constructor: Booster address cannot be 0");
@@ -194,19 +195,19 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
      * @param rewardTokens Reward tokens
      */
     function _claimStrategyRewards(address[] memory rewardTokens) private {
-        // check if any other shared strategy has claimed in the same block
-        if (strategiesShared[_sharedKey].lastClaimBlock < block.number) {
-            
-            (
-                uint256[] memory rewardTokenAmounts,
-                bool didClaimNewRewards
-            ) = boosterHelper.claimRewards(rewardTokens, true);
+        (
+            uint256[] memory rewardTokenAmounts,
+            bool didClaimNewRewards
+        ) = boosterHelper.claimRewards(rewardTokens, true);
 
-            if (didClaimNewRewards) {
-                _spreadRewardsToSharedStrats(rewardTokens, rewardTokenAmounts);
+        if (didClaimNewRewards) {
+            Strategy storage strategy = strategies[self];
+
+            for(uint256 i = 0; i < rewardTokens.length; i++) {
+                if (rewardTokenAmounts[i] > 0) {
+                    strategy.pendingRewards[rewardTokens[i]] += rewardTokenAmounts[i];
+                }
             }
-            
-            strategiesShared[_sharedKey].lastClaimBlock = uint32(block.number);
         }
     }
 
@@ -225,35 +226,6 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         }
 
         return rewardAddresses;
-    }
-
-    /**
-     * @dev Spread rewards to shared strategies
-     * @param rewardTokens All shared reward tokens
-     * @param rewardTokenAmounts Reward token amounts
-     */
-    function _spreadRewardsToSharedStrats(address[] memory rewardTokens, uint256[] memory rewardTokenAmounts) private {
-        StrategiesShared storage stratsShared = strategiesShared[_sharedKey];
-
-        uint256 sharedStratsCount = stratsShared.stratsCount;
-        address[] memory stratAddresses = new address[](sharedStratsCount);
-        uint256[] memory stratLpTokens = new uint256[](sharedStratsCount);
-
-        uint256 totalLpTokens;
-        for(uint256 i = 0; i < sharedStratsCount; i++) {
-            stratAddresses[i] = stratsShared.stratAddresses[i];
-            stratLpTokens[i] = strategies[stratAddresses[i]].lpTokens;
-            totalLpTokens += stratLpTokens[i];
-        }
-
-        for(uint256 i = 0; i < rewardTokens.length; i++) {
-            if (rewardTokenAmounts[i] > 0) {
-                for(uint256 j = 0; j < sharedStratsCount; j++) {
-                    strategies[stratAddresses[j]].pendingRewards[rewardTokens[i]] += 
-                        (rewardTokenAmounts[i] * stratLpTokens[j]) / totalLpTokens;
-                }
-            }
-        }
     }
 
     /**

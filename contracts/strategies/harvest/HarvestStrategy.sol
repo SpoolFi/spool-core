@@ -40,7 +40,7 @@ contract HarvestStrategy is ClaimFullSingleRewardStrategy {
         IHarvestPool _pool,
         IERC20 _underlying
     )
-        BaseStrategy(_underlying, 1, 0, 0, 0, false, false) 
+        BaseStrategy(_underlying, 1, 0, 0, 0, false, false, address(0)) 
         ClaimFullSingleRewardStrategy(_farm) 
     {
         require(address(_vault) != address(0), "HarvestStrategy::constructor: Vault address cannot be 0");

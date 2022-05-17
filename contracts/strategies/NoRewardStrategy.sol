@@ -32,7 +32,8 @@ abstract contract NoRewardStrategy is ProcessStrategy {
             _reallocationSlippageSlots,
             _depositSlippageSlots,
             false,
-            _doValidateBalance
+            _doValidateBalance,
+            address(0)
         )
     {}
 

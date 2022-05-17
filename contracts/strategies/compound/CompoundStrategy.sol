@@ -40,7 +40,7 @@ contract CompoundStrategy is ClaimFullSingleRewardStrategy {
         IERC20 _underlying,
         ICompoundStrategyContractHelper _strategyHelper
     )
-        BaseStrategy(_underlying, 1, 0, 0, 0, false, false) 
+        BaseStrategy(_underlying, 1, 0, 0, 0, false, false, address(0)) 
         ClaimFullSingleRewardStrategy(_comp) 
     {
         require(address(_cToken) != address(0), "CompoundStrategy::constructor: Token address cannot be 0");
