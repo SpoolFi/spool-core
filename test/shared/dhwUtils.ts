@@ -59,8 +59,7 @@ function convertToSlippageStruct(raw: any): SlippageStruct {
         slippage: BigNumber.from(raw[0].toString()),
         isDeposit: Boolean(raw[1]),
         canProcess: Boolean(raw[2]),
-        basisPoints: Number(raw[3]),
-        balance: BigNumber.from(raw[4].toString()),
+        balance: BigNumber.from(raw[3].toString()),
     };
     printSlippage(slippage);
     return slippage;

@@ -40,7 +40,7 @@ const VAULTS: any = {
 
 const VAULT_NAMES: string[] = Object.keys(VAULTS).map((key: string) => VAULTS[key]);
 
-describe("Complex Ent to End Tests", function () {
+describe("Complex End to End Tests", function () {
     let context: Context;
     let snapshotId: string;
 
@@ -69,7 +69,7 @@ describe("Complex Ent to End Tests", function () {
     });
 
     describe("Scenario Complex 2.1", function () {
-        it("The James of Spool", async function () {
+        it("Should deposit, withdraw and reallocate simultaneously", async function () {
             context.scope = "Scenario Complex 2.1";
             await depositWithdrawReallocateSimultaniously(context, VAULT_NAMES);
         });

@@ -1,2 +1,3 @@
 contracts.json
+*.contracts.json
 vaults.json
