@@ -56,7 +56,7 @@ describe("Strategies Unit Test: Yearn", () => {
     it("Should fail deploying Yearn with vault address 0", async () => {
         const YearnStrategy = new YearnStrategy__factory().connect(accounts.administrator);
         await expect(
-            YearnStrategy.deploy(AddressZero, "0x0000000000000000000000000000000000000001")
+            YearnStrategy.deploy(AddressZero, "0x0000000000000000000000000000000000000001", AddressZero)
         ).to.be.revertedWith("YearnStrategy::constructor: Vault address cannot be 0");
     });
 
@@ -65,7 +65,7 @@ describe("Strategies Unit Test: Yearn", () => {
             const { tokens } = await loadFixture(underlyingTokensFixture);
             const yearnContract = await new YearnStrategy__factory()
                 .connect(accounts.administrator)
-                .deploy(mainnetConst.yearn.DAIVault.address, tokens.DAI.address);
+                .deploy(mainnetConst.yearn.DAIVault.address, tokens.DAI.address, AddressZero);
 
             // ACT
             await expect(yearnContract.claimRewards([])).to.be.revertedWith(
@@ -84,7 +84,7 @@ describe("Strategies Unit Test: Yearn", () => {
 
             describe(`Deployment: ${name}`, () => {
                 it("Should deploy", async () => {
-                    await new YearnStrategy__factory().connect(accounts.administrator).deploy(yVault, token.address);
+                    await new YearnStrategy__factory().connect(accounts.administrator).deploy(yVault, token.address, AddressZero);
                 });
             });
 
@@ -96,7 +96,7 @@ describe("Strategies Unit Test: Yearn", () => {
                 before(async () => {
                     const yearnStrategyImpl = await new YearnStrategy__factory()
                         .connect(accounts.administrator)
-                        .deploy(yVault, token.address);
+                        .deploy(yVault, token.address, AddressZero);
 
                     implAddress = yearnStrategyImpl.address;
 

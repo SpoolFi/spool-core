@@ -92,6 +92,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                 mainnetConst.curve._3pool.pool.address,
                 mainnetConst.curve._3pool.lpToken.address,
                 AddressZero,
+                AddressZero,
                 AddressZero
             )
         ).to.be.revertedWith("BaseStrategy::constructor: Underlying address cannot be 0");
@@ -116,6 +117,7 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                             mainnetConst.curve._3pool.pool.address,
                             mainnetConst.curve._3pool.lpToken.address,
                             token.address,
+                            AddressZero,
                             AddressZero
                         );
 
@@ -161,7 +163,8 @@ describe("Strategies Unit Test: Convex 3pool", () => {
                             mainnetConst.curve._3pool.pool.address,
                             mainnetConst.curve._3pool.lpToken.address,
                             token.address,
-                            convexBoosterHelper.address
+                            convexBoosterHelper.address,
+                            AddressZero
                         );
 
                     convexStrategyProxy.setImplementation(convexStrategyImpl.address);

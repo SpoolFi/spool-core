@@ -1,3 +1,5 @@
+// FOR TESTING PURPOSES ONLY. Will NOT be used in production.
+
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.11;
@@ -68,6 +70,8 @@ struct PriceDataHelper {
  *
  */
 contract SpoolDoHardWorkReallocationHelper is SpoolStrategyHelper {
+
+    constructor (IStrategyRegistry _strategyRegistry) SpoolStrategyHelper(_strategyRegistry) {}
 
     /**
      * @notice Executes do hard work of specified strategies if reallocation is in progress.

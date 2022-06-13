@@ -37,7 +37,7 @@ abstract contract MasterChefStrategyBase is RewardStrategy {
         uint256 _pid,
         IERC20 _underlying
     )
-        BaseStrategy(_underlying, 1, 0, 0, 0, true, false)
+        BaseStrategy(_underlying, 1, 0, 0, 0, true, false, address(0))
     {
         require(address(_chef) != address(0), "MasterChefStrategyBase::constructor: Masterchef address cannot be 0");
         require(address(_rewardToken) != address(0), "MasterChefStrategyBase::constructor: Token address cannot be 0");

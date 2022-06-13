@@ -8,8 +8,7 @@ import {
     createVault,
     customConstants,
     getProportionsFromBitwise,
-    reset,
-    TEN_POW_6,
+    reset, TEN_POW_6,
     TEN_UNITS_E8,
     VaultDetailsStruct,
 } from "./shared/utilities";

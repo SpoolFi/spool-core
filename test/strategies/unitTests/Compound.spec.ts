@@ -74,7 +74,9 @@ describe("Strategies Unit Test: Compound", () => {
                     AddressZero,
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
-                    "0x0000000000000000000000000000000000000001"
+                    "0x0000000000000000000000000000000000000001", 
+                    AddressZero,
+
                 )
             ).to.be.revertedWith("CompoundStrategy::constructor: Token address cannot be 0");
         });
@@ -87,7 +89,9 @@ describe("Strategies Unit Test: Compound", () => {
                     "0x0000000000000000000000000000000000000001",
                     AddressZero,
                     "0x0000000000000000000000000000000000000001",
-                    "0x0000000000000000000000000000000000000001"
+                    "0x0000000000000000000000000000000000000001", 
+                    AddressZero,
+
                 )
             ).to.be.revertedWith("CompoundStrategy::constructor: Comptroller address cannot be 0");
         });
@@ -114,7 +118,9 @@ describe("Strategies Unit Test: Compound", () => {
                     strategyAssets[1].cToken, // USDC cToken address
                     "0x0000000000000000000000000000000000000001",
                     tokens.USDC.address,
-                    compoundHelper.address
+                    compoundHelper.address, 
+                    AddressZero,
+
                 )
             ).to.be.revertedWith("CompoundStrategy::constructor: cToken is not the same as helpers cToken");
         });
@@ -161,7 +167,9 @@ describe("Strategies Unit Test: Compound", () => {
                             cToken,
                             mainnetConst.compound.COMPtroller.delegator.address,
                             token.address,
-                            compoundHelper.address
+                            compoundHelper.address, 
+                    AddressZero,
+
                         );
 
                     await compoundStrategyProxy.setImplementation(compStrategy.address);
@@ -207,7 +215,9 @@ describe("Strategies Unit Test: Compound", () => {
                             cToken,
                             mainnetConst.compound.COMPtroller.delegator.address,
                             token.address,
-                            compoundHelper.address
+                            compoundHelper.address, 
+                    AddressZero,
+
                         );
 
                     await compoundStrategyProxy.setImplementation(compStrategy.address);

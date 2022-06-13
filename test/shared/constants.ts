@@ -427,6 +427,6 @@ export const mainnet = function mainnet(): Mainnet {
         masterchef,
         uniswap,
         yearn,
-        tokens,
+        tokens
     };
 };

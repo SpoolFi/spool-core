@@ -78,7 +78,9 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
 
         const CurveStrategy = new Curve3poolStrategy__factory().connect(accounts.administrator);
         await expect(
-            CurveStrategy.deploy(AddressZero, liquidityGaugeMock.address, "0x0000000000000000000000000000000000000001")
+            CurveStrategy.deploy(AddressZero, liquidityGaugeMock.address, "0x0000000000000000000000000000000000000001", 
+                    AddressZero,
+)
         ).to.be.revertedWith("CurveStrategy::constructor: Curve Pool address cannot be 0");
     });
 
@@ -98,7 +100,9 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                         .deploy(
                             mainnetConst.curve._3pool.pool.address,
                             mainnetConst.curve._3pool.LiquidityGauge.address,
-                            token.address
+                            token.address, 
+                    AddressZero,
+
                         );
 
                     await curveStrat.initialize();
@@ -116,7 +120,9 @@ describe("Strategies Unit Test: Curve Liquidity Gauge 3pool", () => {
                         .deploy(
                             mainnetConst.curve._3pool.pool.address,
                             mainnetConst.curve._3pool.LiquidityGauge.address,
-                            token.address
+                            token.address, 
+                    AddressZero,
+
                         );
 
                     implAddress = harvestStrategyImpl.address;

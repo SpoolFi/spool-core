@@ -143,7 +143,6 @@ export interface SpoolFixture {
 export interface HelperContracts {
     slippagesHelper: string;
     reallocationHelper: string;
-    rewardsHelper: string;
 }
 
 export interface Context {

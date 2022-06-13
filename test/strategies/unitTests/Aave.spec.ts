@@ -49,7 +49,8 @@ describe("Strategies Unit Test: AAVE", () => {
                     AddressZero,
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
-                    "0x0000000000000000000000000000000000000001"
+                    "0x0000000000000000000000000000000000000001", 
+                    AddressZero,
                 )
             ).to.be.revertedWith("AaveStrategy::constructor: stkAAVE address cannot be 0");
         });
@@ -61,7 +62,9 @@ describe("Strategies Unit Test: AAVE", () => {
                     "0x0000000000000000000000000000000000000001",
                     AddressZero,
                     "0x0000000000000000000000000000000000000001",
-                    "0x0000000000000000000000000000000000000001"
+                    "0x0000000000000000000000000000000000000001", 
+                    AddressZero,
+
                 )
             ).to.be.revertedWith("AaveStrategy::constructor: LendingPoolAddressesProvider address cannot be 0");
         });
@@ -73,7 +76,9 @@ describe("Strategies Unit Test: AAVE", () => {
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
                     AddressZero,
-                    "0x0000000000000000000000000000000000000001"
+                    "0x0000000000000000000000000000000000000001", 
+                    AddressZero,
+
                 )
             ).to.be.revertedWith("AaveStrategy::constructor: AaveIncentivesController address cannot be 0");
         });
@@ -96,7 +101,9 @@ describe("Strategies Unit Test: AAVE", () => {
                             mainnetConst.aave.stkAAVE.delegator.address,
                             mainnetConst.aave.LendingPoolAddressesProvider.address,
                             mainnetConst.aave.IncentiveController.delegator.address,
-                            token.address
+                            token.address, 
+                    AddressZero,
+
                         );
                 });
             });
@@ -111,7 +118,9 @@ describe("Strategies Unit Test: AAVE", () => {
                         mainnetConst.aave.stkAAVE.delegator.address,
                         mainnetConst.aave.LendingPoolAddressesProvider.address,
                         mainnetConst.aave.IncentiveController.delegator.address,
-                        token.address
+                        token.address, 
+                    AddressZero,
+
                     );
 
                     implAddress = aaveImpl.address;

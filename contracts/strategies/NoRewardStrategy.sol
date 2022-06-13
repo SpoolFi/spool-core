@@ -23,7 +23,8 @@ abstract contract NoRewardStrategy is ProcessStrategy {
         uint256 _processSlippageSlots,
         uint256 _reallocationSlippageSlots,
         uint256 _depositSlippageSlots,
-        bool _doValidateBalance
+        bool _doValidateBalance,
+        address _self
     )
         BaseStrategy(
             _underlying,
@@ -32,7 +33,8 @@ abstract contract NoRewardStrategy is ProcessStrategy {
             _reallocationSlippageSlots,
             _depositSlippageSlots,
             false,
-            _doValidateBalance
+            _doValidateBalance,
+            _self
         )
     {}
 
