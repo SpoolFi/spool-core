@@ -59,7 +59,7 @@ task("test-e2e", "Runs mocha e2e tests")
         await hre.run("test", { testFiles: [...tsFiles], deployFixture: true });
     });
 
-task("test-strategies", "Runs mocha strategy tests")
+task("test-fork", "Runs mocha tests on a fork")
     .addOptionalParam("placement", "The placement of the Mainnet archive node (local or remote)", "", types.string)
     .addFlag("log", "Enable node logging")
     .addFlag("noconsole", "Remove console logs")
@@ -83,11 +83,15 @@ task("test-strategies", "Runs mocha strategy tests")
             };
         }
 
-        if(taskArgs.coverage) {
-            await hre.run("coverage", { testfiles: "test/strategies/**/*.spec.ts" });
+        if (taskArgs.coverage) {
+            const files = "test/**/*.spec.ts";
+            await hre.run("coverage", { testfiles: files });
         } else {
-            const tsFiles = glob.sync(path.join(hre.config.paths.tests, "strategies", "**/*.spec.ts"));
-            await hre.run("test", { testFiles: [...tsFiles] });
+            const files = [
+                ...glob.sync(path.join(hre.config.paths.tests, "strategies/unitTests", "/*.spec.ts")),
+                ...glob.sync(path.join(hre.config.paths.tests, "/*.spec.ts")),
+            ];
+            await hre.run("coverage", { testFiles: files });
         }
     });
 
@@ -106,9 +110,12 @@ task("test-local", "Runs mocha local tests")
             };
         }
 
-        const tsFiles = glob.sync(path.join(hre.config.paths.tests, "*.spec.ts"));
-        const runner = taskArgs.coverage ? "coverage" : "test";
-        await hre.run(runner, { testFiles: [...tsFiles] });
+        if (taskArgs.coverage) {
+            await hre.run("coverage", { testfiles: "test/*.spec.ts" });
+        } else {
+            const files = glob.sync(path.join(hre.config.paths.tests, "*.spec.ts"));
+            await hre.run("test", { testFiles: files });
+        }
     });
 
 export default {

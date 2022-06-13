@@ -35,7 +35,7 @@ const VAULTS: any = {
 
 const VAULT_NAMES: string[] = Object.keys(VAULTS).map((key: string) => VAULTS[key]);
 
-describe("Flow 0", function () {
+describe("Flow 0 [ @skip-on-coverage ]", function () {
     let context: Context;
     let snapshotId: string;
 

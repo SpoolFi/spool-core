@@ -40,7 +40,7 @@ const VAULTS: any = {
 
 const VAULT_NAMES: string[] = Object.keys(VAULTS).map((key: string) => VAULTS[key]);
 
-describe("Complex Ent to End Tests", function () {
+describe("Complex End to End Tests [ @skip-on-coverage ]", function () {
     let context: Context;
     let snapshotId: string;
 
