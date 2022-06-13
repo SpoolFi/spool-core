@@ -97,14 +97,16 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         uint256 _reallocationSlippageSlots,
         uint256 _depositSlippageSlots,
         bool _forceClaim,
-        bool _doValidateBalance
+        bool _doValidateBalance,
+        address _self
     ) {
         require(
             _underlying != IERC20(address(0)),
             "BaseStrategy::constructor: Underlying address cannot be 0"
         );
 
-        self = address(this);
+        self = _self == address(0) ? address(this) : _self;
+
         underlying = _underlying;
         rewardSlippageSlots = _rewardSlippageSlots;
         processSlippageSlots = _processSlippageSlots;

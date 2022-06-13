@@ -64,8 +64,6 @@ The documentation can be generated from the comments of the contract external fu
 - `cp .env.sample .env`
 - add mainnet archive node url under `MAINNET_URL`
 - `npm run test-fork`
-- if you have a local mainnet fork or actual archive node (eg. Erigon) running on the default port, you can run `npm run test-fork-local` to use that instead.
-- to run only strategy tests, run `npm run test-strategy`
 
 ### Run coverage report
 

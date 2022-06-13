@@ -79,7 +79,9 @@ describe("Strategies Unit Test: Harvest", () => {
                 AddressZero,
                 "0x0000000000000000000000000000000000000001",
                 "0x0000000000000000000000000000000000000001",
-                "0x0000000000000000000000000000000000000001"
+                "0x0000000000000000000000000000000000000001", 
+                    AddressZero,
+
             )
         ).to.be.revertedWith("ClaimFullSingleRewardStrategy::constructor: Token address cannot be 0");
     });
@@ -101,7 +103,9 @@ describe("Strategies Unit Test: Harvest", () => {
                             mainnetConst.harvest.FARM.address,
                             contracts.Vault.address,
                             contracts.Pool.address,
-                            token.address
+                            token.address, 
+                            AddressZero,
+
                         );
                 });
             });
@@ -118,7 +122,9 @@ describe("Strategies Unit Test: Harvest", () => {
                             mainnetConst.harvest.FARM.address,
                             contracts.Vault.address,
                             contracts.Pool.address,
-                            token.address
+                            token.address, 
+                    AddressZero,
+
                         );
 
                     implAddress = harvestStrategyImpl.address;
