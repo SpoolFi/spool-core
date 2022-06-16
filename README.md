@@ -45,7 +45,11 @@ Main Spool Core contracts consist of:
 
 - `npm install`
 
-### Generate Documentation
+### Compile solidity
+
+- `npm run compile`
+
+### Generate documentation
 
 The documentation can be generated from the comments of the contract external functions.
 
