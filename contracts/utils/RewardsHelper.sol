@@ -166,8 +166,6 @@ contract RewardsHelper is BaseStorage, SwapHelper {
         pendingDeposits = new uint256[](rewardData.length);
         for (uint256 i = 0; i < rewardData.length; i++) {
             // add compound amount from current batch to the fast withdraw
-            console.log('amount: %s', rewardData[i].amount);
-            console.log('atRouter: %s', rewardData[i].atRouter);
             if (rewardData[i].amount > 0) {
                 uint256 amount = rewardData[i].atRouter ? type(uint256).max : rewardData[i].amount;
                 uint128 compoundAmount = SafeCast.toUint128(
