@@ -8,7 +8,6 @@ import "hardhat-gas-reporter";
 import "@primitivefi/hardhat-dodoc";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
-import { removeConsoleLog } from "hardhat-preprocessor";
 
 import { task, types } from "hardhat/config";
 
@@ -49,12 +48,6 @@ task("test-e2e", "Runs mocha e2e tests")
             hre.config.networks.hardhat.loggingEnabled = true;
         }
 
-        if (taskArgs.noconsole) {
-            hre.config.preprocess = {
-                eachLine: removeConsoleLog(() => true),
-            };
-        }
-
         const tsFiles = glob.sync(path.join(hre.config.paths.tests, "e2e", "**/*.spec.ts"));
         await hre.run("test", { testFiles: [...tsFiles], deployFixture: true });
     });
@@ -77,12 +70,6 @@ task("test-fork", "Runs mocha tests on a fork")
             hre.config.networks.hardhat.loggingEnabled = true;
         }
 
-        if (taskArgs.noconsole) {
-            hre.config.preprocess = {
-                eachLine: removeConsoleLog(() => true),
-            };
-        }
-
         if (taskArgs.coverage) {
             const files = "test/**/*.spec.ts";
             await hre.run("coverage", { testfiles: files });
@@ -102,12 +89,6 @@ task("test-local", "Runs mocha local tests")
     .setAction(async (taskArgs, hre) => {
         if (taskArgs.log) {
             hre.config.networks.hardhat.loggingEnabled = true;
-        }
-
-        if (taskArgs.noconsole) {
-            hre.config.preprocess = {
-                eachLine: removeConsoleLog(() => true),
-            };
         }
 
         if (taskArgs.coverage) {
@@ -189,8 +170,5 @@ export default {
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_KEY,
-    },
-    preprocess: {
-        eachLine: removeConsoleLog(() => false),
     },
 };
