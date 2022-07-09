@@ -188,19 +188,19 @@ export async function tokensFixture(administrator: SignerWithAddress): Promise<T
     if (isForking()) {
         await DAI.connect(await impersonate(constants.tokens.DAI.holder)).transfer(
             administrator.address,
-            parseUnits("20000000", constants.tokens.DAI.units)
+            (await DAI.balanceOf(constants.tokens.DAI.holder))
         );
         await USDC.connect(await impersonate(constants.tokens.USDC.holder)).transfer(
             administrator.address,
-            parseUnits("20000000", constants.tokens.USDC.units)
+            (await USDC.balanceOf(constants.tokens.USDC.holder))
         );
         await USDT.connect(await impersonate(constants.tokens.USDT.holder)).transfer(
             administrator.address,
-            parseUnits("20000000", constants.tokens.USDT.units)
+            (await USDT.balanceOf(constants.tokens.USDT.holder))
         );
         await WETH.connect(await impersonate(constants.tokens.WETH.holder)).transfer(
             administrator.address,
-            parseUnits("20000", constants.tokens.WETH.units)
+            (await WETH.balanceOf(constants.tokens.WETH.holder))
         );
     }
 

@@ -12,7 +12,7 @@ import { ReallocationWithdrawDataHelperStruct } from "../../build/types/SpoolDoH
 // a small perentage difference before passing the slippage as an argument, in the case
 // that the on-chain state has changed before DHW has successfully executed.
 // they are considered as basis points out of 10000.
-// eg. for 50, slippage value passed is 0.5% less than calcuated value (0.55 == (50 / 10000) * 100)
+// eg. for 50, slippage value passed is 0.5% less than calcuated value (0.5 == (50 / 10000) * 100)
 // first index for each is deposit, second is withdraw.
 
 const FULL_PERCENT = "10000";
@@ -34,6 +34,7 @@ function decodeSlippageIfDeposit(slippage: BigNumberish) {
 const percents = {
     // deposit, withdrawal, balance - all in basis points
     "3pool": [30, 30, 3],
+    "4pool": [150, 150, 3],
     Idle: [50, 50],
     Yearn: [30, 30],
 };
@@ -113,12 +114,15 @@ function findRealocationShares(strat: string, context: Context, reallocationWith
 
 // ************************ SLIPPAGES ********************************************
 
-// gets slippages for Convex and Curve
+// gets slippages for Convex and Curve 3pool (3pool as base pool for all)
 async function get3PoolSlippage(
     context: Context,
     reallocationWithdrawnShares?: BigNumber[]
 ): Promise<Array<BigNumber[]>> {
     const strategies = [
+        context.strategies.ConvexMetapool.DAI,
+        context.strategies.ConvexMetapool.USDC,
+        context.strategies.ConvexMetapool.USDT,
         context.strategies.Convex.DAI,
         context.strategies.Convex.USDC,
         context.strategies.Convex.USDT,
@@ -152,6 +156,44 @@ async function get3PoolSlippage(
     return slippageArgs;
 }
 
+// gets slippages for Convex 4pool
+async function getConvex4PoolSlippage(
+    context: Context,
+    reallocationWithdrawnShares?: BigNumber[]
+): Promise<Array<BigNumber[]>> {
+    const strategies = [
+        context.strategies.Convex4pool.DAI,
+        context.strategies.Convex4pool.USDC,
+        context.strategies.Convex4pool.USDT,
+    ];
+
+    const reallocateSharesToWithdraw = strategies.map((s3pl) => {
+        return findRealocationShares(s3pl, context, reallocationWithdrawnShares);
+    });
+
+    let result = await strategyHelperCall("getConvex4PoolSlippage", [strategies, reallocateSharesToWithdraw], context);
+
+    const slippageArgs = new Array<BigNumber[]>();
+    for (let i = 0; i < result.length; i++) {
+        let raw = result[i];
+
+        let slippage = convertToSlippageStruct(raw);
+        let slippageBalance = BigNumber.from(slippage.balance);
+        const balanceSlippage = getPercentage(slippageBalance, percents["4pool"][2]);
+
+        let slippageArg = [
+            slippageBalance.sub(balanceSlippage),
+            slippageBalance.add(balanceSlippage),
+            handleSlippageResult(slippage, percents["4pool"]),
+        ];
+
+        slippageArgs.push(slippageArg);
+    }
+    return slippageArgs;
+}
+
+
+// gets slippages for Convex Metapool
 async function getIdleSlippage(
     strategy: string,
     context: Context,
@@ -322,6 +364,7 @@ export async function getReallocationSlippages(context: Context, reallocationTab
 
 async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: BigNumber[]) {
     const curvePoolSlippages = await get3PoolSlippage(context, reallocationWithdrawnShares);
+    const convex4poolSlippages = await getConvex4PoolSlippage(context, reallocationWithdrawnShares);
     let slippages = new Array<BigNumber[]>();
 
     if (!context.strategies) return slippages;
@@ -337,11 +380,19 @@ async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: B
                 continue;
             }
             case "Convex": {
+                slippages.push(curvePoolSlippages[3], curvePoolSlippages[4], curvePoolSlippages[5]);
+                continue;
+            }
+            case "Convex4pool": {
+                slippages.push(convex4poolSlippages[0], convex4poolSlippages[1], convex4poolSlippages[2]);
+                continue;
+            }
+            case "ConvexMetapool": {
                 slippages.push(curvePoolSlippages[0], curvePoolSlippages[1], curvePoolSlippages[2]);
                 continue;
             }
             case "Curve": {
-                slippages.push(curvePoolSlippages[3], curvePoolSlippages[4], curvePoolSlippages[5]);
+                slippages.push(curvePoolSlippages[6], curvePoolSlippages[7], curvePoolSlippages[8]);
                 continue;
             }
             case "Harvest": {
@@ -385,6 +436,18 @@ function getDhwDepositSlippage(context: Context) {
                 continue;
             }
             case "Convex": {
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                continue;
+            }
+            case "Convex4pool": {
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                continue;
+            }
+            case "ConvexMetapool": {
                 slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
                 slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
                 slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);

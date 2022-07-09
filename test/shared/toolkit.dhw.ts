@@ -1,7 +1,7 @@
 import { Context } from "../../scripts/infrastructure";
 import { BigNumber, constants, ContractTransaction } from "ethers";
 import { pack } from "@ethersproject/solidity";
-import { encodeDepositSlippage } from "./utilities";
+import { encodeDepositSlippage, getRewardSwapPathV3Direct } from "./utilities";
 import { ethers } from "hardhat";
 import { getReallocationSlippages, getSlippages } from "./dhwUtils";
 
@@ -60,43 +60,86 @@ const swapDataConvex = [
     { slippage: 1, path: swapPathWeth10000 },
 ];
 
+const swapDataConvexExtra = [
+    { slippage: 1, path: swapPath3000Weth500 },
+    { slippage: 1, path: swapPathWeth10000 },
+    { slippage: 1, path: swapPathWeth10000 },
+];
+
 const swapPath_COMP = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
 const swapPath_IDLE = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
 
 const swapSlippages = [
-    { slippage: 1, path: swapPath_COMP },
-    { slippage: 1, path: swapPathStkAave },
-    { slippage: 1, path: swapPath_IDLE },
+    { slippage: 0, path: swapPath_COMP },
+    { slippage: 0, path: swapPathStkAave },
+    { slippage: 0, path: swapPath_IDLE },
 ];
 
 function getRewardSlippages(strategies: any) {
     return Object.keys(strategies)
         .filter((s) => s != "All")
         .flatMap((stratName) => {
-            const slippages = getRewardSlippage(stratName);
-            return [slippages, slippages, slippages];
+            return getRewardSlippage(stratName);
         });
 }
 
 function getRewardSlippage(stratName: string) {
     switch (stratName) {
         case "Aave": {
-            return { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] };
+            return [
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] }
+            ]
         }
         case "Compound": {
-            return { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] };
+            return [ 
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] }
+            ]
         }
         case "Convex": {
-            return { doClaim: true, swapData: swapDataConvex };
+            return [ 
+                { doClaim: true, swapData: swapDataConvex }, 
+                { doClaim: true, swapData: swapDataConvex }, 
+                { doClaim: true, swapData: swapDataConvex } 
+            ]
+        }
+        case "Convex4pool": {
+            return [ 
+                { doClaim: true, swapData: swapDataConvexExtra }, 
+                { doClaim: true, swapData: swapDataConvexExtra }, 
+                { doClaim: true, swapData: swapDataConvexExtra },
+            ]
+        }
+        case "ConvexMetapool": {
+            return [ 
+                { doClaim: true, swapData: swapDataConvexExtra }, 
+                { doClaim: true, swapData: swapDataConvexExtra }, 
+                { doClaim: true, swapData: swapDataConvexExtra },
+            ]
         }
         case "Curve": {
-            return { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] };
+            return [ 
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] }
+            ];
         }
         case "Idle": {
-            return { doClaim: true, swapData: swapSlippages };
+            return [ 
+                { doClaim: true, swapData: swapSlippages }, 
+                { doClaim: true, swapData: swapSlippages }, 
+                { doClaim: true, swapData: swapSlippages }
+            ]
         }
         default: {
-            return { doClaim: false, swapData: [] };
+            return [ 
+                { doClaim: false, swapData: [] }, 
+                { doClaim: false, swapData: [] }, 
+                { doClaim: false, swapData: [] } 
+            ];
         }
     }
 }
@@ -123,6 +166,12 @@ function getDhwSlippage(stratName: string, type: ActionType) {
             return [];
         }
         case "Convex": {
+            return type == "deposit" ? [0, MaxUint256, depositSlippage] : [0, MaxUint256, 0];
+        }
+        case "Convex4pool": {
+            return type == "deposit" ? [0, MaxUint256, depositSlippage] : [0, MaxUint256, 0];
+        }
+        case "ConvexMetapool": {
             return type == "deposit" ? [0, MaxUint256, depositSlippage] : [0, MaxUint256, 0];
         }
         case "Curve": {
@@ -153,6 +202,14 @@ export async function doHardWork(context: Context, getRewards: boolean): Promise
 
     const strategies = context.strategies!.All;
     const rewardSlippages = getRewardSlippages(context.strategies);
+
+    const chainStrats = await context.infra.controller.getAllStrategies();
+
+    console.log('All strats:');
+    console.log(strategies);
+
+    console.log('chain strats:');
+    console.log(chainStrats);
 
     const { indexes, slippages } = await getSlippages(context);
     return context.infra.spool

@@ -4,6 +4,8 @@ import {
     accountsFixture,
     DeployCompound,
     DeployConvex,
+    DeployConvex4pool,
+    DeployConvexMetapool,
     loadContracts,
     loadSpoolInfra,
     tokensFixture,
@@ -27,10 +29,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log("Deploying all strategies..");
     let Compound = await DeployCompound(accounts, tokens, spoolFixture, hre);
     let Convex = await DeployConvex(accounts, tokens, spoolFixture, hre);
+    let Convex4pool = await DeployConvex4pool(accounts, tokens, spoolFixture, hre);
+    let ConvexMetapool = await DeployConvexMetapool(accounts, tokens, spoolFixture, hre);
 
     let implementation = {
         Compound,
         Convex,
+        Convex4pool,
+        ConvexMetapool
     };
 
     let strategies = (await loadContracts(hre)).strategies;

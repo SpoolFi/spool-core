@@ -14,15 +14,17 @@ export interface SpoolContracts {
 }
 
 export interface UnderlyingContracts {
-    DAI: string;
-    USDT: string;
-    USDC: string;
+    DAI: string[];
+    USDT: string[];
+    USDC: string[];
 }
 
 export interface StrategiesContracts {
     Aave: UnderlyingContracts;
     Compound: UnderlyingContracts;
     Convex: UnderlyingContracts;
+    Convex4pool: UnderlyingContracts;
+    ConvexMetapool: UnderlyingContracts;
     Curve: UnderlyingContracts;
     Harvest: UnderlyingContracts;
     Idle: UnderlyingContracts;

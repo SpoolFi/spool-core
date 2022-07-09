@@ -478,7 +478,7 @@ export async function DeployAave(
     tokens: TokensFixture,
     hre: HardhatRuntimeEnvironment
 ): Promise<UnderlyingContracts> {
-    let implementation: UnderlyingContracts = { DAI: "", USDC: "", USDT: "" };
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
 
     for (let name of strategyAssets) {
         let token: IERC20 = tokens[name];
@@ -493,7 +493,7 @@ export async function DeployAave(
         ];
 
         const strat = await deploy(hre, accounts, `AaveStrategy${name}`, { contract: "AaveStrategy", args });
-        implementation[name] = strat.address;
+        implementation[name].push(strat.address);
     }
 
     return implementation;
@@ -505,7 +505,7 @@ export async function DeployCompound(
     spool: SpoolFixture,
     hre: HardhatRuntimeEnvironment
 ): Promise<UnderlyingContracts> {
-    let implementation: UnderlyingContracts = { DAI: "", USDC: "", USDT: "" };
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
 
     for (let { name, cToken } of Compound) {
         let token: IERC20 = tokens[name];
@@ -549,7 +549,7 @@ export async function DeployCompound(
         ];
 
         const strat = await deploy(hre, accounts, `CompoundStrategy${name}`, { contract: "CompoundStrategy", args });
-        implementation[name] = strat.address;
+        implementation[name].push(strat.address);
     }
 
     return implementation;
@@ -561,7 +561,7 @@ export async function DeployConvex(
     spool: SpoolFixture,
     hre: HardhatRuntimeEnvironment
 ): Promise<UnderlyingContracts> {
-    let implementation: UnderlyingContracts = { DAI: "", USDC: "", USDT: "" };
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
 
     for (let name of strategyAssets) {
         let token: IERC20 = tokens[name];
@@ -604,7 +604,119 @@ export async function DeployConvex(
             contract: "ConvexSharedStrategy",
             args,
         });
-        implementation[name] = strat.address;
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
+export async function DeployConvex4pool(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    spool: SpoolFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    for (let name of strategyAssets) {
+        let token: IERC20 = tokens[name];
+        console.log("Deploying Convex 4pool Strategy for token: " + name + "...");
+
+        const helperArgs = [
+            spool.spool.address,
+            mainnetConst.convex.Booster.address,
+            mainnetConst.convex._sUSD.boosterPoolId,
+        ];
+        const convexBoosterHelper = await deploy(hre, accounts, `ConvexBooster4poolContractHelper${name}`, {
+            contract: "ConvexBoosterContractHelper",
+            args: helperArgs,
+        });
+        const convexHelperProxy = await deployProxy(
+            hre,
+            accounts,
+            `ConvexBooster4poolContractHelper${name}`,
+            convexBoosterHelper.address,
+            spool.proxyAdmin.address
+        );
+
+        await writeContracts(hre, {
+            [`convex4poolHelper${name}`]: {
+                proxy: convexHelperProxy.address,
+                implementation: convexBoosterHelper.address,
+            },
+        });
+
+        const args = [
+            mainnetConst.convex.Booster.address,
+            mainnetConst.convex._sUSD.boosterPoolId,
+            mainnetConst.curve._sUSD.pool.address,
+            mainnetConst.curve._sUSD.lpToken.address,
+            token.address,
+            convexHelperProxy.address,
+            ethers.constants.AddressZero
+        ];
+        const strat = await deploy(hre, accounts, `ConvexShared4poolStrategy${name}`, {
+            contract: "ConvexShared4poolStrategy",
+            args,
+        });
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
+
+export async function DeployConvexMetapool(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    spool: SpoolFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    for (let name of strategyAssets) {
+        let token: IERC20 = tokens[name];
+        console.log("Deploying Convex Metapool Strategy for token: " + name + "...");
+
+        const helperArgs = [
+            spool.spool.address,
+            mainnetConst.convex.Booster.address,
+            mainnetConst.convex._alUSD.boosterPoolId,
+        ];
+        const convexBoosterHelper = await deploy(hre, accounts, `ConvexBoosterMetapoolContractHelper${name}`, {
+            contract: "ConvexBoosterContractHelper",
+            args: helperArgs,
+        });
+        const convexHelperProxy = await deployProxy(
+            hre,
+            accounts,
+            `ConvexBoosterMetapoolContractHelper${name}`,
+            convexBoosterHelper.address,
+            spool.proxyAdmin.address
+        );
+
+        await writeContracts(hre, {
+            [`convexMetapoolHelper${name}`]: {
+                proxy: convexHelperProxy.address,
+                implementation: convexBoosterHelper.address,
+            },
+        });
+
+        const args = [
+            mainnetConst.convex.Booster.address,
+            mainnetConst.convex._alUSD.boosterPoolId,
+            mainnetConst.curve._3pool.pool.address,
+            mainnetConst.curve._alUSD.depositZap.address,
+            mainnetConst.curve._alUSD.lpToken.address,
+            token.address,
+            convexHelperProxy.address,
+            ethers.constants.AddressZero
+        ];
+        const strat = await deploy(hre, accounts, `ConvexSharedMetapoolStrategy${name}`, {
+            contract: "ConvexSharedMetapoolStrategy",
+            args,
+        });
+        implementation[name].push(strat.address);
     }
 
     return implementation;
@@ -615,7 +727,7 @@ export async function DeployCurve(
     tokens: TokensFixture,
     hre: HardhatRuntimeEnvironment
 ): Promise<UnderlyingContracts> {
-    let implementation: UnderlyingContracts = { DAI: "", USDC: "", USDT: "" };
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
 
     for (let name of strategyAssets) {
         let token: IERC20 = tokens[name];
@@ -631,7 +743,7 @@ export async function DeployCurve(
             args,
         });
 
-        implementation[name] = strat.address;
+        implementation[name].push(strat.address);
     }
 
     return implementation;
@@ -642,7 +754,7 @@ export async function DeployHarvest(
     tokens: TokensFixture,
     hre: HardhatRuntimeEnvironment
 ): Promise<UnderlyingContracts> {
-    let implementation: UnderlyingContracts = { DAI: "", USDC: "", USDT: "" };
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
 
     for (let { name, contracts } of Harvest) {
         let token: IERC20 = tokens[name];
@@ -656,7 +768,7 @@ export async function DeployHarvest(
         ];
         const strat = await deploy(hre, accounts, `HarvestStrategy${name}`, { contract: "HarvestStrategy", args });
 
-        implementation[name] = strat.address;
+        implementation[name].push(strat.address);
     }
 
     return implementation;
@@ -667,7 +779,7 @@ export async function DeployIdle(
     tokens: TokensFixture,
     hre: HardhatRuntimeEnvironment
 ): Promise<UnderlyingContracts> {
-    let implementation: UnderlyingContracts = { DAI: "", USDC: "", USDT: "" };
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
 
     for (let { name, idleTokenYield } of Idle) {
         let token: IERC20 = tokens[name];
@@ -675,7 +787,7 @@ export async function DeployIdle(
         const args = [idleTokenYield, token.address, AddressZero];
         const strat = await deploy(hre, accounts, `IdleStrategy${name}`, { contract: "IdleStrategy", args });
 
-        implementation[name] = strat.address;
+        implementation[name].push(strat.address);
     }
 
     return implementation;
@@ -686,7 +798,7 @@ export async function DeployYearn(
     tokens: TokensFixture,
     hre: HardhatRuntimeEnvironment
 ): Promise<UnderlyingContracts> {
-    let implementation: UnderlyingContracts = { DAI: "", USDC: "", USDT: "" };
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
 
     console.log("Strategy Deployment: Yearn");
     for (let { name, yVault } of Yearn) {
@@ -696,7 +808,7 @@ export async function DeployYearn(
 
         const args = [yVault, token.address, AddressZero];
         const strat = await deploy(hre, accounts, `YearnStrategy${name}`, { contract: "YearnStrategy", args });
-        implementation[name] = strat.address;
+        implementation[name].push(strat.address);
     }
 
     return implementation;
@@ -719,12 +831,12 @@ export async function deployVaults(
     const vaultData: any = JSON.parse((await readFile("scripts/data/allocations.json")).toString());
 
     const parseAlloc = (value: number) => Math.round(value * 10_000);
-    const strategyKeys = ["Aave", "Compound", "Convex", "Curve", "Harvest", "Yearn", "Idle"];
+    const strategyKeys = ["Aave", "Compound", "Convex", "Convex4pool", "ConvexMetapool", "Curve", "Harvest", "Yearn", "Idle"];
 
     const vaults: any = {};
     for (const assetKey of assets) {
         // @ts-ignore
-        const stratAddresses = strategyKeys.map((key) => strategies[key][assetKey]);
+        const stratAddresses = strategyKeys.map((key) => strategies[key][assetKey]).filter(String).flat();
 
         for (const riskKey of riskKeys) {
             const riskDisplay = riskKey == "LOW_RISK" ? "Lower" : "Higher";
@@ -732,7 +844,10 @@ export async function deployVaults(
             console.log("=========================");
             console.log(`Deploying vault: ${name}`);
 
-            const proportions = strategyKeys.map((key) => vaultData[assetKey][riskKey][key].alloc).map(parseAlloc);
+            const proportions = strategyKeys
+                .map((key) => vaultData[assetKey][riskKey][key].alloc)
+                .map(parseAlloc)
+                .filter(Number);
 
             const delta = 10000 - proportions.reduce((a, b) => a + b);
             if (Math.abs(delta) > 1) {
