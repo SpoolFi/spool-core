@@ -134,6 +134,13 @@ function getRewardSlippage(stratName: string) {
                 { doClaim: true, swapData: swapSlippages }
             ]
         }
+        case "Morpho": {
+            return [ 
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] }
+            ]
+        }
         default: {
             return [ 
                 { doClaim: false, swapData: [] }, 
@@ -182,6 +189,9 @@ function getDhwSlippage(stratName: string, type: ActionType) {
         }
         case "Idle": {
             return type == "deposit" ? [depositSlippage] : [0];
+        }
+        case "Morpho": {
+            return [];
         }
         case "Yearn": {
             return type == "deposit" ? [depositSlippage] : [0];

@@ -24,7 +24,8 @@ import {
     IUSDT__factory,
     IVault__factory,
     IWETH__factory,
-    IYearnTokenVault__factory
+    IYearnTokenVault__factory,
+    IMorpho__factory,
 } from "../../build/types";
 import { BINANCE_WALLET } from "./utilities";
 
@@ -144,6 +145,10 @@ export interface Masterchef {
     Masterchef: Contract;
 }
 
+export interface Morpho {
+    Proxy: Contract;
+}
+
 export interface StakeDAO {
     Token: Contract;
 }
@@ -181,6 +186,7 @@ export interface Network {
     harvest: Harvest;
     idle: Idle;
     masterchef: Masterchef;
+    morpho: Morpho;
     uniswap: Uniswap;
     yearn: Yearn;
     tokens: Tokens;
@@ -368,6 +374,10 @@ export const mainnet = function mainnet(): Mainnet {
         Masterchef: { address: "0xbD17B1ce622d73bD438b9E658acA5996dc394b0d", ABI: IMasterChef__factory.abi },
     };
 
+    let morpho = {
+        Proxy: { address: "0x8888882f8f843896699869179fB6E4f7e3B58888", ABI: IMorpho__factory.abi },
+    };
+
     let uniswap = {
         Factory: { address: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", ABI: IUniswapV2Factory__factory.abi },
         Router: { address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D", ABI: IUniswapV2Router02__factory.abi },
@@ -453,6 +463,7 @@ export const mainnet = function mainnet(): Mainnet {
         harvest,
         idle,
         masterchef,
+        morpho,
         uniswap,
         yearn,
         tokens

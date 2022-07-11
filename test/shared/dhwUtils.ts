@@ -399,6 +399,10 @@ async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: B
                 slippages.push([], [], []);
                 continue;
             }
+            case "Morpho": {
+                slippages.push([], [], []);
+                continue;
+            }
             case "Idle": {
                 slippages.push(
                     await getIdleSlippage(context.strategies.Idle.DAI, context, reallocationWithdrawnShares),
@@ -467,6 +471,10 @@ function getDhwDepositSlippage(context: Context) {
                 slippages.push([depositSlippage]);
                 slippages.push([depositSlippage]);
                 slippages.push([depositSlippage]);
+                continue;
+            }
+            case "Morpho": {
+                slippages.push([], [], []);
                 continue;
             }
             case "Yearn": {

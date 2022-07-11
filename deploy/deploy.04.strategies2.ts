@@ -6,6 +6,7 @@ import {
     DeployConvex,
     DeployConvex4pool,
     DeployConvexMetapool,
+    DeployMorpho,
     loadContracts,
     loadSpoolInfra,
     tokensFixture,
@@ -31,12 +32,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     let Convex = await DeployConvex(accounts, tokens, spoolFixture, hre);
     let Convex4pool = await DeployConvex4pool(accounts, tokens, spoolFixture, hre);
     let ConvexMetapool = await DeployConvexMetapool(accounts, tokens, spoolFixture, hre);
+    let Morpho = await DeployMorpho(accounts, tokens, spoolFixture, hre);
 
     let implementation = {
         Compound,
         Convex,
         Convex4pool,
-        ConvexMetapool
+        ConvexMetapool,
+        Morpho
     };
 
     let strategies = (await loadContracts(hre)).strategies;

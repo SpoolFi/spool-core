@@ -167,6 +167,7 @@ export async function buildContext(): Promise<Context> {
         Curve: "Curve3pool",
         Harvest: "Harvest",
         Idle: "Idle",
+        Morpho: "Morpho",
         Yearn: "Yearn",
     };
 
@@ -1457,6 +1458,10 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
             }
             case "Idle": {
                 slippages.push([0]);
+                continue;
+            }
+            case "Morpho": {
+                slippages.push([]);
                 continue;
             }
             case "Yearn": {

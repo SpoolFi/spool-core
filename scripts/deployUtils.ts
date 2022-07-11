@@ -64,6 +64,11 @@ type IdleStratSetup = {
     idleTokenYield: string;
 };
 
+type MorphoStratSetup = {
+    name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
+    cToken: string;
+};
+
 type YearnStratSetup = {
     name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
     yVault: string;
@@ -126,6 +131,21 @@ export const Idle: IdleStratSetup[] = [
     {
         name: "USDT",
         idleTokenYield: mainnetConst.idle.idleUSDT.address,
+    },
+];
+
+export const Morpho: MorphoStratSetup[] = [
+    {
+        name: "DAI",
+        cToken: mainnetConst.compound.cDAI.delegator.address,
+    },
+    {
+        name: "USDC",
+        cToken: mainnetConst.compound.cUSDC.address,
+    },
+    {
+        name: "USDT",
+        cToken: mainnetConst.compound.cUSDT.delegator.address,
     },
 ];
 
@@ -793,6 +813,61 @@ export async function DeployIdle(
     return implementation;
 }
 
+export async function DeployMorpho(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    spool: SpoolFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    for (let { name, cToken } of Morpho) {
+        let token: IERC20 = tokens[name];
+        console.log("Deploying Morpho Strategy for token: " + name + "...");
+
+        let args = [
+            mainnetConst.morpho.Proxy.address,
+            mainnetConst.compound.COMP.address,
+            cToken,
+            token.address,
+            spool.spool.address
+        ];
+
+        const morphoHelper = await deploy(hre, accounts, `MorphoContractHelper${name}`, {
+            contract: "MorphoContractHelper",
+            args,
+        });
+
+        const morphoHelperProxy = await deployProxy(
+            hre,
+            accounts,
+            `MorphoContractHelper${name}`,
+            morphoHelper.address,
+            spool.proxyAdmin.address
+        );
+
+        await writeContracts(hre, {
+            morphoHelper: {
+                proxy: morphoHelperProxy.address,
+                implementation: morphoHelper.address,
+            },
+        });
+
+        args = [
+            mainnetConst.morpho.Proxy.address,
+            mainnetConst.compound.COMP.address,
+            cToken,
+            token.address,
+            morphoHelperProxy.address,
+        ];
+
+        const strat = await deploy(hre, accounts, `MorphoStrategy${name}`, { contract: "MorphoStrategy", args });
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
 export async function DeployYearn(
     accounts: AccountsFixture,
     tokens: TokensFixture,
@@ -831,7 +906,7 @@ export async function deployVaults(
     const vaultData: any = JSON.parse((await readFile("scripts/data/allocations.json")).toString());
 
     const parseAlloc = (value: number) => Math.round(value * 10_000);
-    const strategyKeys = ["Aave", "Compound", "Convex", "Convex4pool", "ConvexMetapool", "Curve", "Harvest", "Yearn", "Idle"];
+    const strategyKeys = ["Aave", "Compound", "Convex", "Convex4pool", "ConvexMetapool", "Curve", "Harvest", "Morpho", "Yearn", "Idle"];
 
     const vaults: any = {};
     for (const assetKey of assets) {

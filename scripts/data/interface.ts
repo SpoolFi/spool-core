@@ -28,6 +28,7 @@ export interface StrategiesContracts {
     Curve: UnderlyingContracts;
     Harvest: UnderlyingContracts;
     Idle: UnderlyingContracts;
+    Morpho: UnderlyingContracts;
     Yearn: UnderlyingContracts;
     All: string[];
 }
