@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.11;
 
-import "../curve/base/CurveStrategy3CoinsBase.sol";
+import "../curve/base/CurveStrategy4CoinsBase.sol";
 import "../MultipleRewardStrategy.sol";
 
 import "../../external/interfaces/convex/IBooster.sol";
@@ -12,7 +12,7 @@ import "../../interfaces/IStrategyContractHelper.sol";
 /**
  * @notice Convex strategy implementation
  */
-contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy {
+contract ConvexShared4poolStrategy is CurveStrategy4CoinsBase, MultipleRewardStrategy {
     using SafeERC20 for IERC20;
 
     /* ========== CONSTANT VARIABLES ========== */
@@ -34,8 +34,6 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
     IERC20 public immutable cvxToken;
     /// @notice Booster helper contract
     IStrategyContractHelper public immutable boosterHelper;
-    /// @notice Shared key
-    bytes32 private immutable _sharedKey;
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -52,47 +50,31 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
     constructor(
         IBooster _booster,
         uint256 _boosterPoolId,
-        IStableSwap3Pool _pool,
+        address _pool,
         IERC20 _lpToken,
         IERC20 _underlying,
         IStrategyContractHelper _boosterDeposit,
         address _self
     )
         BaseStrategy(_underlying, 0, 1, 1, 1, false, true, _self)
-        CurveStrategyBase(_pool, _lpToken)
+        CurveStrategyBaseV2(_pool, _lpToken)
     {
-        require(address(_booster) != address(0), "ConvexSharedStrategy::constructor: Booster address cannot be 0");
+        require(address(_booster) != address(0), "ConvexShared4poolStrategy::constructor: Booster address cannot be 0");
         booster = _booster;
         pid = _boosterPoolId;
-
+        
         IBooster.PoolInfo memory cvxPool = _booster.poolInfo(_boosterPoolId);
 
-        require(cvxPool.lptoken == address(_lpToken), "ConvexSharedStrategy::constructor: Booster and curve lp tokens not the same");
+        require(cvxPool.lptoken == address(_lpToken), "ConvexShared4poolStrategy::constructor: Booster and curve lp tokens not the same");
         
         crvRewards = IBaseRewardPool(cvxPool.crvRewards);
         rewardToken = crvRewards.rewardToken();
         cvxToken = IERC20(_booster.minter());
 
         boosterHelper = _boosterDeposit;
-        
-        _sharedKey = _calculateSharedKey();
     }
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
-
-    /**
-     * @notice Initialize strategy
-     */
-    function initialize() external override {
-        _initialize();
-    }
-
-    /**
-     * @notice Disable strategy
-     */
-    function disable() external override {
-        _disable();
-    }
 
     /**
      * @dev Dynamically return slippage length
@@ -160,7 +142,7 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
             uint256 extraRewardCount = crvRewards.extraRewardsLength();
             
             rewards = new Reward[](extraRewardCount + BASE_REWARDS_COUNT);
-
+            
             address[] memory rewardTokens = _getRewardAddresses(extraRewardCount);
             _claimStrategyRewards(rewardTokens);
 
@@ -226,21 +208,5 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         }
 
         return rewardAddresses;
-    }
-
-    /**
-     * @dev Calculate shared key
-     * @return Shared key
-     */
-    function _calculateSharedKey() private view returns(bytes32) {
-        return keccak256(abi.encodePacked(address(booster), pid));
-    }
-
-    /**
-     * @dev Get shared key
-     * @return Shared key
-     */
-    function _getSharedKey() internal view override returns(bytes32) {
-        return _sharedKey;
     }
 }

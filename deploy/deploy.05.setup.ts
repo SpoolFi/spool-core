@@ -16,16 +16,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log("Loading strategies..");
     const strategies: any = await loadStrategies(hre);
 
-    const strategyNames = ["Aave", "Compound", "Convex", "Curve", "Harvest", "Idle", "Yearn"];
+    const strategyNames = ["Aave",  "Compound", "Convex4pool", "ConvexMetapool", "Convex", "Curve", "Harvest", "Idle", "Morpho", "Yearn"];
 
     for (const strategy of strategyNames) {
         for (const assetKey of ["DAI", "USDC", "USDT"]) {
-            console.log(`Adding strategy: ${strategy} ${assetKey}`);
-            const strategyAddress = strategies[strategy][assetKey];
-
-            let allStrategies = await spoolFixture.controller.getAllStrategies();
-            let tx = await spoolFixture.controller.addStrategy(strategyAddress, allStrategies);
-            await tx.wait();
+            const strategyAddresses = strategies[strategy][assetKey];
+            for(const strategyAddress of strategyAddresses){
+                console.log(`Adding strategy: ${strategy} ${assetKey}`);
+                let allStrategies = await spoolFixture.controller.getAllStrategies();
+                let tx = await spoolFixture.controller.addStrategy(strategyAddress, allStrategies);
+                await tx.wait();
+            }
         }
     }
 };

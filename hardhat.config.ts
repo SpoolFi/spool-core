@@ -16,8 +16,7 @@ import * as path from "path";
 
 dotenvConfig();
 
-const FORK_BLOCK_NUMBER = 13825000;
-const FORK_BLOCK_NUMBER_E2E = 14503764;
+const FORK_BLOCK_NUMBER = 14900000;
 
 task("generate-docs", "Generate docs from contract comments").setAction(async (_, hre) => {
     const excludedContracts = hre.config.dodoc.exclude
@@ -40,7 +39,7 @@ task("test-e2e", "Runs mocha e2e tests")
 
         hre.config.networks.hardhat.forking = {
             url: _url,
-            blockNumber: FORK_BLOCK_NUMBER_E2E,
+            blockNumber: FORK_BLOCK_NUMBER,
             enabled: true,
         };
 
@@ -116,6 +115,8 @@ export default {
             allowUnlimitedContractSize: true,
             hardfork: "london",
             saveDeployments: false,
+            gas: 50000000,
+            blockGasLimit: 50000000,
             accounts: {
                 mnemonic: process.env.MNEMONIC,
                 count: 120,
