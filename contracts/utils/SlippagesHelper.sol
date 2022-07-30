@@ -63,9 +63,11 @@ contract SlippagesHelper is BaseStorage {
                     IDepositZap depositZap = IConvexSharedMetapoolStrategy(strat).depositZap();
                     underlying.safeApprove(address(depositZap), amount);
                     slippages[i] = _metapoolDeposit(_strategies[i], depositZap, amount);
+                    underlying.safeApprove(address(depositZap), 0);
                 }else {
                     underlying.safeApprove(address(pool), amount);
                     slippages[i] = _3poolDeposit(_strategies[i], IStableSwap3Pool(address(pool)), amount);
+                    underlying.safeApprove(address(pool), 0);
                 }
             }else {
                 address lpHelper;
@@ -134,6 +136,7 @@ contract SlippagesHelper is BaseStorage {
                 true,
                 address(this)
             );
+            underlying.safeApprove(address(idleToken), 0);
 
             slippage.slippage = mintedIdleAmount;
         } else {
@@ -167,6 +170,7 @@ contract SlippagesHelper is BaseStorage {
             uint256 yearnTokenBefore = vault.balanceOf(address(this));
             vault.deposit(amount, address(this));
             uint256 yearnTokenNew = vault.balanceOf(address(this)) - yearnTokenBefore;
+            underlying.safeApprove(address(vault), 0);
 
             slippage.slippage = yearnTokenNew;
         }else {
