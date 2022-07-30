@@ -16,7 +16,7 @@ import * as path from "path";
 
 dotenvConfig();
 
-const FORK_BLOCK_NUMBER = 14900000;
+const FORK_BLOCK_NUMBER = 15082700;
 
 task("generate-docs", "Generate docs from contract comments").setAction(async (_, hre) => {
     const excludedContracts = hre.config.dodoc.exclude
@@ -48,6 +48,7 @@ task("test-e2e", "Runs mocha e2e tests")
         }
 
         const tsFiles = glob.sync(path.join(hre.config.paths.tests, "e2e", "**/*.spec.ts"));
+        console.log('tsFiles: ' + tsFiles);
         await hre.run("test", { testFiles: [...tsFiles], deployFixture: true });
     });
 

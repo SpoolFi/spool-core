@@ -26,8 +26,9 @@ import {
     IWETH__factory,
     IYearnTokenVault__factory,
     IMorpho__factory,
+    INotional__factory,
+    IERC20__factory,
 } from "../../build/types";
-import { BINANCE_WALLET } from "./utilities";
 
 export type Contract = {
     address: string;
@@ -46,7 +47,6 @@ export interface Proxy {
 export type Token = {
     contract: any;
     units: number;
-    holder: any;
 };
 
 export interface Aave {
@@ -149,6 +149,18 @@ export interface Morpho {
     Proxy: Contract;
 }
 
+export interface nToken {
+    contract: Contract;
+    id: number;
+}
+
+export interface Notional {
+    Proxy: Contract;
+    NOTE: Contract;
+    nDAI: nToken;
+    nUSDC: nToken;
+}
+
 export interface StakeDAO {
     Token: Contract;
 }
@@ -187,6 +199,7 @@ export interface Network {
     idle: Idle;
     masterchef: Masterchef;
     morpho: Morpho;
+    notional: Notional;
     uniswap: Uniswap;
     yearn: Yearn;
     tokens: Tokens;
@@ -378,6 +391,19 @@ export const mainnet = function mainnet(): Mainnet {
         Proxy: { address: "0x8888882f8f843896699869179fB6E4f7e3B58888", ABI: IMorpho__factory.abi },
     };
 
+    let notional = {
+        Proxy: { address: "0x1344A36A1B56144C3Bc62E7757377D288fDE0369", ABI: INotional__factory.abi },
+        NOTE: { address: "0xCFEAead4947f0705A14ec42aC3D44129E1Ef3eD5", ABI: IERC20__factory.abi },
+        nDAI:  { 
+            contract: { address: "0x6EbcE2453398af200c688C7c4eBD479171231818", ABI: IERC20__factory.abi }, 
+            id: 2 
+        },
+        nUSDC: { 
+            contract: { address: "0x18b0Fc5A233acF1586Da7C199Ca9E3f486305A29", ABI: IERC20__factory.abi },
+            id: 3
+        },
+    };
+
     let uniswap = {
         Factory: { address: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", ABI: IUniswapV2Factory__factory.abi },
         Router: { address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D", ABI: IUniswapV2Router02__factory.abi },
@@ -393,19 +419,16 @@ export const mainnet = function mainnet(): Mainnet {
         DAI: {
             contract: { address: "0x6b175474e89094c44da98b954eedeac495271d0f", ABI: IDAI__factory.abi } as Contract,
             units: 18,
-            holder: BINANCE_WALLET,
         },
 
         USDT: {
             contract: { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", ABI: IUSDT__factory.abi } as Contract,
             units: 6,
-            holder: BINANCE_WALLET,
         },
 
         WETH: {
             contract: { address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", ABI: IWETH__factory.abi } as Contract,
             units: 18,
-            holder: BINANCE_WALLET,
         },
         USDC: {
             contract: {
@@ -413,32 +436,26 @@ export const mainnet = function mainnet(): Mainnet {
                 implementation: { address: "0xa2327a938febf5fec13bacfb16ae10ecbc4cbdcf", ABI: IUSDC__factory.abi },
             } as Proxy,
             units: 6,
-            holder: BINANCE_WALLET,
         },
         stkAAVE: {
             contract: { address: "0x4da27a545c0c5B758a6BA100e3a049001de870f5", ABI: null } as Contract,
             units: 18,
-            holder: BINANCE_WALLET,
         },
         COMP: {
             contract: { address: "0xc00e94Cb662C3520282E6f5717214004A7f26888", ABI: null } as Contract,
             units: 18,
-            holder: BINANCE_WALLET,
         },
         CRV: {
             contract: { address: "0xD533a949740bb3306d119CC777fa900bA034cd52", ABI: null } as Contract,
             units: 18,
-            holder: BINANCE_WALLET,
         },
         CVX: {
             contract: { address: "0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B", ABI: null } as Contract,
             units: 18,
-            holder: BINANCE_WALLET,
         },
         IDLE: {
             contract: { address: "0x875773784Af8135eA0ef43b5a374AaD105c5D39e", ABI: null } as Contract,
             units: 18,
-            holder: BINANCE_WALLET,
         },
         symbols: {
             // enables lookup with address: tokens[tokens.symbols[address]]
@@ -464,6 +481,7 @@ export const mainnet = function mainnet(): Mainnet {
         idle,
         masterchef,
         morpho,
+        notional,
         uniswap,
         yearn,
         tokens

@@ -36,6 +36,7 @@ const percents = {
     "3pool": [30, 30, 3],
     "4pool": [150, 150, 3],
     Idle: [50, 50],
+    Notional: [50, 50],
     Yearn: [30, 30],
 };
 // let spoolContracts: any;
@@ -204,6 +205,18 @@ async function getIdleSlippage(
     const result = await strategyHelperCall("getIdleSlippage", [strategy, reallocateSharesToWithdraw], context);
     const slippage = convertToSlippageStruct(result);
     return [handleSlippageResult(slippage, percents["Idle"])];
+}
+
+async function getNotionalSlippage(
+    strategy: string,
+    context: Context,
+    reallocationWithdrawnShares?: BigNumber[]
+): Promise<BigNumber[]> {
+    const reallocateSharesToWithdraw = findRealocationShares(strategy, context, reallocationWithdrawnShares);
+
+    const result = await strategyHelperCall("getNotionalSlippage", [strategy, reallocateSharesToWithdraw], context);
+    const slippage = convertToSlippageStruct(result);
+    return [handleSlippageResult(slippage, percents["Notional"])];
 }
 
 async function getYearnSlippage(
@@ -403,6 +416,13 @@ async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: B
                 slippages.push([], [], []);
                 continue;
             }
+            case "Notional": {
+                slippages.push(
+                    await getNotionalSlippage(context.strategies.Notional.DAI, context, reallocationWithdrawnShares),
+                    await getNotionalSlippage(context.strategies.Notional.USDC, context, reallocationWithdrawnShares),
+                );
+                continue;
+            }
             case "Idle": {
                 slippages.push(
                     await getIdleSlippage(context.strategies.Idle.DAI, context, reallocationWithdrawnShares),
@@ -475,6 +495,11 @@ function getDhwDepositSlippage(context: Context) {
             }
             case "Morpho": {
                 slippages.push([], [], []);
+                continue;
+            }
+            case "Notional": {
+                slippages.push([depositSlippage]);
+                slippages.push([depositSlippage]);
                 continue;
             }
             case "Yearn": {

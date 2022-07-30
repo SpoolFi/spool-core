@@ -25,12 +25,12 @@ export const parseUnits = ethers.utils.parseUnits;
 export const TEN_UNITS = parseUnits("10");
 export const TEN_UNITS_E8 = TEN_UNITS.div(parseUnits("1", 10));
 export const TEN_POW_6 = BigNumber.from(10).pow(6);
-export const BINANCE_WALLET = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0";
 export const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
 
 const MaxUint16 = BigNumber.from("0xffff");
 const MaxUint128 = BigNumber.from("0xffffffffffffffffffffffffffffffff");
 const Uint2pow255 = BigNumber.from("0x8000000000000000000000000000000000000000000000000000000000000000");
+const mainnetConst = mainnet();
 
 export const customConstants = {
     MaxUint16,
@@ -73,8 +73,24 @@ export async function impersonate(account: string): Promise<SignerWithAddress> {
     return await ethers.getSigner(account);
 }
 
+async function setBalance(account: string, token: string, slot: number){
+    const paddedSlot = ethers.utils.hexZeroPad(ethers.utils.hexlify(slot), 32);
+    const paddedKey = ethers.utils.hexZeroPad(account, 32);
+    const itemSlot = ethers.utils.keccak256(paddedKey + paddedSlot.slice(2));
+    const storageSlot = ethers.utils.hexZeroPad(itemSlot, 32);
+    await ethers.provider.send("hardhat_setStorageAt", [
+      token,
+      storageSlot,
+      ethers.utils.hexZeroPad( ethers.utils.parseUnits('100000000').toHexString(), 32 )
+    ]);
+}
+export async function getFunds(account: SignerWithAddress) {
+    await setBalance(account.address, mainnetConst.tokens.DAI.contract.address, 2);
+    await setBalance(account.address, mainnetConst.tokens.USDT.contract.address, 2);
+    await setBalance(account.address, mainnetConst.tokens.USDC.contract.delegator.address, 9);
+}
+
 export async function whitelistStrategy(address: string) {
-    const mainnetConst = mainnet();
     await IHarvestController__factory.connect(
         mainnetConst.harvest.Controller.address,
         await impersonate(mainnetConst.harvest.Governance.address)
@@ -322,6 +338,37 @@ export function convertToSlippageStruct(raw: any): SlippageStruct {
     };
     printSlippage(slippage);
     return slippage;
+}
+
+export type PathBalancerSwap = {
+    poolId: string;
+    indexIn: number;
+    indexOut: number;
+};
+
+export type PathBalancerAsset = {
+    asset: string;
+}
+
+export function getRewardSwapPathBalancer(swaps: PathBalancerSwap[], assets: PathBalancerAsset[]) {
+    const types = ["uint8"];
+    const values: any[] = [swaps.length];
+
+    swaps.forEach((p) => {
+        types.push("bytes32");
+        values.push(p.poolId);
+        types.push("uint8");
+        values.push(p.indexIn);
+        types.push("uint8");
+        values.push(p.indexOut);
+    });
+
+    assets.forEach((p) => {
+        types.push("address");
+        values.push(p.asset);
+    });
+    
+    return pack(types, values);
 }
 
 export function printSlippage(slippage: SlippageStruct) {
