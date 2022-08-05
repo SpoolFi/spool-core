@@ -175,7 +175,8 @@ export async function buildContext(): Promise<Context> {
         for (const asset of ["DAI", "USDC", "USDT"]) {
             const stratAddress = (await hre.deployments.get(`${strategyNames[stratKey]}Strategy${asset}`)).address;
             context.strategies[stratKey] = context.strategies[stratKey] || {};
-            context.strategies[stratKey][asset] = stratAddress;
+            context.strategies[stratKey][asset] = context.strategies[stratKey][asset] || [];
+            context.strategies[stratKey][asset].push(stratAddress);
             context.strategies["All"].push(stratAddress);
         }
     }

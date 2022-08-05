@@ -120,15 +120,15 @@ async function get3PoolSlippage(
     reallocationWithdrawnShares?: BigNumber[]
 ): Promise<Array<BigNumber[]>> {
     const strategies = [
-        context.strategies.ConvexMetapool.DAI,
-        context.strategies.ConvexMetapool.USDC,
-        context.strategies.ConvexMetapool.USDT,
-        context.strategies.Convex.DAI,
-        context.strategies.Convex.USDC,
-        context.strategies.Convex.USDT,
-        context.strategies.Curve.DAI,
-        context.strategies.Curve.USDC,
-        context.strategies.Curve.USDT,
+        context.strategies.ConvexMetapool.DAI[0],
+        context.strategies.ConvexMetapool.USDC[0],
+        context.strategies.ConvexMetapool.USDT[0],
+        context.strategies.Convex.DAI[0],
+        context.strategies.Convex.USDC[0],
+        context.strategies.Convex.USDT[0],
+        context.strategies.Curve.DAI[0],
+        context.strategies.Curve.USDC[0],
+        context.strategies.Curve.USDT[0],
     ];
 
     const reallocateSharesToWithdraw = strategies.map((s3pl) => {
@@ -162,9 +162,9 @@ async function getConvex4PoolSlippage(
     reallocationWithdrawnShares?: BigNumber[]
 ): Promise<Array<BigNumber[]>> {
     const strategies = [
-        context.strategies.Convex4pool.DAI,
-        context.strategies.Convex4pool.USDC,
-        context.strategies.Convex4pool.USDT,
+        context.strategies.Convex4pool.DAI[0],
+        context.strategies.Convex4pool.USDC[0],
+        context.strategies.Convex4pool.USDT[0],
     ];
 
     const reallocateSharesToWithdraw = strategies.map((s3pl) => {
@@ -405,17 +405,17 @@ async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: B
             }
             case "Idle": {
                 slippages.push(
-                    await getIdleSlippage(context.strategies.Idle.DAI, context, reallocationWithdrawnShares),
-                    await getIdleSlippage(context.strategies.Idle.USDC, context, reallocationWithdrawnShares),
-                    await getIdleSlippage(context.strategies.Idle.USDT, context, reallocationWithdrawnShares)
+                    await getIdleSlippage(context.strategies.Idle.DAI[0], context, reallocationWithdrawnShares),
+                    await getIdleSlippage(context.strategies.Idle.USDC[0], context, reallocationWithdrawnShares),
+                    await getIdleSlippage(context.strategies.Idle.USDT[0], context, reallocationWithdrawnShares)
                 );
                 continue;
             }
             case "Yearn": {
                 slippages.push(
-                    await getYearnSlippage(context.strategies.Yearn.DAI, context, reallocationWithdrawnShares),
-                    await getYearnSlippage(context.strategies.Yearn.USDC, context, reallocationWithdrawnShares),
-                    await getYearnSlippage(context.strategies.Yearn.USDT, context, reallocationWithdrawnShares)
+                    await getYearnSlippage(context.strategies.Yearn.DAI[0], context, reallocationWithdrawnShares),
+                    await getYearnSlippage(context.strategies.Yearn.USDC[0], context, reallocationWithdrawnShares),
+                    await getYearnSlippage(context.strategies.Yearn.USDT[0], context, reallocationWithdrawnShares)
                 );
                 continue;
             }
