@@ -161,10 +161,13 @@ export async function buildContext(): Promise<Context> {
     const strategyNames: any = {
         Aave: "Aave",
         Compound: "Compound",
+        Convex4pool: "ConvexShared4pool",
+        ConvexMetapool: "ConvexSharedMetapool",
         Convex: "ConvexShared",
         Curve: "Curve3pool",
         Harvest: "Harvest",
         Idle: "Idle",
+        Morpho: "Morpho",
         Yearn: "Yearn",
     };
 
@@ -172,7 +175,8 @@ export async function buildContext(): Promise<Context> {
         for (const asset of ["DAI", "USDC", "USDT"]) {
             const stratAddress = (await hre.deployments.get(`${strategyNames[stratKey]}Strategy${asset}`)).address;
             context.strategies[stratKey] = context.strategies[stratKey] || {};
-            context.strategies[stratKey][asset] = stratAddress;
+            context.strategies[stratKey][asset] = context.strategies[stratKey][asset] || [];
+            context.strategies[stratKey][asset].push(stratAddress);
             context.strategies["All"].push(stratAddress);
         }
     }
@@ -548,18 +552,18 @@ export function assertDoHardWorkSnapshotsPrimitive(
 
                 expect(underlyingDiff).to.beCloseTo(
                     depositAmount1,
-                    BasisPoints.Basis_3,
+                    BasisPoints.Basis_5,
                     "Bad user underlying value difference"
                 );
                 expect(activeDepositDiff).to.beCloseTo(
                     depositAmount1,
-                    BasisPoints.Basis_3,
+                    BasisPoints.Basis_5,
                     "Bad user active deposit difference"
                 );
 
                 expect(shareToUnderlying(sharesDiff)).to.beCloseTo(
                     depositAmount1,
-                    BasisPoints.Basis_3,
+                    BasisPoints.Basis_5,
                     "Bad user shares difference"
                 );
                 console.log(context.scope + `\t\t\t>> ASSERT: DEPOSITED OK`);
@@ -757,12 +761,12 @@ export function assertDoHardWorkSnapshotsPrimitive(
         if (vaultStratSum[stratAddress].shares.gte(shareTolerance)) {
             expect(vaultStratSum[stratAddress].shares).to.be.equalOrLowerCloseTo(
                 snapshot3.strategies[stratAddress].totalShares,
-                BasisPoints.Basis_01,
+                BasisPoints.Basis_1,
                 `Bad total strat vs total vault share amount. Strat: ${stratAddress}`
             );
             expect(vaultStratSum[stratAddress].balance).to.be.equalOrLowerCloseTo(
                 snapshot3.strategies[stratAddress].totalUnderlying,
-                BasisPoints.Basis_01,
+                BasisPoints.Basis_1,
                 `Bad total strat vs total vault underlying amount. Strat: ${stratAddress}`
             );
         } else {
@@ -818,16 +822,19 @@ function getVaultDecimals(vaultName: string) {
 }
 
 function getAssetDecimals(asset?: string) {
-    switch (asset) {
-        case "DAI":
-            return 18;
-        case "USDC":
-            return 6;
-        case "USDT":
-            return 6;
-        default:
-            throw new Error(`No asset found: ${asset}`);
+    if(contains(asset as string, "DAI"))
+        return 18;
+    if(contains(asset as string, "USDC"))
+        return 6;
+    if(contains(asset as string, "USDT"))
+        return 6;
+    else {
+        throw new Error(`No asset found: ${asset}`);
     }
+}
+
+function contains(str: string, check: string): boolean {
+    return str.indexOf(check) >= 0;
 }
 
 /**
@@ -1052,7 +1059,7 @@ export function assertVaultStrategyProportions(snapshot: Snapshot, context: Cont
 
                 expect(balanceProportion).to.beCloseTo(
                     strat.proportion,
-                    BasisPoints.Basis_50,
+                    BasisPoints.Basis_100,
                     "Bad vault strategy proportion"
                 );
             });
@@ -1434,6 +1441,14 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 slippages.push([0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
+            case "Convex4pool": {
+                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                continue;
+            }
+            case "ConvexMetapool": {
+                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                continue;
+            }
             case "Curve": {
                 slippages.push([0, ethers.constants.MaxUint256, 0]);
                 continue;
@@ -1444,6 +1459,10 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
             }
             case "Idle": {
                 slippages.push([0]);
+                continue;
+            }
+            case "Morpho": {
+                slippages.push([]);
                 continue;
             }
             case "Yearn": {

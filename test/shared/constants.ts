@@ -25,6 +25,7 @@ import {
     IVault__factory,
     IWETH__factory,
     IYearnTokenVault__factory,
+    IMorpho__factory,
 } from "../../build/types";
 import { BINANCE_WALLET } from "./utilities";
 
@@ -92,11 +93,14 @@ export interface ConvexPool {
 export interface Convex {
     Booster: Contract;
     _3pool: ConvexPool;
+    _sUSD: ConvexPool;
+    _alUSD: ConvexPool;
 }
 
 export type CurvePool = {
     pool: Address;
     lpToken: Address;
+    depositZap: Address;
     LiquidityGauge: Address;
     totalTokens: number;
 };
@@ -105,6 +109,8 @@ export interface Curve {
     CRV: Contract;
     Minter: Address;
     _3pool: CurvePool;
+    _sUSD: CurvePool;
+    _alUSD: CurvePool;
 }
 
 export interface HarvestContracts {
@@ -137,6 +143,10 @@ export interface Keeper {
 export interface Masterchef {
     Sushi: Contract;
     Masterchef: Contract;
+}
+
+export interface Morpho {
+    Proxy: Contract;
 }
 
 export interface StakeDAO {
@@ -176,6 +186,7 @@ export interface Network {
     harvest: Harvest;
     idle: Idle;
     masterchef: Masterchef;
+    morpho: Morpho;
     uniswap: Uniswap;
     yearn: Yearn;
     tokens: Tokens;
@@ -196,6 +207,8 @@ export interface Strategies {
     Aave: StrategyType;
     Compound: StrategyType;
     Convex: StrategyType;
+    Convex4pool: StrategyType;
+    ConvexMetapool: StrategyType;
     Curve: StrategyType;
     Harvest: StrategyType;
     Idle: StrategyType;
@@ -294,9 +307,15 @@ export const mainnet = function mainnet(): Mainnet {
 
     let convex = {
         Booster: { address: "0xF403C135812408BFbE8713b5A23a04b3D48AAE31", ABI: IBooster__factory.abi },
+        _sUSD: {
+            boosterPoolId: 4,
+        },
         _3pool: {
             boosterPoolId: 9,
         },
+        _alUSD: {
+            boosterPoolId: 36,
+        }
     };
 
     let curve = {
@@ -305,8 +324,23 @@ export const mainnet = function mainnet(): Mainnet {
         _3pool: {
             pool: { address: "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7" },
             lpToken: { address: "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490" },
+            depositZap: { address: "" },
             LiquidityGauge: { address: "0xbFcF63294aD7105dEa65aA58F8AE5BE2D9d0952A" },
             totalTokens: 3,
+        },
+        _sUSD: {
+            pool: { address: "0xFCBa3E75865d2d561BE8D220616520c171F12851" },
+            lpToken: { address: "0xC25a3A3b969415c80451098fa907EC722572917F" },
+            depositZap: { address: "" },
+            LiquidityGauge: { address: "0xA90996896660DEcC6E997655E065b23788857849" },
+            totalTokens: 4,
+        },
+        _alUSD: {
+            pool: { address: "0x43b4FdFD4Ff969587185cDB6f0BD875c5Fc83f8c" },
+            lpToken: { address: "0x43b4FdFD4Ff969587185cDB6f0BD875c5Fc83f8c" },
+            depositZap: { address: "0xA79828DF1850E8a3A3064576f380D90aECDD3359" },
+            LiquidityGauge: { address: "0x9582C4ADACB3BCE56Fea3e590F05c3ca2fb9C477" },
+            totalTokens: 4,
         },
     };
 
@@ -338,6 +372,10 @@ export const mainnet = function mainnet(): Mainnet {
     let masterchef = {
         Sushi: { address: "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2", ABI: ISUSHI__factory.abi },
         Masterchef: { address: "0xbD17B1ce622d73bD438b9E658acA5996dc394b0d", ABI: IMasterChef__factory.abi },
+    };
+
+    let morpho = {
+        Proxy: { address: "0x8888882f8f843896699869179fB6E4f7e3B58888", ABI: IMorpho__factory.abi },
     };
 
     let uniswap = {
@@ -425,6 +463,7 @@ export const mainnet = function mainnet(): Mainnet {
         harvest,
         idle,
         masterchef,
+        morpho,
         uniswap,
         yearn,
         tokens

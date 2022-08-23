@@ -77,7 +77,7 @@ contract RewardsHelper is BaseStorage, SwapHelper {
         rewardTokens[0] = address(strategy.rewardToken());
         rewardTokens[1] = address(strategy.cvxToken());
         for (uint256 i = 0; i < extraRewardCount; i++) {
-            rewardTokens[i + BASE_REWARDS_COUNT] = address(crvRewards.extraReward(i));
+            rewardTokens[i + BASE_REWARDS_COUNT] = address(IBaseRewardPool(crvRewards.extraRewards(i)).rewardToken());
         }
         rewardData = new RewardData[](rewardTokens.length);
 
