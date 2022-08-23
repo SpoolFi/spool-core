@@ -17,7 +17,7 @@ interface IBaseRewardPool {
 
     function extraRewardsLength() external view returns (uint256);
 
-    function extraReward(uint256 i) external view returns (IERC20);
+    function extraRewards(uint256 i) external view returns (address);
 
     function balanceOf(address account) external view returns (uint256);
 
