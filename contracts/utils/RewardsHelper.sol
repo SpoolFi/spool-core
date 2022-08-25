@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.11;
 
-import "hardhat/console.sol";
 import "../external/@openzeppelin/token/ERC20/IERC20.sol";
 import "../interfaces/ISwapData.sol";
 import "../shared/BaseStorage.sol";

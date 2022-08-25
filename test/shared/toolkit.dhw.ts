@@ -1,7 +1,7 @@
-import { Context } from "../../scripts/infrastructure";
+import { Context, mainnetConst } from "../../scripts/infrastructure";
 import { BigNumber, constants, ContractTransaction } from "ethers";
 import { pack } from "@ethersproject/solidity";
-import { encodeDepositSlippage, getRewardSwapPathV3Direct } from "./utilities";
+import { encodeDepositSlippage, getRewardSwapPathBalancer, PathBalancerAsset, PathBalancerSwap } from "./utilities";
 import { ethers } from "hardhat";
 import { getReallocationSlippages, getSlippages } from "./dhwUtils";
 
@@ -75,6 +75,47 @@ const swapSlippages = [
     { slippage: 0, path: swapPath_IDLE },
 ];
 
+const baseSwap : PathBalancerSwap = 
+    {
+        poolId: '0x5122e01d819e58bb2e22528c0d68d310f0aa6fd7000200000000000000000163', // 80 NOTE - 20 WETH
+        indexIn: 0,
+        indexOut: 1
+    }
+
+
+const swapDAI : PathBalancerSwap[] = [
+    baseSwap,
+    {
+        poolId: '0x0b09dea16768f0799065c475be02919503cb2a3500020000000000000000001a', // 40 DAI - 60 WETH
+        indexIn: 1,
+        indexOut: 2
+    }
+]
+
+const swapUSDC : PathBalancerSwap[] = [ 
+    baseSwap,
+    {
+        poolId: '0x96646936b91d6b9d7d0c47c496afbf3d6ec7b6f8000200000000000000000019', // 50 USDC - 50 WETH
+        indexIn: 1,
+        indexOut: 2
+    }
+]
+
+const assetsDAI : PathBalancerAsset[] = [
+    { asset: mainnetConst.notional.NOTE.address, },
+    { asset: mainnetConst.tokens.WETH.contract.address, },
+    { asset: mainnetConst.tokens.DAI.contract.address }
+]
+
+const assetsUSDC : PathBalancerAsset[] = [
+    { asset: mainnetConst.notional.NOTE.address, },
+    { asset: mainnetConst.tokens.WETH.contract.address, },
+    { asset: mainnetConst.tokens.USDC.contract.delegator.address }
+]
+
+const swapPathBalancerNOTEDAI = getRewardSwapPathBalancer(swapDAI, assetsDAI);
+const swapPathBalancerNOTEUSDC = getRewardSwapPathBalancer(swapUSDC, assetsUSDC);
+
 function getRewardSlippages(strategies: any) {
     return Object.keys(strategies)
         .filter((s) => s != "All")
@@ -141,6 +182,12 @@ function getRewardSlippage(stratName: string) {
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] }
             ]
         }
+        case "Notional": {
+            return [ 
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathBalancerNOTEDAI }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathBalancerNOTEUSDC }] },
+            ]
+        }
         default: {
             return [ 
                 { doClaim: false, swapData: [] }, 
@@ -192,6 +239,9 @@ function getDhwSlippage(stratName: string, type: ActionType) {
         }
         case "Morpho": {
             return [];
+        }
+        case "Notional": {
+            return type == "deposit" ? [depositSlippage] : [0];
         }
         case "Yearn": {
             return type == "deposit" ? [depositSlippage] : [0];

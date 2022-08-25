@@ -44,7 +44,7 @@ import {
 
 import { Fixture } from "ethereum-waffle";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { createAndSupply, impersonate, isForking, parseUnits } from "./utilities";
+import { createAndSupply, impersonate, isForking, parseUnits, getFunds } from "./utilities";
 
 import { mainnet } from "./constants";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -186,22 +186,7 @@ export async function tokensFixture(administrator: SignerWithAddress): Promise<T
     const CHEF = await new MockToken__factory().connect(administrator).deploy("CHEF", "Chef Reward", 18);
 
     if (isForking()) {
-        await DAI.connect(await impersonate(constants.tokens.DAI.holder)).transfer(
-            administrator.address,
-            (await DAI.balanceOf(constants.tokens.DAI.holder))
-        );
-        await USDC.connect(await impersonate(constants.tokens.USDC.holder)).transfer(
-            administrator.address,
-            (await USDC.balanceOf(constants.tokens.USDC.holder))
-        );
-        await USDT.connect(await impersonate(constants.tokens.USDT.holder)).transfer(
-            administrator.address,
-            (await USDT.balanceOf(constants.tokens.USDT.holder))
-        );
-        await WETH.connect(await impersonate(constants.tokens.WETH.holder)).transfer(
-            administrator.address,
-            (await WETH.balanceOf(constants.tokens.WETH.holder))
-        );
+        await getFunds(administrator);
     }
 
     return { DAI, USDC, USDT, WETH, CHEF };
