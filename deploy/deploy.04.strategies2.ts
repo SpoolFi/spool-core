@@ -7,6 +7,7 @@ import {
     DeployConvex4pool,
     DeployConvexMetapool,
     DeployMorpho,
+    DeployNotional,
     loadContracts,
     loadSpoolInfra,
     tokensFixture,
@@ -28,6 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const tokens = await tokensFixture(accounts.administrator, hre);
 
     console.log("Deploying all strategies..");
+    let Notional = await DeployNotional(accounts, tokens, spoolFixture, hre);
     let Compound = await DeployCompound(accounts, tokens, spoolFixture, hre);
     let Convex = await DeployConvex(accounts, tokens, spoolFixture, hre);
     let Convex4pool = await DeployConvex4pool(accounts, tokens, spoolFixture, hre);
@@ -35,6 +37,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     let Morpho = await DeployMorpho(accounts, tokens, spoolFixture, hre);
 
     let implementation = {
+        Notional,
         Compound,
         Convex,
         Convex4pool,

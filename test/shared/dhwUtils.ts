@@ -36,6 +36,7 @@ const percents = {
     "3pool": [30, 30, 3],
     "4pool": [150, 150, 3],
     Idle: [50, 50],
+    Notional: [50, 50],
     Yearn: [30, 30],
 };
 // let spoolContracts: any;
@@ -120,19 +121,19 @@ async function get3PoolSlippage(
     reallocationWithdrawnShares?: BigNumber[]
 ): Promise<Array<BigNumber[]>> {
     const strategies = [
-        context.strategies.ConvexMetapool.DAI[0],
-        context.strategies.ConvexMetapool.USDC[0],
-        context.strategies.ConvexMetapool.USDT[0],
-        context.strategies.Convex.DAI[0],
-        context.strategies.Convex.USDC[0],
-        context.strategies.Convex.USDT[0],
-        context.strategies.Curve.DAI[0],
-        context.strategies.Curve.USDC[0],
-        context.strategies.Curve.USDT[0],
+        context.strategies.ConvexMetapool.DAI,
+        context.strategies.ConvexMetapool.USDC,
+        context.strategies.ConvexMetapool.USDT,
+        context.strategies.Convex.DAI,
+        context.strategies.Convex.USDC,
+        context.strategies.Convex.USDT,
+        context.strategies.Curve.DAI,
+        context.strategies.Curve.USDC,
+        context.strategies.Curve.USDT,
     ];
 
     const reallocateSharesToWithdraw = strategies.map((s3pl) => {
-        return findRealocationShares(s3pl, context, reallocationWithdrawnShares);
+        return findRealocationShares(s3pl[0], context, reallocationWithdrawnShares);
     });
 
     let result = await strategyHelperCall("get3PoolSlippage", [strategies, reallocateSharesToWithdraw], context);
@@ -162,13 +163,13 @@ async function getConvex4PoolSlippage(
     reallocationWithdrawnShares?: BigNumber[]
 ): Promise<Array<BigNumber[]>> {
     const strategies = [
-        context.strategies.Convex4pool.DAI[0],
-        context.strategies.Convex4pool.USDC[0],
-        context.strategies.Convex4pool.USDT[0],
+        context.strategies.Convex4pool.DAI,
+        context.strategies.Convex4pool.USDC,
+        context.strategies.Convex4pool.USDT,
     ];
 
     const reallocateSharesToWithdraw = strategies.map((s3pl) => {
-        return findRealocationShares(s3pl, context, reallocationWithdrawnShares);
+        return findRealocationShares(s3pl[0], context, reallocationWithdrawnShares);
     });
 
     let result = await strategyHelperCall("getConvex4PoolSlippage", [strategies, reallocateSharesToWithdraw], context);
@@ -204,6 +205,18 @@ async function getIdleSlippage(
     const result = await strategyHelperCall("getIdleSlippage", [strategy, reallocateSharesToWithdraw], context);
     const slippage = convertToSlippageStruct(result);
     return [handleSlippageResult(slippage, percents["Idle"])];
+}
+
+async function getNotionalSlippage(
+    strategy: string,
+    context: Context,
+    reallocationWithdrawnShares?: BigNumber[]
+): Promise<BigNumber[]> {
+    const reallocateSharesToWithdraw = findRealocationShares(strategy, context, reallocationWithdrawnShares);
+
+    const result = await strategyHelperCall("getNotionalSlippage", [strategy, reallocateSharesToWithdraw], context);
+    const slippage = convertToSlippageStruct(result);
+    return [handleSlippageResult(slippage, percents["Notional"])];
 }
 
 async function getYearnSlippage(
@@ -403,6 +416,13 @@ async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: B
                 slippages.push([], [], []);
                 continue;
             }
+            case "Notional": {
+                slippages.push(
+                    await getNotionalSlippage(context.strategies.Notional.DAI[0], context, reallocationWithdrawnShares),
+                    await getNotionalSlippage(context.strategies.Notional.USDC[0], context, reallocationWithdrawnShares),
+                );
+                continue;
+            }
             case "Idle": {
                 slippages.push(
                     await getIdleSlippage(context.strategies.Idle.DAI[0], context, reallocationWithdrawnShares),
@@ -475,6 +495,11 @@ function getDhwDepositSlippage(context: Context) {
             }
             case "Morpho": {
                 slippages.push([], [], []);
+                continue;
+            }
+            case "Notional": {
+                slippages.push([depositSlippage]);
+                slippages.push([depositSlippage]);
                 continue;
             }
             case "Yearn": {

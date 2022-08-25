@@ -159,23 +159,23 @@ export async function buildContext(): Promise<Context> {
     };
 
     const strategyNames: any = {
-        Aave: "Aave",
-        Compound: "Compound",
-        Convex4pool: "ConvexShared4pool",
-        ConvexMetapool: "ConvexSharedMetapool",
-        Convex: "ConvexShared",
-        Curve: "Curve3pool",
-        Harvest: "Harvest",
-        Idle: "Idle",
-        Morpho: "Morpho",
-        Yearn: "Yearn",
+        Aave: { name: "Aave", assets: ["DAI", "USDC", "USDT"] },
+        Notional: { name: "Notional", assets: ["DAI", "USDC"] },
+        Compound: { name: "Compound", assets: ["DAI", "USDC", "USDT"] },
+        Convex4pool: { name: "ConvexShared4pool", assets: ["DAI", "USDC", "USDT"] },
+        ConvexMetapool: { name: "ConvexSharedMetapool", assets: ["DAI", "USDC", "USDT"] },
+        Convex: { name: "ConvexShared", assets: ["DAI", "USDC", "USDT"] },
+        Curve: { name: "Curve3pool", assets: ["DAI", "USDC", "USDT"] },
+        Harvest: { name: "Harvest", assets: ["DAI", "USDC", "USDT"] },
+        Idle: { name: "Idle", assets: ["DAI", "USDC", "USDT"] },
+        Morpho: { name: "Morpho", assets: ["DAI", "USDC", "USDT"] },
+        Yearn: { name: "Yearn", assets: ["DAI", "USDC", "USDT"] },
     };
 
     for (const stratKey of Object.keys(strategyNames)) {
-        for (const asset of ["DAI", "USDC", "USDT"]) {
-            const stratAddress = (await hre.deployments.get(`${strategyNames[stratKey]}Strategy${asset}`)).address;
-            context.strategies[stratKey] = context.strategies[stratKey] || {};
-            context.strategies[stratKey][asset] = context.strategies[stratKey][asset] || [];
+        for (const asset of strategyNames[stratKey].assets) {
+            const stratAddress = (await hre.deployments.get(`${strategyNames[stratKey].name}Strategy${asset}`)).address;
+            context.strategies[stratKey] = context.strategies[stratKey] || [];
             context.strategies[stratKey][asset].push(stratAddress);
             context.strategies["All"].push(stratAddress);
         }
@@ -279,25 +279,26 @@ export async function doTransferAssetsToWallets(wallets: SignerWithAddress[], va
 
 export async function doTransferAssetsToUser(userAddress: string, value: string) {
     const constants = mainnet();
+    const accounts = await accountsFixture(hre);
 
     await transferFunds(
         userAddress,
         constants.tokens.DAI.contract.address,
-        constants.tokens.DAI.holder,
+        accounts.administrator.address,
         value,
         constants.tokens.DAI.units
     );
     await transferFunds(
         userAddress,
         constants.tokens.USDC.contract.delegator.address,
-        constants.tokens.USDC.holder,
+        accounts.administrator.address,
         value,
         constants.tokens.USDC.units
     );
     await transferFunds(
         userAddress,
         constants.tokens.USDT.contract.address,
-        constants.tokens.USDT.holder,
+        accounts.administrator.address,
         value,
         constants.tokens.USDT.units
     );
@@ -552,18 +553,18 @@ export function assertDoHardWorkSnapshotsPrimitive(
 
                 expect(underlyingDiff).to.beCloseTo(
                     depositAmount1,
-                    BasisPoints.Basis_5,
+                    BasisPoints.Basis_10,
                     "Bad user underlying value difference"
                 );
                 expect(activeDepositDiff).to.beCloseTo(
                     depositAmount1,
-                    BasisPoints.Basis_5,
+                    BasisPoints.Basis_10,
                     "Bad user active deposit difference"
                 );
 
                 expect(shareToUnderlying(sharesDiff)).to.beCloseTo(
                     depositAmount1,
-                    BasisPoints.Basis_5,
+                    BasisPoints.Basis_10,
                     "Bad user shares difference"
                 );
                 console.log(context.scope + `\t\t\t>> ASSERT: DEPOSITED OK`);
@@ -595,19 +596,19 @@ export function assertDoHardWorkSnapshotsPrimitive(
 
                 expect(activeDepositDiff).to.beCloseTo(
                     withdrawAmount,
-                    BasisPoints.Basis_10,
+                    BasisPoints.Basis_50,
                     "Bad user active deposit difference"
                 );
 
                 expect(sharesDiff).to.be.equal(withdrawShares1, "Bad user shares difference");
-                expect(owedDiff).to.beCloseTo(withdrawAmount, BasisPoints.Basis_5, "Bad user owed difference");
+                expect(owedDiff).to.beCloseTo(withdrawAmount, BasisPoints.Basis_50, "Bad user owed difference");
                 console.log(context.scope + `\t\t\t>> ASSERT: WITHDRAWN OK`);
             }
 
             if (depositAmount1.isZero() && withdrawShares1.isZero()) {
                 expect(BigNumber.from(userVaultAfter.userTotalUnderlying)).to.beCloseTo(
                     userVaultBefore.userTotalUnderlying,
-                    BasisPoints.Basis_5,
+                    BasisPoints.Basis_50,
                     "Bad user underlying value difference"
                 );
                 expect(BigNumber.from(userVaultAfter.activeDeposit)).to.be.equal(
@@ -679,12 +680,12 @@ export function assertDoHardWorkSnapshotsPrimitive(
         if (depositAmount1.isZero() && withdrawShares1.isZero()) {
             expect(BigNumber.from(vaultAfter.totalUnderlying)).to.beCloseTo(
                 vaultBefore.totalUnderlying,
-                BasisPoints.Basis_5,
+                BasisPoints.Basis_50,
                 "Bad vault underlying value difference after reallocation"
             );
             expect(BigNumber.from(vaultAfter.totalShares)).to.beCloseTo(
                 vaultBefore.totalShares,
-                BasisPoints.Basis_5,
+                BasisPoints.Basis_50,
                 "Bad vault share difference after reallocation"
             );
         } else {
@@ -929,7 +930,7 @@ export function assertClaimSnapshotsPrimitive(
 
                 expect(balances.owed[assetName]).to.beCloseTo(
                     userErc20Diff,
-                    BasisPoints.Basis_5,
+                    BasisPoints.Basis_10,
                     "Bad user claim owed amount"
                 );
             }
@@ -1463,6 +1464,10 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
             }
             case "Morpho": {
                 slippages.push([]);
+                continue;
+            }
+            case "Notional": {
+                slippages.push([0]);
                 continue;
             }
             case "Yearn": {
