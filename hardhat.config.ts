@@ -77,7 +77,7 @@ task("test-fork", "Runs mocha tests on a fork")
                 ...glob.sync(path.join(hre.config.paths.tests, "strategies/unitTests", "/*.spec.ts")),
                 ...glob.sync(path.join(hre.config.paths.tests, "/*.spec.ts")),
             ];
-            await hre.run("coverage", { testFiles: files });
+            await hre.run("test", { testFiles: files });
         }
     });
 
