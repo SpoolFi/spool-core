@@ -100,8 +100,9 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
 
     /* ========== MUTATIVE FUNCTIONS ========== */
 
-    /*
+    /**
      * @notice Set mutable initial values
+     *
      * @param _ecosystemFee Ecosystem fee
      * @param _treasuryFee Treasury fee
      * @param _ecosystemFeeCollector Ecosystem fee collector address
@@ -158,6 +159,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
     /**
      * @notice Collect ecosystem fees
      *
+     * @dev
      * transfers any fees collected for the ecosystem fee collecter to them.
      * callable by anyone, but only transfers to ecosystem fee collector address.
      * see NOTE in {collectFees} for more details on internal logic.
@@ -187,6 +189,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
     /**
      * @notice Collect treasury fees
      *
+     * @dev
      * transfers any fees collected for the treasury fee collecter to them.
      * see NOTE in {collectFees} for more details on internal logic.
      * Requirements:
@@ -216,6 +219,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
 
     /**
      * @notice Pay vault fees to ecosystem, treasury, risk provider and vault owner.
+     *
      * @dev
      * Returns total fee size, that is later transfered by vault to this contract.
      *
@@ -267,7 +271,7 @@ contract FeeHandler is IFeeHandler, SpoolOwnable, BaseConstants {
         // vault owner
         uint128 vaultFeeCollected = _calculateFee(profit, vaultFee);
         if (vaultFeeCollected > 0) {
-            collectedFees[vaultOwner][underlying] += riskProviderColected;
+            collectedFees[vaultOwner][underlying] += vaultFeeCollected;
             feesPaid += vaultFeeCollected;
         }
 
