@@ -31,9 +31,6 @@ abstract contract SwapHelperBalancer {
     /// @dev The length of the bytes encoded poolID and indexes size
     uint256 private constant SWAPS_SIZE = POOLID_SIZE + INDEXES_SIZE;
 
-    /// @dev The length of the bytes encoded maximum pool size
-    uint256 private constant MAX_SWAP_SIZE = MAX_SWAPS * SWAPS_SIZE;
-
     /// @notice Balancer master vault
     IBalancerVault private immutable vault = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
