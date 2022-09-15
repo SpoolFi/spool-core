@@ -122,7 +122,7 @@ contract NotionalStrategy is ClaimFullSingleRewardStrategy {
 
         uint256 underlyingWithdrawn = strategyHelper.withdraw(nTokenWithdraw);
 
-        require(underlyingWithdrawn >= slippage, "NotionalStrategy::_deposit: Insufficient withdrawn amount");
+        require(underlyingWithdrawn >= slippage, "NotionalStrategy::_withdraw: Insufficient withdrawn amount");
 
         emit Slippage(self, underlying, false, shares, underlyingWithdrawn);
 
