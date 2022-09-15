@@ -4,6 +4,7 @@ pragma solidity 0.8.11;
 
 import "../../interfaces/INotionalStrategyContractHelper.sol";
 import "../../external/@openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import "../../external/@openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import "../ClaimFullSingleRewardStrategy.sol";
 import "../../external/interfaces/notional/INotional.sol";
 import "../../external/interfaces/notional/INToken.sol";
@@ -13,6 +14,10 @@ import "../../external/interfaces/notional/INToken.sol";
  */
 contract NotionalStrategy is ClaimFullSingleRewardStrategy {
     using SafeERC20 for IERC20;
+
+    /* ========== CONSTANTS ========== */
+
+    uint256 private constant NTOKEN_DECIMALS_MULTIPLIER = 10**8;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -27,6 +32,8 @@ contract NotionalStrategy is ClaimFullSingleRewardStrategy {
 
     INotionalStrategyContractHelper public immutable strategyHelper;
 
+    uint256 private immutable underlyingDecimalsMultiplier;
+
     /* ========== CONSTRUCTOR ========== */
 
     /**
@@ -39,7 +46,7 @@ contract NotionalStrategy is ClaimFullSingleRewardStrategy {
         IERC20 _note,
         INToken _nToken,
         uint16 _id,
-        IERC20 _underlying,
+        IERC20Metadata _underlying,
         INotionalStrategyContractHelper _strategyHelper
     ) BaseStrategy(_underlying, 1, 0, 0, 0, false, false, address(0)) ClaimFullSingleRewardStrategy(_note) {
         require(address(_notional) != address(0), "NotionalStrategy::constructor: Notional address cannot be 0");
@@ -59,6 +66,8 @@ contract NotionalStrategy is ClaimFullSingleRewardStrategy {
         nToken = _nToken;
         id = _id;
         strategyHelper = _strategyHelper;
+
+        underlyingDecimalsMultiplier = 10**_underlying.decimals();
     }
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
@@ -140,6 +149,7 @@ contract NotionalStrategy is ClaimFullSingleRewardStrategy {
 
     function _getNTokenValue(uint256 nTokenAmount) private view returns (uint256) {
         if (nTokenAmount == 0) return 0;
-        return uint256(notional.convertCashBalanceToExternal(id, int256(nTokenAmount), true));
+        return (nTokenAmount * uint256(nToken.getPresentValueUnderlyingDenominated()) / nToken.totalSupply()) * 
+            underlyingDecimalsMultiplier / NTOKEN_DECIMALS_MULTIPLIER;
     }
 }
