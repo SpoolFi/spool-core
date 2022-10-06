@@ -2,6 +2,7 @@ import hre, { ethers } from "hardhat";
 import { BigNumber, BigNumberish, ContractTransaction } from "ethers";
 import {
     IHarvestController__factory,
+    IWETH__factory,
     UniswapV2Factory,
     UniswapV2Pair,
     UniswapV2Pair__factory,
@@ -15,6 +16,7 @@ import { BaseContract } from "@ethersproject/contracts";
 import { pack } from "@ethersproject/solidity";
 import { mainnet } from "./constants";
 import { SlippageStruct } from "../../build/types/SlippagesHelper";
+import { parseEther } from "ethers/lib/utils";
 
 export { BasisPoints } from "./chaiExtension/chaiExtAssertions";
 export { VaultDetailsStruct };
@@ -88,6 +90,12 @@ export async function getFunds(account: SignerWithAddress) {
     await setBalance(account.address, mainnetConst.tokens.DAI.contract.address, 2);
     await setBalance(account.address, mainnetConst.tokens.USDT.contract.address, 2);
     await setBalance(account.address, mainnetConst.tokens.USDC.contract.delegator.address, 9);
+
+    // set WETH balance
+    await ethers.provider.send("hardhat_setBalance", [account.address, parseEther("1000000").toHexString()]);
+
+    const weth = IWETH__factory.connect(mainnetConst.tokens.WETH.contract.address,  account);
+    await weth.deposit({value: parseEther("100000")});
 }
 
 export async function whitelistStrategy(address: string) {
