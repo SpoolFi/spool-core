@@ -2,25 +2,27 @@
     "DAI": {
         "LOW_RISK": {
             "Aave": { "risk": "2.9/10", "alloc": 0.20606 },
-            "Compound": { "risk": "4.0/10", "alloc": 0.07528 },
+            "Compound": { "risk": "4.0/10", "alloc": 0.02528 },
             "Convex": { "risk": "3.1/10", "alloc": 0.03845 },
             "Convex4pool": { "risk": "3.1/10", "alloc": 0.03 },
             "ConvexMetapool": { "risk": "3.1/10", "alloc": 0.03 },
             "Curve": { "risk": "0.7/10", "alloc": 0.19609 },
             "Harvest": { "risk": "5.5/10", "alloc": 0.10452 },
             "Morpho": { "risk": "4.0/10", "alloc": 0.08 },
+            "Notional": { "risk": "0/10", "alloc": 0.05 },
             "Yearn": { "risk": "4.6/10", "alloc": 0.12984 },
             "Idle": { "risk": "5.3/10", "alloc": 0.10975 }
         },
         "HIGH_RISK": {
             "Aave": { "risk": "2.9/10", "alloc": 0.11697 },
-            "Compound": { "risk": "4.0/10", "alloc": 0.07522 },
+            "Compound": { "risk": "4.0/10", "alloc": 0.02522 },
             "Convex": { "risk": "3.1/10", "alloc": 0.02120 },
             "Convex4pool": { "risk": "3.1/10", "alloc": 0.02 },
             "ConvexMetapool": { "risk": "3.1/10", "alloc": 0.02 },
             "Curve": { "risk": "0.7/10", "alloc": 0.03073 },
             "Harvest": { "risk": "5.5/10", "alloc": 0.23061 },
             "Morpho": { "risk": "4.0/10", "alloc": 0.08 },
+            "Notional": { "risk": "0/10", "alloc": 0.05 },
             "Yearn": { "risk": "4.6/10", "alloc": 0.18564 },
             "Idle": { "risk": "5.3/10", "alloc": 0.21962 }
         }
@@ -28,25 +30,27 @@
     "USDC": {
         "LOW_RISK": {
             "Aave": { "risk": "3.2/10", "alloc": 0.19261 },
-            "Compound": { "risk": "3.8/10", "alloc": 0.08 },
+            "Compound": { "risk": "3.8/10", "alloc": 0.02 },
             "Convex": { "risk": "3.1/10", "alloc": 0.03884 },
             "Convex4pool": { "risk": "3.1/10", "alloc": 0.03 },
             "ConvexMetapool": { "risk": "3.1/10", "alloc": 0.03 },
             "Curve": { "risk": "0.7/10", "alloc": 0.19654 },
             "Harvest": { "risk": "5.6/10", "alloc": 0.10155 },
             "Morpho": { "risk": "3.8/10", "alloc": 0.08407 },
+            "Notional": { "risk": "0/10", "alloc": 0.06 },
             "Yearn": { "risk": "4.4/10", "alloc": 0.13850 },
             "Idle": { "risk": "5.4/10", "alloc": 0.10789 }
         },
         "HIGH_RISK": {
             "Aave": { "risk": "3.2/10", "alloc": 0.12533 },
-            "Compound": { "risk": "3.8/10", "alloc": 0.07 },
+            "Compound": { "risk": "3.8/10", "alloc": 0.02 },
             "Convex": { "risk": "3.1/10", "alloc": 0.02106 },
             "Convex4pool": { "risk": "3.1/10", "alloc": 0.02 },
             "ConvexMetapool": { "risk": "3.1/10", "alloc": 0.02 },
             "Curve": { "risk": "0.7/10", "alloc": 0.03071 },
             "Harvest": { "risk": "5.6/10", "alloc": 0.23772 },
             "Morpho": { "risk": "3.8/10", "alloc": 0.07714 },
+            "Notional": { "risk": "0/10", "alloc": 0.05 },
             "Yearn": { "risk": "4.4/10", "alloc": 0.17430 },
             "Idle": { "risk": "5.4/10", "alloc": 0.22375 }
         }
@@ -61,6 +65,7 @@
             "Curve": { "risk":  "0.7/10", "alloc": 0.19942 },
             "Harvest": { "risk":  "5.8/10", "alloc": 0.10426 },
             "Morpho": { "risk":  "4.4/10", "alloc": 0.07633 },
+            "Notional": { "risk": "0/10", "alloc": 0 },
             "Yearn": { "risk":  "4.3/10", "alloc": 0.15034 },
             "Idle": { "risk":  "5.7/10", "alloc": 0.10855 }
         },
@@ -73,6 +78,7 @@
             "Curve": { "risk": "0.7/10", "alloc": 0.03036 },
             "Harvest": { "risk": "5.8/10", "alloc": 0.23230 },
             "Morpho": { "risk": "4.4/10", "alloc": 0.08552 },
+            "Notional": { "risk": "0/10", "alloc": 0 },
             "Yearn": { "risk": "4.3/10", "alloc": 0.16110 },
             "Idle": { "risk": "5.7/10", "alloc": 0.22312 }
         }
