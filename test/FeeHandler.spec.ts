@@ -108,7 +108,7 @@ describe("Fee Handler unit tests", () => {
 
             // vault owner
             const vaultOwnerFees = await feeHandler.collectedFees(vaultOwner.address, tokenAddress);
-            const expectedVaultOwnerFees = getPercentageTwoDecimal(profit, riskProviderFee);
+            const expectedVaultOwnerFees = getPercentageTwoDecimal(profit, vaultFee);
             expect(vaultOwnerFees).to.equal(expectedVaultOwnerFees);
         });
 
@@ -180,7 +180,7 @@ describe("Fee Handler unit tests", () => {
             const vaultOwnerDaiBalanceAfter = await tokens.DAI.balanceOf(vaultOwner.address);
             const actualVaultOwnerFeesCollected = vaultOwnerDaiBalanceAfter.sub(vaultOwnerDaiBalancebefore);
 
-            const expectedVaultOwnerFees = getPercentageTwoDecimal(profit, riskProviderFee);
+            const expectedVaultOwnerFees = getPercentageTwoDecimal(profit, vaultFee);
             expect(actualVaultOwnerFeesCollected).to.be.closeTo(expectedVaultOwnerFees, 10);
         });
 
