@@ -23,7 +23,7 @@ import {
     Vault__factory,
 } from "../build/types";
 
-import { BarnBridgeMultiContracts, HarvestContracts, mainnet, Tokens } from "../test/shared/constants";
+import { BarnBridgeMultiContracts, HarvestContracts, mainnet, nToken, Tokens } from "../test/shared/constants";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { getContractAddress } from "ethers/lib/utils";
 import { StrategiesContracts, UnderlyingContracts } from "./data/interface";
@@ -67,6 +67,11 @@ type IdleStratSetup = {
 type MorphoStratSetup = {
     name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
     cToken: string;
+};
+
+type NotionalStratSetup = {
+    name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
+    nToken: nToken;
 };
 
 type YearnStratSetup = {
@@ -146,6 +151,17 @@ export const Morpho: MorphoStratSetup[] = [
     {
         name: "USDT",
         cToken: mainnetConst.compound.cUSDT.delegator.address,
+    },
+];
+
+export const Notional: NotionalStratSetup[] = [
+    {
+        name: "DAI",
+        nToken: mainnetConst.notional.nDAI,
+    },
+    {
+        name: "USDC",
+        nToken: mainnetConst.notional.nUSDC,
     },
 ];
 
@@ -868,6 +884,63 @@ export async function DeployMorpho(
     return implementation;
 }
 
+export async function DeployNotional(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    spool: SpoolFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    for (let { name, nToken } of Notional) {
+        let token: IERC20 = tokens[name];
+        console.log("Deploying Notional Strategy for token: " + name + "...");
+
+        let args = [
+            mainnetConst.notional.Proxy.address,
+            mainnetConst.notional.NOTE.address,
+            nToken.contract.address,
+            nToken.id,
+            token.address,
+            spool.spool.address,
+        ];
+
+        const compoundHelper = await deploy(hre, accounts, `NotionalContractHelper${name}`, {
+            contract: "NotionalContractHelper",
+            args,
+        });
+
+        const compoundHelperProxy = await deployProxy(
+            hre,
+            accounts,
+            `NotionalContractHelper${name}`,
+            compoundHelper.address,
+            spool.proxyAdmin.address
+        );
+
+        await writeContracts(hre, {
+            compoundHelper: {
+                proxy: compoundHelperProxy.address,
+                implementation: compoundHelper.address,
+            },
+        });
+
+        args = [
+            mainnetConst.notional.Proxy.address,
+            mainnetConst.notional.NOTE.address,
+            nToken.contract.address,
+            nToken.id,
+            token.address,
+            compoundHelperProxy.address,
+        ];
+
+        const strat = await deploy(hre, accounts, `NotionalStrategy${name}`, { contract: "NotionalStrategy", args });
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
 export async function DeployYearn(
     accounts: AccountsFixture,
     tokens: TokensFixture,
@@ -906,7 +979,7 @@ export async function deployVaults(
     const vaultData: any = JSON.parse((await readFile("scripts/data/allocations.json")).toString());
 
     const parseAlloc = (value: number) => Math.round(value * 10_000);
-    const strategyKeys = ["Aave", "Compound", "Convex", "Convex4pool", "ConvexMetapool", "Curve", "Harvest", "Morpho", "Yearn", "Idle"];
+    const strategyKeys = ["Aave", "Notional", "Compound", "Convex", "Convex4pool", "ConvexMetapool", "Curve", "Harvest", "Morpho", "Yearn", "Idle"];
 
     const vaults: any = {};
     for (const assetKey of assets) {

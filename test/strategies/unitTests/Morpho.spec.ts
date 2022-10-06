@@ -62,7 +62,7 @@ const strategyAssets: MorphoStratSetup[] = [
     },
 ];
 
-describe.only("Strategies Unit Test: Morpho", () => {
+describe("Strategies Unit Test: Morpho", () => {
     let accounts: AccountsFixture;
 
     before(async () => {

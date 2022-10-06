@@ -21,12 +21,12 @@ const { Zero, AddressZero } = constants;
 
 use(solidity);
 
-const swapPath = getRewardSwapPathV3Custom(UNISWAP_V3_FEE._3000, [
-    // AAVE
-    { address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9", fee: UNISWAP_V3_FEE._3000 },
-    // WETH
-    { address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", fee: UNISWAP_V3_FEE._500 },
-]);
+// const swapPath = getRewardSwapPathV3Custom(UNISWAP_V3_FEE._3000, [
+//     // AAVE
+//     { address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9", fee: UNISWAP_V3_FEE._3000 },
+//     // WETH
+//     { address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", fee: UNISWAP_V3_FEE._500 },
+// ]);
 
 const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
@@ -157,7 +157,7 @@ describe("Strategies Unit Test: AAVE", () => {
                     expect(strategyDetails.totalShares).to.beCloseTo(totalShares, BasisPoints.Basis_01);
                 });
 
-                it("Process deposit twice, should redeposit rewards", async () => {
+                it("Process deposit twice, should consider protocol yield", async () => {
                     // ARRANGE
 
                     // deposit
@@ -181,7 +181,7 @@ describe("Strategies Unit Test: AAVE", () => {
                     token.transfer(aaveContract.address, depositAmount);
 
                     // ACT
-                    await aaveContract.process([], true, [{ slippage: 1, path: swapPath }]);
+                    await aaveContract.process([], false, []);
 
                     // ASSERT
                     const balance = await aaveContract.getStrategyBalance();
@@ -189,7 +189,7 @@ describe("Strategies Unit Test: AAVE", () => {
 
                     const strategyDetails = await getStrategyState(aaveContract);
                     const totalShares = depositAmount.mul(10**6).mul(2).sub(10**5);
-                    // total shares should be less or equal, as we redeposit, so shares are not 1 to 1 with deposit anymore
+                    // total shares should be less or equal, as protocol generates yield, so shares are not 1 to 1 with deposit anymore
                     // so second user gets less shares than first
                     expect(strategyDetails.totalShares).to.be.lte(totalShares);
                 });
@@ -222,29 +222,34 @@ describe("Strategies Unit Test: AAVE", () => {
                     expect(strategyDetails.totalShares).to.equal(Zero);
                 });
 
-                it("Claim rewards, should deposit in strategy", async () => {
-                    // ARRANGE
+                // NOTE:
+                // As we're using newer fork block number and AAVE stopped emitting rewards,
+                // the test below is no longer necessary and it fails
+                //
 
-                    // deposit
-                    const depositAmount = millionUnits;
-                    const stratSetupDeposit = getStrategySetupObject();
-                    stratSetupDeposit.pendingUser.deposit = depositAmount;
-                    await setStrategyState(aaveContract, stratSetupDeposit);
-                    token.transfer(aaveContract.address, depositAmount);
-                    await aaveContract.process([], false, []);
+                // it("Claim rewards, should deposit in strategy", async () => {
+                //     // ARRANGE
 
-                    // mine blocks, to gain reward
-                    console.log("mining blocks...");
-                    await mineBlocks(100, SECS_DAY);
-                    console.log("mined");
+                //     // deposit
+                //     const depositAmount = millionUnits;
+                //     const stratSetupDeposit = getStrategySetupObject();
+                //     stratSetupDeposit.pendingUser.deposit = depositAmount;
+                //     await setStrategyState(aaveContract, stratSetupDeposit);
+                //     token.transfer(aaveContract.address, depositAmount);
+                //     await aaveContract.process([], false, []);
 
-                    // ACT
-                    await aaveContract.claimRewards([{ slippage: 1, path: swapPath }]);
+                //     // mine blocks, to gain reward
+                //     console.log("mining blocks...");
+                //     await mineBlocks(100, SECS_DAY);
+                //     console.log("mined");
 
-                    // ASSERT
-                    const strategyDetails = await getStrategyState(aaveContract);
-                    expect(strategyDetails.pendingDepositReward).to.be.gt(Zero);
-                });
+                //     // ACT
+                //     await aaveContract.claimRewards([{ slippage: 1, path: swapPath }]);
+
+                //     // ASSERT
+                //     const strategyDetails = await getStrategyState(aaveContract);
+                //     expect(strategyDetails.pendingDepositReward).to.be.gt(Zero);
+                // });
 
                 it("Fast withdraw, should withdraw from strategy", async () => {
                     // ARRANGE
@@ -264,7 +269,7 @@ describe("Strategies Unit Test: AAVE", () => {
 
                     // ACT
                     const stratSetupWithdraw = await getStrategyState(aaveContract);
-                    await aaveContract.fastWithdraw(stratSetupWithdraw.totalShares, [], [{ slippage: 1, path: swapPath }]);
+                    await aaveContract.fastWithdraw(stratSetupWithdraw.totalShares, [], []);
 
                     // ASSERT
                     const balance = await aaveContract.getStrategyBalance();

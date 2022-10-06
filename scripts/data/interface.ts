@@ -29,6 +29,7 @@ export interface StrategiesContracts {
     Harvest: UnderlyingContracts;
     Idle: UnderlyingContracts;
     Morpho: UnderlyingContracts;
+    Notional: UnderlyingContracts;
     Yearn: UnderlyingContracts;
     All: string[];
 }

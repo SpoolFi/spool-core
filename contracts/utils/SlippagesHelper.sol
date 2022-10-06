@@ -13,9 +13,11 @@ import "../external/interfaces/curve/IStableSwap3Pool.sol";
 import "../external/interfaces/curve/IStableSwap4Pool.sol";
 import "../external/interfaces/yearn/IYearnTokenVault.sol";
 import "../interfaces/IBaseStrategy.sol";
+import "../interfaces/INotionalStrategyContractHelper.sol";
 import "../interfaces/IStrategyContractHelper.sol";
 import "../interfaces/IStrategyRegistry.sol";
 import "./interfaces/strategies/IIdleStrategy.sol";
+import "./interfaces/strategies/INotionalStrategy.sol";
 import "./interfaces/strategies/IYearnStrategy.sol";
 import "./interfaces/strategies/ICurveStrategyBase.sol";
 import "./interfaces/strategies/ICurve3poolStrategy.sol";
@@ -63,11 +65,9 @@ contract SlippagesHelper is BaseStorage {
                     IDepositZap depositZap = IConvexSharedMetapoolStrategy(strat).depositZap();
                     underlying.safeApprove(address(depositZap), amount);
                     slippages[i] = _metapoolDeposit(_strategies[i], depositZap, amount);
-                    underlying.safeApprove(address(depositZap), 0);
                 }else {
                     underlying.safeApprove(address(pool), amount);
                     slippages[i] = _3poolDeposit(_strategies[i], IStableSwap3Pool(address(pool)), amount);
-                    underlying.safeApprove(address(pool), 0);
                 }
             }else {
                 address lpHelper;
@@ -136,7 +136,6 @@ contract SlippagesHelper is BaseStorage {
                 true,
                 address(this)
             );
-            underlying.safeApprove(address(idleToken), 0);
 
             slippage.slippage = mintedIdleAmount;
         } else {
@@ -147,6 +146,35 @@ contract SlippagesHelper is BaseStorage {
             uint256 undelyingBefore = underlying.balanceOf(address(this));
             idleToken.redeemIdleToken(redeemIdleAmount);
             uint256 underlyingWithdrawn = underlying.balanceOf(address(this)) - undelyingBefore;
+            slippage.slippage = underlyingWithdrawn;
+        }
+
+        return slippage;
+    }
+
+    function getNotionalSlippage(INotionalStrategy strategy_, uint128 reallocateSharesToWithdraw) external returns(Slippage memory slippage){
+        INotionalStrategy strategy = INotionalStrategy(strategyRegistry.getImplementation(address(strategy_)));
+        Strategy storage strategyStorage = strategies[address(strategy_)];
+
+        INotionalStrategyContractHelper strategyHelper = INotionalStrategyContractHelper(strategy.strategyHelper());
+        IERC20 underlying = IERC20(strategy.underlying());
+        INToken nToken = INToken(strategy.nToken());
+
+        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy), reallocateSharesToWithdraw);
+        if(amount==0) return slippage;
+        slippage.canProcess = true;
+        if(isDeposit){
+            slippage.isDeposit = true;
+            // deposit underlying
+            underlying.safeTransfer(address(strategyHelper), amount);
+
+            uint256 nTokenBalanceNew = strategyHelper.deposit(amount);
+            slippage.slippage = nTokenBalanceNew;
+        }else {
+            uint256 nTokenBalance = nToken.balanceOf(address(strategyHelper));
+            uint256 nTokenWithdraw = (nTokenBalance * amount) / strategyStorage.totalShares;
+
+            uint256 underlyingWithdrawn = strategyHelper.withdraw(nTokenWithdraw);
             slippage.slippage = underlyingWithdrawn;
         }
 
@@ -170,7 +198,6 @@ contract SlippagesHelper is BaseStorage {
             uint256 yearnTokenBefore = vault.balanceOf(address(this));
             vault.deposit(amount, address(this));
             uint256 yearnTokenNew = vault.balanceOf(address(this)) - yearnTokenBefore;
-            underlying.safeApprove(address(vault), 0);
 
             slippage.slippage = yearnTokenNew;
         }else {
