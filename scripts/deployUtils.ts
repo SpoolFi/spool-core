@@ -758,6 +758,61 @@ export async function DeployConvexMetapool(
     return implementation;
 }
 
+export async function DeployConvex2pool(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    spool: SpoolFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { USDC: [], DAI:[], USDT:[] };
+
+    const name = "USDC";
+    let token: IERC20 = tokens[name];
+    console.log("Deploying Convex 2pool Strategy for token: " + name + "...");
+
+    const helperArgs = [
+        spool.spool.address,
+        mainnetConst.convex.Booster.address,
+        mainnetConst.convex._sUSD.boosterPoolId,
+    ];
+    const boosterHelperName = `ConvexBooster2poolContractHelper${name}`;
+    const convexBoosterHelper = await deploy(hre, accounts, boosterHelperName, {
+        contract: "ConvexBoosterContractHelper",
+        args: helperArgs,
+    });
+    const convexHelperProxy = await deployProxy(
+        hre,
+        accounts,
+        boosterHelperName,
+        convexBoosterHelper.address,
+        spool.proxyAdmin.address
+    );
+
+    await writeContracts(hre, {
+        [`convex2poolHelper${name}`]: {
+            proxy: convexHelperProxy.address,
+            implementation: convexBoosterHelper.address,
+        },
+    });
+
+    const args = [
+        mainnetConst.convex.Booster.address,
+        mainnetConst.convex._fraxusdc.boosterPoolId,
+        mainnetConst.curve._fraxusdc.pool.address,
+        mainnetConst.curve._fraxusdc.lpToken.address,
+        token.address,
+        convexHelperProxy.address,
+        ethers.constants.AddressZero
+    ];
+    const strat = await deploy(hre, accounts, `ConvexShared2poolStrategy${name}`, {
+        contract: "ConvexShared2poolStrategy",
+        args,
+    });
+    implementation[name].push(strat.address);
+
+    return implementation;
+}
+
 export async function DeployCurve(
     accounts: AccountsFixture,
     tokens: TokensFixture,

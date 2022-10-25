@@ -95,6 +95,7 @@ export interface Convex {
     _3pool: ConvexPool;
     _sUSD: ConvexPool;
     _alUSD: ConvexPool;
+    _fraxusdc: ConvexPool;
 }
 
 export type CurvePool = {
@@ -111,6 +112,7 @@ export interface Curve {
     _3pool: CurvePool;
     _sUSD: CurvePool;
     _alUSD: CurvePool;
+    _fraxusdc: CurvePool;
 }
 
 export interface HarvestContracts {
@@ -328,6 +330,9 @@ export const mainnet = function mainnet(): Mainnet {
         },
         _alUSD: {
             boosterPoolId: 36,
+        },
+        _fraxusdc: {
+            boosterPoolId: 100,
         }
     };
 
@@ -354,6 +359,13 @@ export const mainnet = function mainnet(): Mainnet {
             depositZap: { address: "0xA79828DF1850E8a3A3064576f380D90aECDD3359" },
             LiquidityGauge: { address: "0x9582C4ADACB3BCE56Fea3e590F05c3ca2fb9C477" },
             totalTokens: 4,
+        },
+        _fraxusdc: {
+            pool: { address: "0xdcef968d416a41cdac0ed8702fac8128a64241a2" },
+            lpToken: { address: "0x3175Df0976dFA876431C2E9eE6Bc45b65d3473CC" },
+            depositZap: { address: "" },
+            LiquidityGauge: { address: "" },
+            totalTokens: 2,
         },
     };
 
