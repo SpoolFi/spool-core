@@ -1,14 +1,14 @@
 
 import { expect, use } from "chai";
-import { BigNumber, constants } from "ethers";
+import { BigNumber, BigNumberish, constants } from "ethers";
 import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
 import {
-    MorphoStrategy__factory,
     IBaseStrategy,
     IERC20,
     TestStrategySetup__factory,
-    MorphoContractHelper__factory,
+    MorphoAaveContractHelper__factory,
     TransparentUpgradeableProxy__factory,
+    MorphoAaveStrategy__factory,
 } from "../../../build/types";
 import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
 import { Tokens } from "../../shared/constants";
@@ -17,7 +17,6 @@ import {
     BasisPoints,
     encodeDepositSlippage,
     getMillionUnits,
-    getRewardSwapPathV3Direct,
     getRewardSwapPathV3Weth,
     mineBlocks,
     reset,
@@ -40,29 +39,29 @@ const withdrawSlippage = [ 0 ];
 
 type MorphoStratSetup = {
     underlying: keyof TokensFixture & keyof Tokens;
-    cToken: string;
+    aToken: string;
     swapPath: string;
 };
 
 const strategyAssets: MorphoStratSetup[] = [
     {
         underlying: "DAI",
-        cToken: mainnetConst.compound.cDAI.delegator.address,
+        aToken: mainnetConst.aave.aDAI.address,
         swapPath: swapPathWeth,
     },
     {
         underlying: "USDC",
-        cToken: mainnetConst.compound.cUSDC.address,
+        aToken: mainnetConst.aave.aUSDC.address,
         swapPath: swapPathWeth,
     },
     {
         underlying: "USDT",
-        cToken: mainnetConst.compound.cUSDT.delegator.address,
+        aToken: mainnetConst.aave.aUSDT.address,
         swapPath: swapPathWeth,
     },
 ];
 
-describe("Strategies Unit Test: Morpho", () => {
+describe("Strategies Unit Test: Morpho-Aave", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
@@ -71,8 +70,8 @@ describe("Strategies Unit Test: Morpho", () => {
     });
 
     describe(`Deployment Gatekeeping`, () => {
-        it("Should fail deploying Morpho Strategy with Morpho address 0", async () => {
-            const MorphoStrategy = new MorphoStrategy__factory().connect(accounts.administrator);
+        it("Should fail deploying Morpho-Aave Strategy with Morpho address 0", async () => {
+            const MorphoStrategy = new MorphoAaveStrategy__factory().connect(accounts.administrator);
             await expect(
                 MorphoStrategy.deploy(
                     AddressZero,
@@ -81,13 +80,13 @@ describe("Strategies Unit Test: Morpho", () => {
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
-                    AddressZero,
+                    "0x0000000000000000000000000000000000000001",
                 )
-            ).to.be.revertedWith("MorphoStrategy::constructor: Morpho address cannot be 0");
+            ).to.be.revertedWith("MorphoAaveStrategy::constructor: Morpho address cannot be 0");
         });
 
-        it("Should fail deploying Morpho Strategy with cToken address 0", async () => {
-            const MorphoStrategy = new MorphoStrategy__factory().connect(accounts.administrator);
+        it("Should fail deploying Morpho-Aave Strategy with aToken address 0", async () => {
+            const MorphoStrategy = new MorphoAaveStrategy__factory().connect(accounts.administrator);
             await expect(
                 MorphoStrategy.deploy(
                     "0x0000000000000000000000000000000000000001",
@@ -96,12 +95,12 @@ describe("Strategies Unit Test: Morpho", () => {
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
-                    AddressZero,
+                    "0x0000000000000000000000000000000000000001",
                 )
-            ).to.be.revertedWith("MorphoStrategy::constructor: cToken address cannot be 0");
+            ).to.be.revertedWith("MorphoAaveStrategy::constructor: aToken address cannot be 0");
         });
 
-        strategyAssets.forEach(({ underlying, cToken, swapPath }) => {
+        strategyAssets.forEach(({ underlying, aToken, swapPath }) => {
             describe(`Asset: ${underlying}`, () => {
                 let tokens: TokensFixture;
                 let token: IERC20;
@@ -117,12 +116,12 @@ describe("Strategies Unit Test: Morpho", () => {
                             AddressZero
                         );
 
-                    let morphoHelper = await new MorphoContractHelper__factory()
+                    let morphoHelper = await new MorphoAaveContractHelper__factory()
                         .connect(accounts.administrator)
                         .deploy(
-                            mainnetConst.morpho.Compound.Proxy.address,
-                            mainnetConst.compound.COMP.address,
-                            cToken,
+                            mainnetConst.morpho.Aave.Proxy.address,
+                            mainnetConst.tokens.AAVE.contract.address,
+                            aToken,
                             token.address,
                             morphoStrategyProxy.address
                         );
@@ -131,21 +130,22 @@ describe("Strategies Unit Test: Morpho", () => {
                         .connect(accounts.administrator)
                         .deploy(morphoHelper.address, "0x0000000000000000000000000000000000000001", "0x");
 
-                    morphoHelper = MorphoContractHelper__factory.connect(
+                    morphoHelper = MorphoAaveContractHelper__factory.connect(
                         helperProxy.address,
                         accounts.administrator
                     );
 
-                        const morphoStrategy = await new MorphoStrategy__factory()
+                        const morphoStrategy = await new MorphoAaveStrategy__factory()
                             .connect(accounts.administrator)
                             .deploy(
-                                mainnetConst.morpho.Compound.Proxy.address,
-                                mainnetConst.compound.COMP.address,
-                                cToken,
+                                mainnetConst.morpho.Aave.Proxy.address,
+                                mainnetConst.tokens.AAVE.contract.address,
+                                aToken,
                                 token.address,
                                 morphoHelper.address,
-                                mainnetConst.morpho.Compound.Lens.address,
+                                mainnetConst.morpho.Aave.Lens.address,
                                 AddressZero
+
                             );
 
                         await morphoStrategyProxy.setImplementation(morphoStrategy.address);
@@ -154,10 +154,10 @@ describe("Strategies Unit Test: Morpho", () => {
 
                 describe(`Functions: ${underlying}`, () => {
                     let morphoContract: IBaseStrategy;
-                    let millionUnits: BigNumber;
+                    let hundredThousandUnits: BigNumber;
 
                     before(async () => {
-                        millionUnits = getMillionUnits(mainnetConst.tokens[underlying].units);
+                        hundredThousandUnits = getMillionUnits(mainnetConst.tokens[underlying].units);
                     });
 
                     beforeEach(async () => {
@@ -165,12 +165,12 @@ describe("Strategies Unit Test: Morpho", () => {
                             AddressZero
                         );
 
-                    let morphoHelper = await new MorphoContractHelper__factory()
+                    let morphoHelper = await new MorphoAaveContractHelper__factory()
                         .connect(accounts.administrator)
                         .deploy(
-                            mainnetConst.morpho.Compound.Proxy.address,
-                            mainnetConst.compound.COMP.address,
-                            cToken,
+                            mainnetConst.morpho.Aave.Proxy.address,
+                            mainnetConst.tokens.AAVE.contract.address,
+                            aToken,
                             token.address,
                             morphoStrategyProxy.address
                         );
@@ -179,26 +179,26 @@ describe("Strategies Unit Test: Morpho", () => {
                         .connect(accounts.administrator)
                         .deploy(morphoHelper.address, "0x0000000000000000000000000000000000000001", "0x");
 
-                    morphoHelper = MorphoContractHelper__factory.connect(
+                    morphoHelper = MorphoAaveContractHelper__factory.connect(
                         helperProxy.address,
                         accounts.administrator
                     );
 
-                        const morphoStrategy = await new MorphoStrategy__factory()
+                        const morphoStrategy = await new MorphoAaveStrategy__factory()
                             .connect(accounts.administrator)
                             .deploy(
-                                mainnetConst.morpho.Compound.Proxy.address,
-                                mainnetConst.compound.COMP.address,
-                                cToken,
+                                mainnetConst.morpho.Aave.Proxy.address,
+                                mainnetConst.tokens.AAVE.contract.address,
+                                aToken,
                                 token.address,
                                 morphoHelper.address,
-                                mainnetConst.morpho.Compound.Lens.address,
+                                mainnetConst.morpho.Aave.Lens.address,
                                 AddressZero
                             );
 
                         await morphoStrategyProxy.setImplementation(morphoStrategy.address);
 
-                        morphoContract = MorphoStrategy__factory.connect(
+                        morphoContract = MorphoAaveStrategy__factory.connect(
                             morphoStrategyProxy.address,
                             accounts.administrator
                         );
@@ -206,7 +206,7 @@ describe("Strategies Unit Test: Morpho", () => {
 
                     it("Process deposit, should deposit in strategy", async () => {
                         // ARRANGE
-                        const depositAmount = millionUnits;
+                        const depositAmount = hundredThousandUnits;
                         const stratSetup = getStrategySetupObject();
                         stratSetup.pendingUser.deposit = depositAmount;
                         await setStrategyState(morphoContract, stratSetup);
@@ -228,7 +228,7 @@ describe("Strategies Unit Test: Morpho", () => {
 
                     it("Process deposit twice, should redeposit rewards", async () => {
                         // ARRANGE
-                        const depositAmount = millionUnits;
+                        const depositAmount = hundredThousandUnits;
                         const stratSetup = getStrategySetupObject();
                         stratSetup.pendingUser.deposit = depositAmount;
                         await setStrategyState(morphoContract, stratSetup);
@@ -246,11 +246,13 @@ describe("Strategies Unit Test: Morpho", () => {
                         await token.transfer(morphoContract.address, depositAmount);
 
                         // ACT
-                        await morphoContract.process(depositSlippage, true, [{ slippage: 1, path: swapPath }]);
+                        // AaveIncentivesController not yet added on MorphoAave so can't claim rewards yet.
+                        //await morphoContract.process(depositSlippage, true, [{ slippage: 1, path: swapPath }]);
+                        await morphoContract.process(depositSlippage, true, []);
 
                         // ASSERT
                         const balance = await morphoContract.getStrategyBalance();
-                        expect(balance).to.be.gt(depositAmount.mul(2));
+                        expect(balance).to.be.gte(depositAmount.mul(2));
 
                         const strategyDetails = await getStrategyState(morphoContract);
                         const totalShares = balance.mul(10**6).mul(2).sub(10**5);
@@ -261,7 +263,7 @@ describe("Strategies Unit Test: Morpho", () => {
                         // ARRANGE
 
                         // deposit
-                        const depositAmount = millionUnits;
+                        const depositAmount = hundredThousandUnits;
                         const maxBalLeft = depositAmount.div(1000).mul(1);
                         const stratSetupDeposit = getStrategySetupObject();
                         stratSetupDeposit.pendingUser.deposit = depositAmount;
@@ -286,11 +288,13 @@ describe("Strategies Unit Test: Morpho", () => {
                         expect(strategyDetails.totalShares).to.equal(Zero);
                     });
 
-                    it("Claim rewards, should claim and swap rewards for the underlying currency", async () => {
+
+                    // AaveIncentivesController not yet added on MorphoAave so can't claim rewards yet.
+                    it.skip("Claim rewards, should claim and swap rewards for the underlying currency", async () => {
                         // ARRANGE
 
                         // deposit
-                        const depositAmount = millionUnits;
+                        const depositAmount = hundredThousandUnits;
                         const stratSetupDeposit = getStrategySetupObject();
                         stratSetupDeposit.pendingUser.deposit = depositAmount;
                         await setStrategyState(morphoContract, stratSetupDeposit);
@@ -307,14 +311,14 @@ describe("Strategies Unit Test: Morpho", () => {
 
                         // ASSERT
                         const strategyDetails = await getStrategyState(morphoContract);
-                        expect(strategyDetails.pendingDepositReward).to.be.gte(Zero);
+                        expect(strategyDetails.pendingDepositReward).to.be.gt(Zero);
                     });
 
                     it("Fast withdraw, remove shares", async () => {
                         // ARRANGE
 
                         // deposit
-                        const depositAmount = millionUnits;
+                        const depositAmount = hundredThousandUnits;
                         const maxBalLeft = depositAmount.div(1000).mul(1);
                         const stratSetupDeposit = getStrategySetupObject();
                         stratSetupDeposit.pendingUser.deposit = depositAmount;
@@ -330,10 +334,16 @@ describe("Strategies Unit Test: Morpho", () => {
                         const stratSetupWithdraw = await getStrategyState(morphoContract);
 
                         // ACT
+                        // AaveIncentivesController not yet added on MorphoAave so can't claim rewards yet.
+                        //await morphoContract.fastWithdraw(
+                        //    stratSetupWithdraw.totalShares,
+                        //    [],
+                        //    [{ slippage: 1, path: swapPath }]
+                        //);
                         await morphoContract.fastWithdraw(
                             stratSetupWithdraw.totalShares,
                             [],
-                            [{ slippage: 1, path: swapPath }]
+                            []
                         );
 
                         // ASSERT
@@ -355,7 +365,7 @@ describe("Strategies Unit Test: Morpho", () => {
                         const tokenBalanceBefore = await token.balanceOf(emergencyRecipient);
 
                         // deposit
-                        const depositAmount = millionUnits;
+                        const depositAmount = hundredThousandUnits;
                         const maxBalLeft = depositAmount.div(1000).mul(1);
                         const stratSetupDeposit = getStrategySetupObject();
                         stratSetupDeposit.pendingUser.deposit = depositAmount;
@@ -364,7 +374,7 @@ describe("Strategies Unit Test: Morpho", () => {
                         await morphoContract.process(withdrawSlippage, false, []);
 
                         // add pending deposit
-                        const pendingDeposit = millionUnits.div(5);
+                        const pendingDeposit = hundredThousandUnits.div(5);
                         const stratSetupDepositpending = getStrategySetupObject();
                         stratSetupDepositpending.pendingUser.deposit = pendingDeposit;
                         stratSetupDepositpending.pendingUserNext.deposit = pendingDeposit;
