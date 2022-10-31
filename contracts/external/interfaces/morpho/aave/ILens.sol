@@ -1,7 +1,20 @@
 // SPDX-License-Identifier: GNU AGPLv3
 pragma solidity ^0.8.0;
 
+import "./../../../../external/interfaces/aave/ILendingPool.sol";
+import "./../IMorpho.sol";
+
 interface ILens {
+    /// STORAGE ///
+
+    function DEFAULT_LIQUIDATION_CLOSE_FACTOR() external view returns (uint16);
+
+    function HEALTH_FACTOR_LIQUIDATION_THRESHOLD() external view returns (uint256);
+
+    function morpho() external view returns (IMorpho);
+
+    function pool() external view returns (ILendingPool);
+
     /// GENERAL ///
 
     function getTotalSupply()
