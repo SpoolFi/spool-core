@@ -149,6 +149,7 @@ export interface Masterchef {
 
 export interface Morpho {
     Proxy: Contract;
+    lens: Address;
 }
 
 export interface nToken {
@@ -401,6 +402,7 @@ export const mainnet = function mainnet(): Mainnet {
 
     let morpho = {
         Proxy: { address: "0x8888882f8f843896699869179fB6E4f7e3B58888", ABI: IMorpho__factory.abi },
+        lens: { address: "0x930f1b46e1D081Ec1524efD95752bE3eCe51EF67"},
     };
 
     let notional = {

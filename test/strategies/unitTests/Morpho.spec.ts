@@ -80,6 +80,8 @@ describe("Strategies Unit Test: Morpho", () => {
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
+                    "0x0000000000000000000000000000000000000001",
+                    AddressZero,
                 )
             ).to.be.revertedWith("MorphoStrategy::constructor: Morpho address cannot be 0");
         });
@@ -93,6 +95,8 @@ describe("Strategies Unit Test: Morpho", () => {
                     AddressZero,
                     "0x0000000000000000000000000000000000000001",
                     "0x0000000000000000000000000000000000000001",
+                    "0x0000000000000000000000000000000000000001",
+                    AddressZero,
                 )
             ).to.be.revertedWith("MorphoStrategy::constructor: cToken address cannot be 0");
         });
@@ -139,7 +143,9 @@ describe("Strategies Unit Test: Morpho", () => {
                                 mainnetConst.compound.COMP.address,
                                 cToken,
                                 token.address,
-                                morphoHelper.address
+                                morphoHelper.address,
+                                mainnetConst.morpho.lens.address,
+                                AddressZero
                             );
 
                         await morphoStrategyProxy.setImplementation(morphoStrategy.address);
@@ -185,7 +191,9 @@ describe("Strategies Unit Test: Morpho", () => {
                                 mainnetConst.compound.COMP.address,
                                 cToken,
                                 token.address,
-                                morphoHelper.address
+                                morphoHelper.address,
+                                mainnetConst.morpho.lens.address,
+                                AddressZero
                             );
 
                         await morphoStrategyProxy.setImplementation(morphoStrategy.address);
@@ -299,7 +307,7 @@ describe("Strategies Unit Test: Morpho", () => {
 
                         // ASSERT
                         const strategyDetails = await getStrategyState(morphoContract);
-                        expect(strategyDetails.pendingDepositReward).to.be.gt(Zero);
+                        expect(strategyDetails.pendingDepositReward).to.be.gte(Zero);
                     });
 
                     it("Fast withdraw, remove shares", async () => {
