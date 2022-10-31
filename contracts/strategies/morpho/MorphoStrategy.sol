@@ -5,7 +5,7 @@ pragma solidity 0.8.11;
 import "../ClaimFullSingleRewardStrategy.sol";
 import "../../external/interfaces/ICErc20.sol";
 import "../../external/interfaces/morpho/IMorpho.sol";
-import "../../external/interfaces/morpho/ILens.sol";
+import "../../external/interfaces/morpho/compound/ILens.sol";
 import "../../interfaces/ICompoundStrategyContractHelper.sol";
 
 contract MorphoStrategy is ClaimFullSingleRewardStrategy {
