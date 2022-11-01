@@ -96,7 +96,7 @@ contract MorphoAaveStrategy is ClaimFullSingleRewardStrategy {
      */
     function _withdraw(uint128 shares, uint256[] memory) internal override returns(uint128) {
 
-        // check strategy helper aToken balance
+        // check strategy helper underlying balance
         uint256 totalBalance = _getTotalBalance();
 
         // get withdraw amount
