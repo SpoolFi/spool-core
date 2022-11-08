@@ -101,30 +101,30 @@ contract MorphoAaveContractHelper is IAaveStrategyContractHelper {
     /**
      * @notice Withdraw from Morpho market
      * @dev
-     * The the withdrawn underlying amount is then send back to the Spool.
+     * The withdrawn underlying amount is then send back to the Spool.
      *
      * @param aTokenUnderlyingWithdraw Amount of underlying tokens to withdraw
-     * @return undelyingWithdrawn Gained underlying amount from withdrawing
+     * @return underlyingToWithdraw Gained underlying amount from withdrawing and on the contract
      */
     function withdraw(uint256 aTokenUnderlyingWithdraw) external override onlySpool returns (uint256) {
         morpho.withdraw(address( aToken ), aTokenUnderlyingWithdraw);
-        uint256 undelyingWithdrawn = underlying.balanceOf(address(this));
+        uint256 underlyingToWithdraw = underlying.balanceOf(address(this));
 
         // transfer withdrawn back to spool
-        underlying.safeTransfer(msg.sender, undelyingWithdrawn);
+        underlying.safeTransfer(msg.sender, underlyingToWithdraw);
 
-        return undelyingWithdrawn;
+        return underlyingToWithdraw;
     }
 
     function withdrawAll(uint256[] calldata) external override onlySpool returns (uint256) {
         morpho.withdraw(address( aToken ), type(uint256).max);
 
-        uint256 undelyingWithdrawn = underlying.balanceOf(address(this));
+        uint256 underlyingWithdrawn = underlying.balanceOf(address(this));
 
         // transfer withdrawn back to spool
-        underlying.safeTransfer(msg.sender, undelyingWithdrawn);
+        underlying.safeTransfer(msg.sender, underlyingWithdrawn);
 
-        return undelyingWithdrawn;
+        return underlyingWithdrawn;
     }
 
     /* ========== PRIVATE FUNCTIONS ========== */

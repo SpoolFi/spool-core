@@ -246,7 +246,7 @@ describe("Strategies Unit Test: Morpho-Aave", () => {
                         await token.transfer(morphoContract.address, depositAmount);
 
                         // ACT
-                        // AaveIncentivesController not yet added on MorphoAave so can't claim rewards yet.
+                        // No rewards on Aave
                         //await morphoContract.process(depositSlippage, true, [{ slippage: 1, path: swapPath }]);
                         await morphoContract.process(depositSlippage, true, []);
 
@@ -289,7 +289,7 @@ describe("Strategies Unit Test: Morpho-Aave", () => {
                     });
 
 
-                    // AaveIncentivesController not yet added on MorphoAave so can't claim rewards yet.
+                    // No rewards on Aave
                     it.skip("Claim rewards, should claim and swap rewards for the underlying currency", async () => {
                         // ARRANGE
 
@@ -334,7 +334,7 @@ describe("Strategies Unit Test: Morpho-Aave", () => {
                         const stratSetupWithdraw = await getStrategyState(morphoContract);
 
                         // ACT
-                        // AaveIncentivesController not yet added on MorphoAave so can't claim rewards yet.
+                        // No rewards on Aave
                         //await morphoContract.fastWithdraw(
                         //    stratSetupWithdraw.totalShares,
                         //    [],

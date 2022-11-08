@@ -96,11 +96,8 @@ contract MorphoAaveStrategy is ClaimFullSingleRewardStrategy {
      */
     function _withdraw(uint128 shares, uint256[] memory) internal override returns(uint128) {
 
-        // check strategy helper underlying balance
-        uint256 totalBalance = _getTotalBalance();
-
         // get withdraw amount
-        uint256 withdrawAmount = (totalBalance * shares) / strategies[self].totalShares;
+        uint256 withdrawAmount = (_getTotalBalance() * shares) / strategies[self].totalShares;
         uint256 undelyingWithdrawn = strategyHelper.withdraw(withdrawAmount);
 
         return SafeCast.toUint128(undelyingWithdrawn);
