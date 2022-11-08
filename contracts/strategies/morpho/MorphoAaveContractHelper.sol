@@ -51,8 +51,8 @@ contract MorphoAaveContractHelper is IAaveStrategyContractHelper {
         require(_spool != address(0), "MorphoAaveContractHelper::constructor: Spool address cannot be 0");
 
         morpho = _morpho;
-        aToken = _aToken;
         aave = _aave;
+        aToken = _aToken;
         underlying = _underlying;
         spool = _spool;
     }
