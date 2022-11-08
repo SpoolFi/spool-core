@@ -30,12 +30,20 @@ type idleTranchesStratSetup = {
 
 const strategyAssets: idleTranchesStratSetup[] = [
     {
+        name: "DAI",
+        idleTranche: mainnetConst.idleTranches.eulerDAI.address,
+    },
+    {
         name: "USDC",
-        idleTranche: mainnetConst.idleTranches.clearpool.protocol.address,
+        idleTranche: mainnetConst.idleTranches.eulerUSDC.address,
+    },
+    {
+        name: "USDT",
+        idleTranche: mainnetConst.idleTranches.eulerUSDT.address,
     },
 ];
 
-describe.only("Strategies Unit Test: IdleTranches Clearpool", () => {
+describe.only("Strategies Unit Test: IdleTranches Euler", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
@@ -43,7 +51,7 @@ describe.only("Strategies Unit Test: IdleTranches Clearpool", () => {
         ({ accounts } = await loadFixture(underlyingTokensFixture));
     });
 
-    it.only("Should fail deploying strategy with vault address 0", async () => {
+    it("Should fail deploying strategy with vault address 0", async () => {
         const IdleTranchesStrategy = new IdleTranchesNoReward__factory().connect(accounts.administrator);
         await expect(
             IdleTranchesStrategy.deploy(AddressZero, "0x0000000000000000000000000000000000000001", AddressZero)
@@ -55,7 +63,7 @@ describe.only("Strategies Unit Test: IdleTranches Clearpool", () => {
             const { tokens } = await loadFixture(underlyingTokensFixture);
             const idleTranchesContract = await new IdleTranchesNoReward__factory()
                 .connect(accounts.administrator)
-                .deploy(mainnetConst.idleTranches.clearpool.protocol.address, tokens.USDC.address, AddressZero);
+                .deploy(mainnetConst.idleTranches.eulerUSDC.address, tokens.USDC.address, AddressZero);
 
             // ACT
             await expect(idleTranchesContract.claimRewards([])).to.be.revertedWith(
