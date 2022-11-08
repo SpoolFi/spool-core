@@ -43,7 +43,7 @@ const strategyAssets: idleTranchesStratSetup[] = [
     },
 ];
 
-describe.only("Strategies Unit Test: IdleTranches Euler", () => {
+describe("Strategies Unit Test: IdleTranches Euler", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
