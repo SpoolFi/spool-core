@@ -28,6 +28,7 @@ import {
     IMorpho__factory,
     INotional__factory,
     IERC20__factory,
+    IAToken__factory,
 } from "../../build/types";
 
 export type Contract = {
@@ -50,6 +51,9 @@ export type Token = {
 };
 
 export interface Aave {
+    aDAI: Contract;
+    aUSDC: Contract;
+    aUSDT: Contract;
     stkAAVE: Proxy;
     LendingPool: Proxy;
     IncentiveController: Proxy;
@@ -88,6 +92,11 @@ export interface Compound {
 
 export interface ConvexPool {
     boosterPoolId: number;
+}
+
+export interface MorphoContracts {
+    Proxy: Contract;
+    Lens: Address;
 }
 
 export interface Convex {
@@ -148,8 +157,8 @@ export interface Masterchef {
 }
 
 export interface Morpho {
-    Proxy: Contract;
-    lens: Address;
+    Compound: MorphoContracts;
+    Aave: MorphoContracts;
 }
 
 export interface nToken {
@@ -184,6 +193,7 @@ export interface Tokens {
     USDC: Token;
     USDT: Token;
     WETH: Token;
+    AAVE: Token;
     stkAAVE: Token;
     COMP: Token;
     CRV: Token;
@@ -235,6 +245,18 @@ export interface Mainnet extends Network {}
 
 export const mainnet = function mainnet(): Mainnet {
     let aave = {
+        aDAI: {
+            address: "0x028171bca77440897b824ca71d1c56cac55b68a3",
+            ABI: IAToken__factory.abi,
+        },
+        aUSDC: {
+            address: "0xbcca60bb61934080951369a648fb03df4f96263c",
+            ABI: IAToken__factory.abi,
+        },
+        aUSDT: {
+            address: "0x3ed3b47dd13ec9a98b44e6204a523e766b225811",
+            ABI: IAToken__factory.abi,
+        },
         stkAAVE: {
             delegator: {
                 address: "0x4da27a545c0c5b758a6ba100e3a049001de870f5",
@@ -401,8 +423,14 @@ export const mainnet = function mainnet(): Mainnet {
     };
 
     let morpho = {
-        Proxy: { address: "0x8888882f8f843896699869179fB6E4f7e3B58888", ABI: IMorpho__factory.abi },
-        lens: { address: "0x930f1b46e1D081Ec1524efD95752bE3eCe51EF67"},
+        Compound: { 
+            Proxy: { address: "0x8888882f8f843896699869179fB6E4f7e3B58888", ABI: IMorpho__factory.abi },
+            Lens: { address: "0x930f1b46e1D081Ec1524efD95752bE3eCe51EF67"},
+        },
+        Aave: { 
+            Proxy: { address: "0x777777c9898D384F785Ee44Acfe945efDFf5f3E0", ABI: IMorpho__factory.abi },
+            Lens: { address: "0x507fa343d0a90786d86c7cd885f5c49263a91ff4"},
+        },
     };
 
     let notional = {
@@ -451,6 +479,10 @@ export const mainnet = function mainnet(): Mainnet {
             } as Proxy,
             units: 6,
         },
+        AAVE: {
+            contract: { address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9", ABI: null } as Contract,
+            units: 18,
+        },
         stkAAVE: {
             contract: { address: "0x4da27a545c0c5B758a6BA100e3a049001de870f5", ABI: null } as Contract,
             units: 18,
@@ -477,6 +509,7 @@ export const mainnet = function mainnet(): Mainnet {
             "0xdAC17F958D2ee523a2206206994597C13D831ec7": "USDT",
             "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2": "WETH",
             "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "USDC",
+            "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": "AAVE",
             "0x4da27a545c0c5B758a6BA100e3a049001de870f5": "stkAAVE",
             "0xc00e94Cb662C3520282E6f5717214004A7f26888": "COMP",
             "0xD533a949740bb3306d119CC777fa900bA034cd52": "CRV",
