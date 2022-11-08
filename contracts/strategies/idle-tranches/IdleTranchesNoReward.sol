@@ -91,9 +91,8 @@ contract IdleTranchesNoReward is NoRewardStrategy {
 
     /**
      * @notice Emergency withdraw
-     * @param recipient Address to withdraw to
      */
-    function _emergencyWithdraw(address recipient, uint256[] calldata) internal override {
+    function _emergencyWithdraw(address, uint256[] calldata) internal override {
         idleCDO.withdrawBB(_getBBTokenBalance());
     }
 

@@ -137,7 +137,9 @@ export interface Idle {
 }
 
 export interface IdleTranches {
-    clearpool: IdleTranche;
+    eulerDAI: Address;
+    eulerUSDC: Address;
+    eulerUSDT: Address;
 }
 
 export interface IdleTranche {
@@ -406,10 +408,9 @@ export const mainnet = function mainnet(): Mainnet {
     };
 
     const idleTranches = {
-        clearpool: {
-            protocol: { address: "0xDBCEE5AE2E9DAf0F5d93473e08780C9f45DfEb93" },
-            underlying: { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }
-        }
+        eulerDAI: { address: "0x46c1f702a6aad1fd810216a5ff15aab1c62ca826" },
+        eulerUSDC: { address: "0xf5a3d259bfe7288284bd41823ec5c8327a314054" },
+        eulerUSDT: { address: "0xd5469df8ca36e7eaedb35d428f28e13380ec8ede" },
     };
 
     let masterchef = {
