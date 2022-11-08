@@ -67,7 +67,7 @@ const depositSlippage = encodeDepositSlippage(0);
 const depositSlippages = [0, MaxUint256, depositSlippage];
 const withdrawSlippages = [0, MaxUint256, 0];
 
-describe.only("Strategies Unit Test: Convex FRAXUSDC", () => {
+describe("Strategies Unit Test: Convex FRAXUSDC", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
@@ -91,7 +91,7 @@ describe.only("Strategies Unit Test: Convex FRAXUSDC", () => {
     });
 
     strategyAssets.forEach(({ name, swapData }) => {
-        describe.only(`Asset: ${name}`, () => {
+        describe(`Asset: ${name}`, () => {
             let token: IERC20;
 
             before(async () => {
