@@ -69,6 +69,11 @@ type MorphoStratSetup = {
     cToken: string;
 };
 
+type MorphoAaveStratSetup = {
+    name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
+    aToken: string;
+};
+
 type NotionalStratSetup = {
     name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
     nToken: nToken;
@@ -151,6 +156,21 @@ export const Morpho: MorphoStratSetup[] = [
     {
         name: "USDT",
         cToken: mainnetConst.compound.cUSDT.delegator.address,
+    },
+];
+
+export const MorphoAave: MorphoAaveStratSetup[] = [
+    {
+        name: "DAI",
+        aToken: mainnetConst.aave.aDAI.address,
+    },
+    {
+        name: "USDC",
+        aToken: mainnetConst.aave.aUSDC.address,
+    },
+    {
+        name: "USDT",
+        aToken: mainnetConst.aave.aUSDT.address,
     },
 ];
 
@@ -897,7 +917,7 @@ export async function DeployMorpho(
         console.log("Deploying Morpho Strategy for token: " + name + "...");
 
         let args = [
-            mainnetConst.morpho.Proxy.address,
+            mainnetConst.morpho.Compound.Proxy.address,
             mainnetConst.compound.COMP.address,
             cToken,
             token.address,
@@ -925,14 +945,73 @@ export async function DeployMorpho(
         });
 
         args = [
-            mainnetConst.morpho.Proxy.address,
+            mainnetConst.morpho.Compound.Proxy.address,
             mainnetConst.compound.COMP.address,
             cToken,
             token.address,
             morphoHelperProxy.address,
+            mainnetConst.morpho.Compound.Lens.address,
+            AddressZero
         ];
 
         const strat = await deploy(hre, accounts, `MorphoStrategy${name}`, { contract: "MorphoStrategy", args });
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
+export async function DeployMorphoAave(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    spool: SpoolFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    for (let { name, aToken } of MorphoAave) {
+        let token: IERC20 = tokens[name];
+        console.log("Deploying MorphoAave Strategy for token: " + name + "...");
+
+        let args = [
+            mainnetConst.morpho.Aave.Proxy.address,
+            mainnetConst.tokens.AAVE.contract.address,
+            aToken,
+            token.address,
+            spool.spool.address
+        ];
+
+        const morphoHelper = await deploy(hre, accounts, `MorphoAaveContractHelper${name}`, {
+            contract: "MorphoAaveContractHelper",
+            args,
+        });
+
+        const morphoHelperProxy = await deployProxy(
+            hre,
+            accounts,
+            `MorphoAaveContractHelper${name}`,
+            morphoHelper.address,
+            spool.proxyAdmin.address
+        );
+
+        await writeContracts(hre, {
+            morphoHelper: {
+                proxy: morphoHelperProxy.address,
+                implementation: morphoHelper.address,
+            },
+        });
+
+        args = [
+            mainnetConst.morpho.Aave.Proxy.address,
+            mainnetConst.tokens.AAVE.contract.address,
+            aToken,
+            token.address,
+            morphoHelperProxy.address,
+            mainnetConst.morpho.Aave.Lens.address,
+            AddressZero
+        ];
+
+        const strat = await deploy(hre, accounts, `MorphoAaveStrategy${name}`, { contract: "MorphoAaveStrategy", args });
         implementation[name].push(strat.address);
     }
 
