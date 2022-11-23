@@ -88,7 +88,7 @@ contract MorphoAaveContractHelper is IAaveStrategyContractHelper {
      * newly received aToken amount.
      *
      * @param amount Amount of underlying to deposit
-     * @return amount amount deposited
+     * @return amount Gained amount from depositing
      */
     function deposit(uint256 amount) external override onlySpool returns (uint256) {
         underlying.safeApprove(address(morpho), amount);
