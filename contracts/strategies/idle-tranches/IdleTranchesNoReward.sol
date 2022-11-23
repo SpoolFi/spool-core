@@ -52,7 +52,7 @@ contract IdleTranchesNoReward is NoRewardStrategy {
      * @return Strategy balance
      */
     function getStrategyBalance() public view override returns(uint128) {
-        return SafeCast.toUint128(_getYearnTokenValue(_getBBTokenBalance()));
+        return SafeCast.toUint128(_getIdleTokenValue(_getBBTokenBalance()));
     }
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
@@ -70,7 +70,7 @@ contract IdleTranchesNoReward is NoRewardStrategy {
         
         _resetAllowance(underlying, address(idleCDO));
 
-        return SafeCast.toUint128(_getYearnTokenValue(newBbTokens));
+        return SafeCast.toUint128(_getIdleTokenValue(newBbTokens));
     }
 
     /**
@@ -98,7 +98,7 @@ contract IdleTranchesNoReward is NoRewardStrategy {
 
     /* ========== PRIVATE FUNCTIONS ========== */
 
-    function _getYearnTokenValue(uint256 bbTokenAmount) private view returns(uint256) {
+    function _getIdleTokenValue(uint256 bbTokenAmount) private view returns(uint256) {
         if (bbTokenAmount == 0)
             return 0;
 
