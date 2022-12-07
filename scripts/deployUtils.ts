@@ -64,6 +64,11 @@ type IdleStratSetup = {
     idleTokenYield: string;
 };
 
+type IdleTranchesStratSetup = {
+    name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
+    idleTranche: string;
+};
+
 type MorphoStratSetup = {
     name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
     cToken: string;
@@ -141,6 +146,21 @@ export const Idle: IdleStratSetup[] = [
     {
         name: "USDT",
         idleTokenYield: mainnetConst.idle.idleUSDT.address,
+    },
+];
+
+export const IdleTranchesEuler: IdleTranchesStratSetup[] = [
+    {
+        name: "DAI",
+        idleTranche: mainnetConst.idleTranches.eulerDAI.address,
+    },
+    {
+        name: "USDC",
+        idleTranche: mainnetConst.idleTranches.eulerUSDC.address,
+    },
+    {
+        name: "USDT",
+        idleTranche: mainnetConst.idleTranches.eulerUSDT.address,
     },
 ];
 
@@ -897,6 +917,25 @@ export async function DeployIdle(
         console.log("Deploying Idle Strategy for token: " + name + "...");
         const args = [idleTokenYield, token.address, AddressZero];
         const strat = await deploy(hre, accounts, `IdleStrategy${name}`, { contract: "IdleStrategy", args });
+
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
+export async function DeployIdleTranchesEuler(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    for (let { name, idleTranche } of IdleTranchesEuler) {
+        let token: IERC20 = tokens[name];
+        console.log("Deploying IdleTranchesEuler Strategy for token: " + name + "...");
+        const args = [idleTranche, token.address, AddressZero];
+        const strat = await deploy(hre, accounts, `IdleTranchesEulerStrategy${name}`, { contract: "IdleTranchesNoReward", args });
 
         implementation[name].push(strat.address);
     }

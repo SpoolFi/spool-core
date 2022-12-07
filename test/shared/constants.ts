@@ -145,6 +145,17 @@ export interface Idle {
     idleUSDT: Address;
 }
 
+export interface IdleTranches {
+    eulerDAI: Address;
+    eulerUSDC: Address;
+    eulerUSDT: Address;
+}
+
+export interface IdleTranche {
+    protocol: Address;
+    underlying: Address
+}
+
 export interface Keeper {
     Token: Contract;
     Distributer: Contract;
@@ -210,6 +221,7 @@ export interface Network {
     curve: Curve;
     harvest: Harvest;
     idle: Idle;
+    idleTranches: IdleTranches;
     masterchef: Masterchef;
     morpho: Morpho;
     notional: Notional;
@@ -417,6 +429,12 @@ export const mainnet = function mainnet(): Mainnet {
         idleUSDT: { address: "0xF34842d05A1c888Ca02769A633DF37177415C2f8" },
     };
 
+    const idleTranches = {
+        eulerDAI: { address: "0x46c1f702a6aad1fd810216a5ff15aab1c62ca826" },
+        eulerUSDC: { address: "0xf5a3d259bfe7288284bd41823ec5c8327a314054" },
+        eulerUSDT: { address: "0xd5469df8ca36e7eaedb35d428f28e13380ec8ede" },
+    };
+
     let masterchef = {
         Sushi: { address: "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2", ABI: ISUSHI__factory.abi },
         Masterchef: { address: "0xbD17B1ce622d73bD438b9E658acA5996dc394b0d", ABI: IMasterChef__factory.abi },
@@ -526,6 +544,7 @@ export const mainnet = function mainnet(): Mainnet {
         curve,
         harvest,
         idle,
+        idleTranches,
         masterchef,
         morpho,
         notional,
