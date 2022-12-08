@@ -21,6 +21,7 @@ import {
     printStrategyBalances,
     reallocateVaults,
     reallocateVaultsEqual,
+    REALLOCATION_TYPE,
     sliceElements,
     UserVaultActions,
 } from "../shared/toolkit";
@@ -49,11 +50,11 @@ describe("Complex End to End Tests [ @skip-on-coverage ]", function () {
         context = await buildContext();
 
         console.log("Strats");
-        const stratNames = Object.keys(context.strategies)
+        const stratNames = Object.keys(context.strategies[context.network])
             .filter((s) => s != "All")
-            .flatMap((s) => Object.keys((context.strategies as any)[s]).map((st) => s + st));
+            .flatMap((s) => Object.keys((context.strategies[context.network] as any)[s]).map((st) => s + st));
 
-        console.table(stratNames.map((stratName, i) => [stratName, context.strategies.All[i]]));
+        console.table(stratNames.map((stratName, i) => [stratName, context.strategies[context.network].All[i]]));
     });
 
     afterEach("Reset to snapshot", async function () {
@@ -281,7 +282,7 @@ async function testVaultsTripleReallocation(context: Context, vaults: string[], 
     assertVaultStrategyProportions(s3, context);
 
     // SET REALLOCATION1
-    const reallocationTable1 = await reallocateVaults(context, vaults, [40_00, 10_00, 10_00, 10_00, 10_00, 10_00, 10_00]);
+    const reallocationTable1 = await reallocateVaults(context, vaults, REALLOCATION_TYPE._40);
     printReallocationTable(reallocationTable1);
 
     // DHW2 - REALLOCATION
@@ -292,7 +293,7 @@ async function testVaultsTripleReallocation(context: Context, vaults: string[], 
     await printStrategyBalances(context);
 
     // SET REALLOCATION2
-    const reallocationTable2 = await reallocateVaults(context, vaults, [0, 0, 0, 100_00, 0, 0, 0]);
+    const reallocationTable2 = await reallocateVaults(context, vaults, REALLOCATION_TYPE._100);
     printReallocationTable(reallocationTable2);
 
     // DHW3 - REALLOCATION

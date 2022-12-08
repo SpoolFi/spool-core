@@ -1,4 +1,4 @@
-import { expect, use } from "chai";
+import { use } from "chai";
 import { solidity } from "ethereum-waffle";
 import { Context } from "../../scripts/infrastructure";
 import {
@@ -167,7 +167,7 @@ async function testVaultDepositWithdrawClaimSimple(
 
 async function testVaultDepositWithdrawClaim(context: Context, vaults: string[], users: SignerWithAddress[]) {
     // ARRANGE
-    const balances1 = users.map(() => getRandomAmount(100, 100_000).toString());
+    const balances1 = users.map(() => getRandomAmount(10_000, 100_000).toString());
     const userVaultActions = getUserVaultActions();
 
     const s1 = await doBalanceSnapshot(context, users, vaults, userVaultActions);
@@ -185,7 +185,7 @@ async function testVaultDepositWithdrawClaim(context: Context, vaults: string[],
     assertDoHardWorkSnapshotsPrimitive(s1, s2, s3, userVaultActions, context);
     assertVaultStrategyProportions(s3, context);
 
-    const balances2 = users.map(() => getRandomAmount(100, 100_000).toString());
+    const balances2 = users.map(() => getRandomAmount(10_000, 100_000).toString());
 
     for (const vaultName of vaults) {
         for (let i = 0; i < users.length; i++) {

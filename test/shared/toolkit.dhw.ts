@@ -1,12 +1,12 @@
-import { Context, mainnetConst } from "../../scripts/infrastructure";
-import { BigNumber, constants, ContractTransaction } from "ethers";
+import { Context } from "../../scripts/infrastructure";
+import { BigNumber, ContractTransaction } from "ethers";
 import { pack } from "@ethersproject/solidity";
-import { encodeDepositSlippage, getRewardSwapPathBalancer, PathBalancerAsset, PathBalancerSwap } from "./utilities";
+import { getRewardSwapPathBalancer, getRewardSwapPathV2Weth, PathBalancerAsset, PathBalancerSwap } from "./utilities";
 import { ethers } from "hardhat";
 import { getReallocationSlippages, getSlippages } from "./dhwUtils";
+import {arbitrum, mainnet} from "./constants";
 
 export type ActionType = "deposit" | "withdrawal";
-const { MaxUint256 } = constants;
 
 type FeeValue = 10000 | 3000 | 500;
 
@@ -20,6 +20,9 @@ type PathV3 = {
     address: string;
     fee: FeeValue;
 };
+
+export const mainnetConst = mainnet();
+export const arbitrumConst = arbitrum();
 
 function getRewardSwapPathV3Custom(fee: FeeValue, path: PathV3[]) {
     const types = ["uint8", "uint24"];
@@ -41,6 +44,8 @@ function getRewardSwapPathV3Weth(fee1: FeeValue, fee2: FeeValue) {
 
     return pack(types, values);
 }
+
+const swapPathWeth = getRewardSwapPathV2Weth();
 
 const swapPathStkAave = getRewardSwapPathV3Custom(UNISWAP_V3_FEE._3000, [
     // AAVE
@@ -133,6 +138,19 @@ function getRewardSlippage(stratName: string) {
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] }
             ]
         }
+        case "AaveV3": {
+            return [
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] }
+            ]
+        }
+        case "Abracadabra": {
+            return [
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathWeth }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathWeth }] }
+            ]
+        }
         case "Compound": {
             return [ 
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
@@ -168,6 +186,12 @@ function getRewardSlippage(stratName: string) {
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] }
             ];
         }
+        case "Curve2pool": {
+            return [ 
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] }
+            ];
+        }
         case "Idle": {
             return [ 
                 { doClaim: true, swapData: swapSlippages }, 
@@ -188,66 +212,23 @@ function getRewardSlippage(stratName: string) {
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPathBalancerNOTEUSDC }] },
             ]
         }
+        case "TimelessFi": {
+            return [ 
+                { doClaim: false, swapData: [] },
+            ]
+        }
+        case "YearnMetapool": {
+            return [ 
+                { doClaim: false, swapData: [] },
+                { doClaim: false, swapData: [] },
+            ]
+        }
         default: {
             return [ 
                 { doClaim: false, swapData: [] }, 
                 { doClaim: false, swapData: [] }, 
                 { doClaim: false, swapData: [] } 
             ];
-        }
-    }
-}
-
-function getDhwSlippages(strategies: any, type: ActionType) {
-    return Object.keys(strategies)
-        .filter((s) => s != "All")
-        .flatMap((stratName) => {
-            const slippages = getDhwSlippage(stratName, type);
-            return [slippages, slippages, slippages];
-        });
-}
-
-function getDhwSlippage(stratName: string, type: ActionType) {
-    const depositSlippage = encodeDepositSlippage(0);
-    switch (stratName) {
-        case "Aave": {
-            return [];
-        }
-        case "BarnBridge": {
-            return type == "deposit" ? [depositSlippage] : [0];
-        }
-        case "Compound": {
-            return [];
-        }
-        case "Convex": {
-            return type == "deposit" ? [0, MaxUint256, depositSlippage] : [0, MaxUint256, 0];
-        }
-        case "Convex4pool": {
-            return type == "deposit" ? [0, MaxUint256, depositSlippage] : [0, MaxUint256, 0];
-        }
-        case "ConvexMetapool": {
-            return type == "deposit" ? [0, MaxUint256, depositSlippage] : [0, MaxUint256, 0];
-        }
-        case "Curve": {
-            return type == "deposit" ? [0, MaxUint256, depositSlippage] : [0, MaxUint256, 0];
-        }
-        case "Harvest": {
-            return [];
-        }
-        case "Idle": {
-            return type == "deposit" ? [depositSlippage] : [0];
-        }
-        case "Morpho": {
-            return [];
-        }
-        case "Notional": {
-            return type == "deposit" ? [depositSlippage] : [0];
-        }
-        case "Yearn": {
-            return type == "deposit" ? [depositSlippage] : [0];
-        }
-        default: {
-            throw new Error(`Strategy: "${stratName}" not supported`);
         }
     }
 }
@@ -259,9 +240,10 @@ export async function doHardWork(context: Context, getRewards: boolean): Promise
         await ethers.provider.send("evm_increaseTime", [BigNumber.from(100_000).toNumber()]);
         await ethers.provider.send("hardhat_mine", [BigNumber.from(7000).toHexString(), "0x0"]);
     }
-
-    const strategies = context.strategies!.All;
-    const rewardSlippages = getRewardSlippages(context.strategies);
+    
+    const _strategies = context.strategies[context.network];
+    const strategies = _strategies!.All;
+    const rewardSlippages = getRewardSlippages(_strategies);
 
     const chainStrats = await context.infra.controller.getAllStrategies();
 

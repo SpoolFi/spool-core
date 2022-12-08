@@ -1,20 +1,20 @@
 import { expect, use } from "chai";
 import { BigNumber, constants } from "ethers";
 import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
-import { IBaseStrategy, IERC20, TestStrategySetup__factory, YearnStrategy__factory } from "../../../build/types";
-import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
-import { Tokens } from "../../shared/constants";
-0
+import { IBaseStrategy, IERC20, TestStrategySetup__factory, BalancerStrategy__factory } from "../../../../build/types";
+import { AccountsFixture, arbitrumConst, TokensFixture, underlyingTokensFixture } from "../../../shared/fixtures";
+import { Tokens } from "../../../shared/constants";
+
 import {
     BasisPoints,
     encodeDepositSlippage,
     getMillionUnits,
     mineBlocks,
-    resetToBlockNumber,
+    reset,
     SECS_DAY,
-} from "../../shared/utilities";
+} from "../../../shared/utilities";
 
-import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
+import { getStrategySetupObject, getStrategyState, setStrategyState } from "./../shared/stratSetupUtilities";
 
 const { Zero, AddressZero } = constants;
 
@@ -22,60 +22,63 @@ use(solidity);
 
 const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
-const mainnetBlock = 15082700;
 
-type YearnStratSetup = {
+type BalancerStratSetup = {
     name: keyof TokensFixture & keyof Tokens;
-    yVault: string;
+    nCoin: number;
 };
 
-const strategyAssets: YearnStratSetup[] = [
+const strategyAssets: BalancerStratSetup[] = [
     {
         name: "DAI",
-        yVault: mainnetConst.yearn.DAIVault.address,
+        nCoin: arbitrumConst.balancer.staBAL.DAI
     },
     {
         name: "USDC",
-        yVault: mainnetConst.yearn.USDCVault.address,
+        nCoin: arbitrumConst.balancer.staBAL.USDC
     },
     {
         name: "USDT",
-        yVault: mainnetConst.yearn.USDTVault.address,
+        nCoin: arbitrumConst.balancer.staBAL.USDT
     },
 ];
 
 const depositSlippage = encodeDepositSlippage(0);
 
-describe("Strategies Unit Test: Yearn", () => {
+describe("Strategies Unit Test: Arbitrum - Balancer", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
-        await resetToBlockNumber(mainnetBlock);
+        await reset();
         ({ accounts } = await loadFixture(underlyingTokensFixture));
     });
 
-    it("Should fail deploying Yearn with vault address 0", async () => {
-        const YearnStrategy = new YearnStrategy__factory().connect(accounts.administrator);
+    it("Should fail deploying Balancer with vault address 0", async () => {
+        const BalancerStrategy = new BalancerStrategy__factory().connect(accounts.administrator);
         await expect(
-            YearnStrategy.deploy(AddressZero, "0x0000000000000000000000000000000000000001", AddressZero)
-        ).to.be.revertedWith("YearnStrategy::constructor: Vault address cannot be 0");
+            BalancerStrategy.deploy(AddressZero, "0x0000000000000000000000000000000000000001", AddressZero, AddressZero)
+        ).to.be.revertedWith("BalancerStrategy::constructor: Pool address cannot be 0");
     });
 
     describe(`Gatekeeping`, () => {
-        it("Claim rewards, should throw as Yearn Vault has no rewards", async () => {
+        it("Claim rewards, should throw as Balancer Vault has no rewards", async () => {
             const { tokens } = await loadFixture(underlyingTokensFixture);
-            const yearnContract = await new YearnStrategy__factory()
+            const balancerContract = await new BalancerStrategy__factory()
                 .connect(accounts.administrator)
-                .deploy(mainnetConst.yearn.DAIVault.address, tokens.DAI.address, AddressZero);
+                .deploy(arbitrumConst.balancer.staBAL.Pool.address, 
+                        tokens.DAI.address, 
+                        arbitrumConst.balancer.staBAL.DAI,
+                        AddressZero
+                );
 
             // ACT
-            await expect(yearnContract.claimRewards([])).to.be.revertedWith(
+            await expect(balancerContract.claimRewards([])).to.be.revertedWith(
                 "NoRewardStrategy::_processRewards: Strategy does not have rewards"
             );
         });
     });
 
-    strategyAssets.forEach(({ name, yVault }) => {
+    strategyAssets.forEach(({ name, nCoin }) => {
         describe(`Asset: ${name}`, () => {
             let token: IERC20;
             before(async () => {
@@ -85,23 +88,32 @@ describe("Strategies Unit Test: Yearn", () => {
 
             describe(`Deployment: ${name}`, () => {
                 it("Should deploy", async () => {
-                    await new YearnStrategy__factory().connect(accounts.administrator).deploy(yVault, token.address, AddressZero);
+                    await new BalancerStrategy__factory().connect(accounts.administrator)
+                    .deploy(arbitrumConst.balancer.staBAL.Pool.address, 
+                            token.address, 
+                            nCoin,
+                            AddressZero
+                     );
                 });
             });
 
             describe(`Functions: ${name}`, () => {
-                let yearnContract: IBaseStrategy;
+                let balancerContract: IBaseStrategy;
                 let implAddress: string;
                 let millionUnits: BigNumber;
 
                 before(async () => {
-                    const yearnStrategyImpl = await new YearnStrategy__factory()
+                    const balancerStrategyImpl = await new BalancerStrategy__factory()
                         .connect(accounts.administrator)
-                        .deploy(yVault, token.address, AddressZero);
+                        .deploy(arbitrumConst.balancer.staBAL.Pool.address, 
+                            token.address, 
+                            nCoin,
+                            AddressZero
+                        );
 
-                    implAddress = yearnStrategyImpl.address;
+                    implAddress = balancerStrategyImpl.address;
 
-                    millionUnits = getMillionUnits(mainnetConst.tokens[name].units);
+                    millionUnits = getMillionUnits(arbitrumConst.tokens[name].units);
                 });
 
                 beforeEach(async () => {
@@ -110,7 +122,7 @@ describe("Strategies Unit Test: Yearn", () => {
                         implAddress
                     );
 
-                    yearnContract = YearnStrategy__factory.connect(
+                    balancerContract = BalancerStrategy__factory.connect(
                         compoundStrategyProxy.address,
                         accounts.administrator
                     );
@@ -121,19 +133,19 @@ describe("Strategies Unit Test: Yearn", () => {
                     const depositAmount = millionUnits;
                     const stratSetup = getStrategySetupObject();
                     stratSetup.pendingUser.deposit = depositAmount;
-                    await setStrategyState(yearnContract, stratSetup);
-                    token.transfer(yearnContract.address, depositAmount);
+                    await setStrategyState(balancerContract, stratSetup);
+                    token.transfer(balancerContract.address, depositAmount);
 
                     // ACT
-                    await yearnContract.process([depositSlippage], false, []);
+                    await balancerContract.process([depositSlippage], false, []);
 
                     // ASSERT
-                    const balance = await yearnContract.getStrategyBalance();
+                    const balance = await balancerContract.getStrategyBalance();
                     expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_100);
 
-                    const strategyDetails = await getStrategyState(yearnContract);
+                    const strategyDetails = await getStrategyState(balancerContract);
 
-                    expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_1);
+                    expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_100);
                     const totalShares = balance.mul(10**6).sub(10**5);
                     expect(strategyDetails.totalShares).to.beCloseTo(totalShares, BasisPoints.Basis_01);
                 });
@@ -143,62 +155,57 @@ describe("Strategies Unit Test: Yearn", () => {
                     const depositAmount = millionUnits;
                     const stratSetup = getStrategySetupObject();
                     stratSetup.pendingUser.deposit = depositAmount;
-                    await setStrategyState(yearnContract, stratSetup);
-                    token.transfer(yearnContract.address, depositAmount);
+                    await setStrategyState(balancerContract, stratSetup);
+                    token.transfer(balancerContract.address, depositAmount);
 
-                    await yearnContract.process([depositSlippage], false, []);
+                    await balancerContract.process([depositSlippage], false, []);
 
                     console.log("mining blocks...");
                     await mineBlocks(100, SECS_DAY);
                     console.log("mined");
 
-                    const stratSetup2 = await getStrategyState(yearnContract);
+                    const stratSetup2 = await getStrategyState(balancerContract);
                     stratSetup2.pendingUser.deposit = depositAmount;
-                    await setStrategyState(yearnContract, stratSetup2);
-                    token.transfer(yearnContract.address, depositAmount);
+                    await setStrategyState(balancerContract, stratSetup2);
+                    token.transfer(balancerContract.address, depositAmount);
 
                     // ACT
-                    await yearnContract.process([depositSlippage], false, []);
+                    await balancerContract.process([depositSlippage], false, []);
 
                     // ASSERT
-                    const balance = await yearnContract.getStrategyBalance();
-                    expect(balance).to.beCloseTo(depositAmount.mul(2), BasisPoints.Basis_1);
+                    const balance = await balancerContract.getStrategyBalance();
+                    expect(balance).to.be.greaterWithTolerance(depositAmount.mul(2), BasisPoints.Basis_100);
 
-                    const totalShares = balance.mul(10**6).sub(10**5);
-                    const strategyDetails = await getStrategyState(yearnContract);
-                    expect(strategyDetails.totalShares).to.beCloseTo(totalShares, BasisPoints.Basis_01);
-
-                    const shares1 = stratSetup2.totalShares;
-                    const shares2 = strategyDetails.totalShares.sub(shares1);
-
-                    expect(shares1).to.beCloseTo(shares2, BasisPoints.Basis_01);
+                    const totalShares = balance.mul(10**6).mul(2).sub(10**5);
+                    const strategyDetails = await getStrategyState(balancerContract);
+                    expect(strategyDetails.totalShares).to.be.lte(totalShares);
                 });
 
-                it("Process withraw, should withdraw from strategy", async () => {
+                it("Process withdraw, should withdraw from strategy", async () => {
                     // ARRANGE
 
                     // deposit
                     const depositAmount = millionUnits;
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
-                    await setStrategyState(yearnContract, stratSetupDeposit);
-                    token.transfer(yearnContract.address, depositAmount);
-                    await yearnContract.process([depositSlippage], false, []);
+                    await setStrategyState(balancerContract, stratSetupDeposit);
+                    token.transfer(balancerContract.address, depositAmount);
+                    await balancerContract.process([depositSlippage], false, []);
 
                     // set withdraw
-                    const stratSetupWithdraw = await getStrategyState(yearnContract);
+                    const stratSetupWithdraw = await getStrategyState(balancerContract);
                     stratSetupWithdraw.pendingUser.deposit = Zero;
                     stratSetupWithdraw.pendingUser.sharesToWithdraw = stratSetupWithdraw.totalShares;
-                    await setStrategyState(yearnContract, stratSetupWithdraw);
+                    await setStrategyState(balancerContract, stratSetupWithdraw);
 
                     // ACT
-                    await yearnContract.process([0], false, []);
+                    await balancerContract.process([0], false, []);
 
                     // ASSERT
-                    const balance = await yearnContract.getStrategyBalance();
+                    const balance = await balancerContract.getStrategyBalance();
                     expect(balance).to.equal(Zero);
 
-                    const strategyDetails = await getStrategyState(yearnContract);
+                    const strategyDetails = await getStrategyState(balancerContract);
                     expect(strategyDetails.totalShares).to.equal(Zero);
                 });
 
@@ -209,30 +216,30 @@ describe("Strategies Unit Test: Yearn", () => {
                     const depositAmount = millionUnits;
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
-                    await setStrategyState(yearnContract, stratSetupDeposit);
-                    token.transfer(yearnContract.address, depositAmount);
-                    await yearnContract.process([depositSlippage], false, []);
+                    await setStrategyState(balancerContract, stratSetupDeposit);
+                    token.transfer(balancerContract.address, depositAmount);
+                    await balancerContract.process([depositSlippage], false, []);
 
                     // mine block, to gain reward
                     console.log("mining blocks...");
                     await mineBlocks(100, SECS_DAY);
                     console.log("mined");
 
-                    const stratSetupWithdraw = await getStrategyState(yearnContract);
+                    const stratSetupWithdraw = await getStrategyState(balancerContract);
 
                     // ACT
-                    await yearnContract.fastWithdraw(stratSetupWithdraw.totalShares, [0], []);
+                    await balancerContract.fastWithdraw(stratSetupWithdraw.totalShares, [0], []);
 
                     // ASSERT
 
-                    const balance = await yearnContract.getStrategyBalance();
+                    const balance = await balancerContract.getStrategyBalance();
                     expect(balance).to.equal(Zero);
 
-                    const strategyDetails = await getStrategyState(yearnContract);
+                    const strategyDetails = await getStrategyState(balancerContract);
                     expect(strategyDetails.totalShares).to.equal(Zero);
 
-                    const daiBalance = await token.balanceOf(yearnContract.address);
-                    expect(daiBalance).to.be.greaterWithTolerance(depositAmount, BasisPoints.Basis_1);
+                    const tokenBalance = await token.balanceOf(balancerContract.address);
+                    expect(tokenBalance).to.be.greaterWithTolerance(depositAmount, BasisPoints.Basis_5);
                 });
 
                 it("Emergency withdraw, should withdraw all funds and send it to the recipient", async () => {
@@ -244,19 +251,19 @@ describe("Strategies Unit Test: Yearn", () => {
                     const depositAmount = millionUnits;
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
-                    await setStrategyState(yearnContract, stratSetupDeposit);
-                    token.transfer(yearnContract.address, depositAmount);
-                    await yearnContract.process([depositSlippage], false, []);
+                    await setStrategyState(balancerContract, stratSetupDeposit);
+                    token.transfer(balancerContract.address, depositAmount);
+                    await balancerContract.process([depositSlippage], false, []);
 
                     // add pending deposit
                     const pendingDeposit = millionUnits.div(5);
                     const stratSetupDepositpending = getStrategySetupObject();
                     stratSetupDepositpending.pendingUser.deposit = pendingDeposit;
                     stratSetupDepositpending.pendingUserNext.deposit = pendingDeposit;
-                    await setStrategyState(yearnContract, stratSetupDepositpending);
+                    await setStrategyState(balancerContract, stratSetupDepositpending);
 
                     const totalPendingDeposit = pendingDeposit.add(pendingDeposit);
-                    token.transfer(yearnContract.address, totalPendingDeposit);
+                    token.transfer(balancerContract.address, totalPendingDeposit);
 
                     // mine blocks
                     console.log("mining blocks...");
@@ -264,10 +271,10 @@ describe("Strategies Unit Test: Yearn", () => {
                     console.log("mined");
 
                     // ACT
-                    await yearnContract.emergencyWithdraw(emergencyRecipient, []);
+                    await balancerContract.emergencyWithdraw(emergencyRecipient, []);
 
                     // ASSERT
-                    const stratBalance = await yearnContract.getStrategyBalance();
+                    const stratBalance = await balancerContract.getStrategyBalance();
                     expect(stratBalance).to.equal(Zero);
 
                     // check if balance of the recipient is close to the deposit + pending deposit

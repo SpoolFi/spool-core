@@ -2,29 +2,28 @@ import { expect, use } from "chai";
 import { BigNumber, constants } from "ethers";
 import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
 import {
-    ConvexBoosterContractHelper__factory,
-    ConvexSharedMetapoolStrategy__factory,
+    Curve2poolStrategy__factory,
+    CurveGaugeContractHelper__factory,
     IBaseStrategy,
     IERC20,
     TestStrategySetup__factory,
     TransparentUpgradeableProxy__factory,
-} from "../../../build/types";
-import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
-import { Tokens } from "../../shared/constants";
+} from "../../../../build/types";
+import { AccountsFixture, arbitrumConst, TokensFixture, underlyingTokensFixture } from "../../../shared/fixtures";
+import { Tokens } from "../../../shared/constants";
 
 import {
     BasisPoints,
     encodeDepositSlippage,
     getMillionUnits,
-    getRewardSwapPathV3Direct,
     getRewardSwapPathV3Weth,
     mineBlocks,
     reset,
     SECS_DAY,
     UNISWAP_V3_FEE,
-} from "../../shared/utilities";
+} from "../../../shared/utilities";
 
-import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
+import { getStrategySetupObject, getStrategyState, setStrategyState } from "./../shared/stratSetupUtilities";
 
 const { Zero, AddressZero, MaxUint256 } = constants;
 
@@ -34,34 +33,20 @@ const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
 
 const swapPathWeth = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
-const swapPathWeth10000 = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._10000, UNISWAP_V3_FEE._500);
 
 type ConvexStratSetup = {
     name: keyof TokensFixture & keyof Tokens;
-    swapData: {
-        slippage: number;
-        path: string;
-    }[];
+    swapPath: string;
 };
-
-const swapData = [
-    { slippage: 1, path: swapPathWeth },      // CRV
-    { slippage: 1, path: swapPathWeth10000 }, // CVX
-    { slippage: 1, path: swapPathWeth10000 }  // ALCX
-];
 
 const strategyAssets: ConvexStratSetup[] = [
     {
-        name: "DAI",
-        swapData: swapData,
-    },
-    {
         name: "USDC",
-        swapData: swapData,
+        swapPath: swapPathWeth,
     },
     {
         name: "USDT",
-        swapData: swapData,
+        swapPath: swapPathWeth,
     },
 ];
 
@@ -70,7 +55,7 @@ const depositSlippage = encodeDepositSlippage(0);
 const depositSlippages = [0, MaxUint256, depositSlippage];
 const withdrawSlippages = [0, MaxUint256, 0];
 
-describe("Strategies Unit Test: Convex AlUSD", () => {
+describe("Strategies Unit Test: Arbitrum - Curve Liquidity Gauge 2pool", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
@@ -78,23 +63,21 @@ describe("Strategies Unit Test: Convex AlUSD", () => {
         ({ accounts } = await loadFixture(underlyingTokensFixture));
     });
 
-    it("Should fail deploying Convex Metapool Strategy with underlying address 0", async () => {
-        const ConvexSharedMetapoolStrategy = await new ConvexSharedMetapoolStrategy__factory().connect(accounts.administrator);
+    it("Should fail deploying Curve 2pool with pool address 0", async () => {
+        const CurveStrategy = new Curve2poolStrategy__factory().connect(accounts.administrator);
         await expect(
-            ConvexSharedMetapoolStrategy.deploy(
-                mainnetConst.convex.Booster.address,
-                mainnetConst.convex._alUSD.boosterPoolId,
-                mainnetConst.curve._3pool.pool.address,
-                mainnetConst.curve._alUSD.depositZap.address,
-                mainnetConst.curve._alUSD.lpToken.address,
+            CurveStrategy.deploy(
+                AddressZero, 
+                "0x0000000000000000000000000000000000000001",
+                "0x0000000000000000000000000000000000000001", 
+                "0x0000000000000000000000000000000000000001", 
+                "0x0000000000000000000000000000000000000001", 
                 AddressZero,
-                AddressZero,
-                AddressZero
-            )
-        ).to.be.revertedWith("BaseStrategy::constructor: Underlying address cannot be 0");
+)
+        ).to.be.revertedWith("CurveStrategyBaseV3::constructor: Curve Pool address cannot be 0");
     });
 
-    strategyAssets.forEach(({ name, swapData }) => {
+    strategyAssets.forEach(({ name, swapPath }) => {
         describe(`Asset: ${name}`, () => {
             let token: IERC20;
 
@@ -105,76 +88,71 @@ describe("Strategies Unit Test: Convex AlUSD", () => {
 
             describe(`Deployment: ${name}`, () => {
                 it("Should deploy", async () => {
-                    const convexStrat = await new ConvexSharedMetapoolStrategy__factory()
+                    const curveStrat = await new Curve2poolStrategy__factory()
                         .connect(accounts.administrator)
                         .deploy(
-                            mainnetConst.convex.Booster.address,
-                            mainnetConst.convex._alUSD.boosterPoolId,
-                            mainnetConst.curve._3pool.pool.address,
-                            mainnetConst.curve._alUSD.depositZap.address,
-                            mainnetConst.curve._alUSD.lpToken.address,
-                            token.address,
+                            arbitrumConst.curve._2pool.pool.address,
+                            arbitrumConst.curve._2pool.lpToken.address,
+                            arbitrumConst.curve.CRV.address,
+                            token.address, 
                             AddressZero,
-                            AddressZero
+                            AddressZero,
+
                         );
 
-                    await convexStrat.initialize();
+                    await curveStrat.initialize();
                 });
             });
 
             describe(`Functions: ${name}`, () => {
-                let convexContract: IBaseStrategy;
+                let curveContract: IBaseStrategy;
                 let millionUnits: BigNumber;
 
                 before(async () => {
-                    millionUnits = getMillionUnits(mainnetConst.tokens[name].units);
+                    millionUnits = getMillionUnits(arbitrumConst.tokens[name].units);
                 });
 
                 beforeEach(async () => {
                     // deploy proxy for a strategy
-                    const convexStrategyProxy = await new TestStrategySetup__factory(accounts.administrator).deploy(
+                    const curveStrategyProxy = await new TestStrategySetup__factory(accounts.administrator).deploy(
                         AddressZero
                     );
 
-                    let convexBoosterHelper = await new ConvexBoosterContractHelper__factory()
+                    let curveHelper = await new CurveGaugeContractHelper__factory()
                         .connect(accounts.administrator)
                         .deploy(
-                            convexStrategyProxy.address,
-                            mainnetConst.convex.Booster.address,
-                            mainnetConst.convex._alUSD.boosterPoolId
+                            curveStrategyProxy.address,
+                            arbitrumConst.curve._2pool.LiquidityGauge.address,
+                            arbitrumConst.curve.CRV.address,
                         );
 
                     const helperProxy = await new TransparentUpgradeableProxy__factory()
                         .connect(accounts.administrator)
-                        .deploy(convexBoosterHelper.address, "0x0000000000000000000000000000000000000001", "0x");
-                    convexBoosterHelper = ConvexBoosterContractHelper__factory.connect(
+                        .deploy(curveHelper.address, "0x0000000000000000000000000000000000000001", "0x");
+                    curveHelper = CurveGaugeContractHelper__factory.connect(
                         helperProxy.address,
                         accounts.administrator
                     );
 
-                    const convexStrategyImpl = await new ConvexSharedMetapoolStrategy__factory()
+                    const curveStrategyImpl = await new Curve2poolStrategy__factory()
                         .connect(accounts.administrator)
                         .deploy(
-                            mainnetConst.convex.Booster.address,
-                            mainnetConst.convex._alUSD.boosterPoolId,
-                            mainnetConst.curve._3pool.pool.address,
-                            mainnetConst.curve._alUSD.depositZap.address,
-                            mainnetConst.curve._alUSD.lpToken.address,
-                            token.address,
-                            convexBoosterHelper.address,
+                            arbitrumConst.curve._2pool.pool.address,
+                            arbitrumConst.curve._2pool.lpToken.address,
+                            arbitrumConst.curve.CRV.address,
+                            token.address, 
+                            curveHelper.address,
                             AddressZero
                         );
 
-                    convexStrategyProxy.setImplementation(convexStrategyImpl.address);
+                    curveStrategyProxy.setImplementation(curveStrategyImpl.address);
 
-                    convexContract = ConvexSharedMetapoolStrategy__factory.connect(
-                        convexStrategyProxy.address,
+                    curveContract = Curve2poolStrategy__factory.connect(
+                        curveStrategyProxy.address,
                         accounts.administrator
                     );
 
-                    // console.log(tx)
-                    await convexContract.initialize();
-                    await convexContract.initialize();
+                    await curveContract.initialize();
                 });
 
                 it("Process deposit, should deposit in strategy", async () => {
@@ -182,17 +160,17 @@ describe("Strategies Unit Test: Convex AlUSD", () => {
                     const depositAmount = millionUnits;
                     const stratSetup = getStrategySetupObject();
                     stratSetup.pendingUser.deposit = depositAmount;
-                    await setStrategyState(convexContract, stratSetup);
-                    token.transfer(convexContract.address, depositAmount);
+                    await setStrategyState(curveContract, stratSetup);
+                    await token.transfer(curveContract.address, depositAmount);
 
                     // ACT
-                    await convexContract.process(depositSlippages, false, []);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // ASSERT
-                    const balance = await convexContract.getStrategyBalance();
+                    const balance = await curveContract.getStrategyBalance();
                     expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_100);
 
-                    const strategyDetails = await getStrategyState(convexContract);
+                    const strategyDetails = await getStrategyState(curveContract);
 
                     expect(balance).to.beCloseTo(depositAmount, BasisPoints.Basis_10);
                     const totalShares = balance.mul(10**6).sub(10**5);
@@ -204,60 +182,60 @@ describe("Strategies Unit Test: Convex AlUSD", () => {
                     const depositAmount = millionUnits;
                     const stratSetup = getStrategySetupObject();
                     stratSetup.pendingUser.deposit = depositAmount;
-                    await setStrategyState(convexContract, stratSetup);
-                    token.transfer(convexContract.address, depositAmount);
+                    await setStrategyState(curveContract, stratSetup);
+                    await token.transfer(curveContract.address, depositAmount);
 
-                    await convexContract.process(depositSlippages, false, []);
+                    await curveContract.process(depositSlippages, false, []);
 
                     console.log("mining blocks...");
                     await mineBlocks(100, SECS_DAY);
                     console.log("mined");
 
-                    const stratSetup2 = await getStrategyState(convexContract);
+                    const stratSetup2 = await getStrategyState(curveContract);
                     stratSetup2.pendingUser.deposit = depositAmount;
-                    await setStrategyState(convexContract, stratSetup2);
-                    token.transfer(convexContract.address, depositAmount);
+                    await setStrategyState(curveContract, stratSetup2);
+                    await token.transfer(curveContract.address, depositAmount);
 
                     // ACT
-                    await convexContract.process(depositSlippages, true, swapData);
+                    await curveContract.process(depositSlippages, true, [{ slippage: 1, path: swapPath }]);
 
                     // ASSERT
-                    const balance = await convexContract.getStrategyBalance();
+                    const balance = await curveContract.getStrategyBalance();
                     expect(balance).to.be.greaterWithTolerance(depositAmount.mul(2), BasisPoints.Basis_100);
 
-                    const strategyDetails = await getStrategyState(convexContract);
                     const totalShares = balance.mul(10**6).mul(2).sub(10**5);
-                    expect(strategyDetails.totalShares).to.be.lt(totalShares);
+                    const strategyDetails = await getStrategyState(curveContract);
+                    expect(strategyDetails.totalShares).to.be.lte(totalShares);
                 });
 
-                it("Process withdraw, should withdraw from strategy", async () => {
+                it("Process withraw, should withdraw from strategy", async () => {
                     // ARRANGE
 
                     // deposit
                     const depositAmount = millionUnits;
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
-                    await setStrategyState(convexContract, stratSetupDeposit);
-                    token.transfer(convexContract.address, depositAmount);
-                    await convexContract.process(depositSlippages, false, []);
+                    await setStrategyState(curveContract, stratSetupDeposit);
+                    await token.transfer(curveContract.address, depositAmount);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // set withdraw
-                    const stratSetupWithdraw = await getStrategyState(convexContract);
+                    const stratSetupWithdraw = await getStrategyState(curveContract);
                     stratSetupWithdraw.pendingUser.deposit = Zero;
                     stratSetupWithdraw.pendingUser.sharesToWithdraw = stratSetupWithdraw.totalShares;
-                    await setStrategyState(convexContract, stratSetupWithdraw);
+                    await setStrategyState(curveContract, stratSetupWithdraw);
 
                     // ACT
-                    await convexContract.process(withdrawSlippages, false, swapData);
+                    await curveContract.process(withdrawSlippages, false, [{ slippage: 1, path: swapPath }]);
 
                     // ASSERT
-                    const balance = await convexContract.getStrategyBalance();
+                    const balance = await curveContract.getStrategyBalance();
                     expect(balance).to.equal(Zero);
 
-                    const strategyDetails = await getStrategyState(convexContract);
+                    const strategyDetails = await getStrategyState(curveContract);
                     expect(strategyDetails.totalShares).to.equal(Zero);
 
-                    const tokenBalance = await token.balanceOf(convexContract.address);
+                    const tokenBalance = await token.balanceOf(curveContract.address);
                     expect(tokenBalance).to.be.greaterWithTolerance(depositAmount, BasisPoints.Basis_10);
                 });
 
@@ -268,9 +246,9 @@ describe("Strategies Unit Test: Convex AlUSD", () => {
                     const depositAmount = millionUnits;
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
-                    await setStrategyState(convexContract, stratSetupDeposit);
-                    token.transfer(convexContract.address, depositAmount);
-                    await convexContract.process(depositSlippages, false, []);
+                    await setStrategyState(curveContract, stratSetupDeposit);
+                    await token.transfer(curveContract.address, depositAmount);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // mine block, to gain reward
                     console.log("mining blocks...");
@@ -278,10 +256,10 @@ describe("Strategies Unit Test: Convex AlUSD", () => {
                     console.log("mined");
 
                     // ACT
-                    await convexContract.claimRewards(swapData);
+                    await curveContract.claimRewards([{ slippage: 1, path: swapPath }]);
 
                     // ASSERT
-                    const strategyDetails = await getStrategyState(convexContract);
+                    const strategyDetails = await getStrategyState(curveContract);
                     expect(strategyDetails.pendingDepositReward).to.be.gte(Zero);
                 });
 
@@ -292,30 +270,31 @@ describe("Strategies Unit Test: Convex AlUSD", () => {
                     const depositAmount = millionUnits;
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
-                    await setStrategyState(convexContract, stratSetupDeposit);
-                    token.transfer(convexContract.address, depositAmount);
-                    await convexContract.process(depositSlippages, false, []);
+                    await setStrategyState(curveContract, stratSetupDeposit);
+                    await token.transfer(curveContract.address, depositAmount);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // mine block, to gain reward
                     console.log("mining blocks...");
                     await mineBlocks(100, SECS_DAY);
                     console.log("mined");
 
-                    const stratSetupWithdraw = await getStrategyState(convexContract);
+                    const stratSetupWithdraw = await getStrategyState(curveContract);
 
                     // ACT
-                    await convexContract.fastWithdraw(stratSetupWithdraw.totalShares, withdrawSlippages, swapData);
+                    await curveContract.fastWithdraw(stratSetupWithdraw.totalShares, withdrawSlippages, [
+                        { slippage: 1, path: swapPath },
+                    ]);
 
                     // ASSERT
-
-                    const balance = await convexContract.getStrategyBalance();
+                    const balance = await curveContract.getStrategyBalance();
                     expect(balance).to.equal(Zero);
 
-                    const strategyDetails = await getStrategyState(convexContract);
+                    const strategyDetails = await getStrategyState(curveContract);
                     expect(strategyDetails.totalShares).to.equal(Zero);
 
                     // check if balance is greater than initial, as we claim the rewards as well
-                    const tokenBalance = await token.balanceOf(convexContract.address);
+                    const tokenBalance = await token.balanceOf(curveContract.address);
                     expect(tokenBalance).to.be.greaterWithTolerance(depositAmount, BasisPoints.Basis_10);
                 });
 
@@ -328,19 +307,19 @@ describe("Strategies Unit Test: Convex AlUSD", () => {
                     const depositAmount = millionUnits;
                     const stratSetupDeposit = getStrategySetupObject();
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
-                    await setStrategyState(convexContract, stratSetupDeposit);
-                    token.transfer(convexContract.address, depositAmount);
-                    await convexContract.process(depositSlippages, false, []);
+                    await setStrategyState(curveContract, stratSetupDeposit);
+                    await token.transfer(curveContract.address, depositAmount);
+                    await curveContract.process(depositSlippages, false, []);
 
                     // add pending deposit
                     const pendingDeposit = millionUnits.div(5);
                     const stratSetupDepositpending = getStrategySetupObject();
                     stratSetupDepositpending.pendingUser.deposit = pendingDeposit;
                     stratSetupDepositpending.pendingUserNext.deposit = pendingDeposit;
-                    await setStrategyState(convexContract, stratSetupDepositpending);
+                    await setStrategyState(curveContract, stratSetupDepositpending);
 
                     const totalPendingDeposit = pendingDeposit.add(pendingDeposit);
-                    token.transfer(convexContract.address, totalPendingDeposit);
+                    await token.transfer(curveContract.address, totalPendingDeposit);
 
                     // mine blocks
                     console.log("mining blocks...");
@@ -348,10 +327,10 @@ describe("Strategies Unit Test: Convex AlUSD", () => {
                     console.log("mined");
 
                     // ACT
-                    await convexContract.emergencyWithdraw(emergencyRecipient, []);
+                    await curveContract.emergencyWithdraw(emergencyRecipient, []);
 
                     // ASSERT
-                    const stratBalance = await convexContract.getStrategyBalance();
+                    const stratBalance = await curveContract.getStrategyBalance();
                     expect(stratBalance).to.equal(Zero);
 
                     // check if balance of the recipient is close to the deposit + pending deposit

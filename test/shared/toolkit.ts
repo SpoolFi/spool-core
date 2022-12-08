@@ -15,15 +15,17 @@ import {
     BasisPoints,
     getBitwiseProportions,
     getBitwiseStrategies,
+    getConstants,
+    getNetworkName,
     getProportionsFromBitwise,
     getStrategyIndexes,
+    getStrategyNames,
     impersonate,
     parseUnits,
     whitelistStrategy,
 } from "./utilities";
-import { mainnet } from "./constants";
 import { BigNumber, BigNumberish, constants, Wallet } from "ethers";
-import { Context, NamedVault } from "../../scripts/infrastructure";
+import { Context, NamedVault, StrategiesContracts } from "../../scripts/infrastructure";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { accountsFixture, tokensFixture } from "./fixtures";
 import hre, { ethers } from "hardhat";
@@ -32,6 +34,7 @@ import { expect } from "chai";
 import { loadSpoolInfra, loadVaults, writeContracts } from "../../scripts/deployUtils";
 
 import seedrandom from "seedrandom";
+import { readFile, writeFile } from "fs/promises";
 
 const spoolTokenAddress = "0x40803cea2b2a32bda1be61d3604af6a814e70976";
 const spoolTokenHolder = "0xf6bc2e3b1f939c435d9769d078a6e5048aabd463";
@@ -104,6 +107,12 @@ export type UserVaultActions = {
     };
 };
 
+export enum REALLOCATION_TYPE {
+    EQUAL,
+    _100,
+    _40
+}
+
 const ASSETS = ["DAI", "USDC", "USDT"];
 
 function getVaultElement(context: Context, vaultName: string): NamedVault {
@@ -124,10 +133,11 @@ export function sliceElements<T>(elements: T[], count: number) {
 
 export async function buildContext(): Promise<Context> {
     let tx: any;
+    const network = await getNetworkName() as keyof StrategiesContracts;
     const accounts = await accountsFixture(hre);
     const tokens = await tokensFixture(accounts.administrator);
     const infra = await loadSpoolInfra(accounts, hre);
-
+    
     const slippagesHelper = (await new SlippagesHelper__factory()
         .connect(accounts.administrator)
         .deploy(infra.strategyRegistry.address))
@@ -144,8 +154,9 @@ export async function buildContext(): Promise<Context> {
     });
 
     const signers = await hre.ethers.getSigners();
-
+    
     const context: any = {
+        network,
         accounts,
         tokens,
         strategies: { All: [] },
@@ -158,26 +169,17 @@ export async function buildContext(): Promise<Context> {
         vaults: await loadVaults(hre),
     };
 
-    const strategyNames: any = {
-        Aave: { name: "Aave", assets: ["DAI", "USDC", "USDT"] },
-        Notional: { name: "Notional", assets: ["DAI", "USDC"] },
-        Compound: { name: "Compound", assets: ["DAI", "USDC", "USDT"] },
-        Convex4pool: { name: "ConvexShared4pool", assets: ["DAI", "USDC", "USDT"] },
-        ConvexMetapool: { name: "ConvexSharedMetapool", assets: ["DAI", "USDC", "USDT"] },
-        Convex: { name: "ConvexShared", assets: ["DAI", "USDC", "USDT"] },
-        Curve: { name: "Curve3pool", assets: ["DAI", "USDC", "USDT"] },
-        Harvest: { name: "Harvest", assets: ["DAI", "USDC", "USDT"] },
-        Idle: { name: "Idle", assets: ["DAI", "USDC", "USDT"] },
-        Morpho: { name: "Morpho", assets: ["DAI", "USDC", "USDT"] },
-        Yearn: { name: "Yearn", assets: ["DAI", "USDC", "USDT"] },
-    };
-
+    const strategyNames = await getStrategyNames();
+    console.log(strategyNames);
     for (const stratKey of Object.keys(strategyNames)) {
         for (const asset of strategyNames[stratKey].assets) {
             const stratAddress = (await hre.deployments.get(`${strategyNames[stratKey].name}Strategy${asset}`)).address;
-            context.strategies[stratKey] = context.strategies[stratKey] || [];
-            context.strategies[stratKey][asset].push(stratAddress);
-            context.strategies["All"].push(stratAddress);
+            context.strategies[network] = context.strategies[network] || [];
+            context.strategies[network][stratKey] = context.strategies[network][stratKey] || [];
+            context.strategies[network][stratKey][asset] = context.strategies[network][stratKey][asset] || [];
+            context.strategies[network][stratKey][asset].push(stratAddress);
+            context.strategies[network]["All"] = context.strategies[network]["All"] || [];
+            context.strategies[network]["All"].push(stratAddress);
         }
     }
 
@@ -278,7 +280,7 @@ export async function doTransferAssetsToWallets(wallets: SignerWithAddress[], va
 }
 
 export async function doTransferAssetsToUser(userAddress: string, value: string) {
-    const constants = mainnet();
+    const constants = await getConstants();
     const accounts = await accountsFixture(hre);
 
     await transferFunds(
@@ -445,7 +447,7 @@ export async function doDeployVault(
 
     const strats: number[] = []; // indexes of strats. empty indicates all.
     const proportions: number[] = []; // proportions of each strat. must be same size as strats. empty indicates even proportions.
-    const strategies: any = context.strategies;
+    const strategies: any = context.strategies[context.network];
     let underlyingStrategies = Object.keys(strategies)
         .filter((s) => s != "All")
         .map((key) => strategies[key][underlying]);
@@ -553,7 +555,7 @@ export function assertDoHardWorkSnapshotsPrimitive(
 
                 expect(underlyingDiff).to.beCloseTo(
                     depositAmount1,
-                    BasisPoints.Basis_10,
+                    BasisPoints.Basis_50,
                     "Bad user underlying value difference"
                 );
                 expect(activeDepositDiff).to.beCloseTo(
@@ -564,7 +566,7 @@ export function assertDoHardWorkSnapshotsPrimitive(
 
                 expect(shareToUnderlying(sharesDiff)).to.beCloseTo(
                     depositAmount1,
-                    BasisPoints.Basis_10,
+                    BasisPoints.Basis_50,
                     "Bad user shares difference"
                 );
                 console.log(context.scope + `\t\t\t>> ASSERT: DEPOSITED OK`);
@@ -629,7 +631,7 @@ export function assertDoHardWorkSnapshotsPrimitive(
         }
     }
 
-    const vaultStratSum = context.strategies.All.reduce((strats, stratAddress) => {
+    const vaultStratSum = context.strategies[context.network].All.reduce((strats, stratAddress) => {
         strats[stratAddress] = {
             balance: constants.Zero,
             shares: constants.Zero,
@@ -735,7 +737,7 @@ export function assertDoHardWorkSnapshotsPrimitive(
     }
 
     console.log(context.scope + `\t>> ASSERT: Strategies`);
-    for (let stratAddress of context.strategies.All) {
+    for (let stratAddress of context.strategies[context.network].All) {
         console.log(context.scope + `\t\t>> ASSERT: Strategy: ${stratAddress}`);
         console.log(
             context.scope + `\t\t\t>> ASSERT: Strategy shares: ${snapshot3.strategies[stratAddress].totalShares}`
@@ -794,10 +796,10 @@ function underlyingToShares(shares: BigNumberish) {
 }
 
 function getStratDecimals(context: Context, strategy: string) {
-    const strats = context.strategies as any;
+    const strats = context.strategies[context.network] as any;
 
     let stratAsset;
-    for (const stratName of Object.keys(context.strategies).filter((s) => s != "All")) {
+    for (const stratName of Object.keys(context.strategies[context.network]).filter((s) => s != "All")) {
         stratAsset = Object.keys(strats[stratName]).find((asset: string) => strats[stratName][asset] == strategy);
 
         if (stratAsset) {
@@ -924,7 +926,7 @@ export function assertClaimSnapshotsPrimitive(
 
                 expect(balances.deposit[assetName]).to.beCloseTo(
                     userErc20Diff,
-                    BasisPoints.Basis_10,
+                    BasisPoints.Basis_50,
                     "Bad user claim deposit amount"
                 );                
 
@@ -1055,6 +1057,7 @@ export function assertVaultStrategyProportions(snapshot: Snapshot, context: Cont
         if (!BigNumber.from(vault.totalUnderlying).isZero()) {
             vault.strategies.forEach((strat) => {
                 console.log(`\t\t>> ASSERT: Vault Proportions for Strat: ${strat.address}`);
+
                 const balanceProportion = BigNumber.from(strat.balance).mul(FULL_PERCENT).div(vault.totalUnderlying);
                 console.log(`\t\t\t>> ASSERT: Vault Proportion Actual: ${balanceProportion.toString()}`);
 
@@ -1128,7 +1131,7 @@ export async function doBalanceSnapshot(
     );
 
     await Promise.all(
-        context.strategies.All.map(async (strat) => {
+        context.strategies[context.network].All.map(async (strat) => {
             const balance = await context.infra.spool.callStatic.getStratUnderlying(strat);
             const strategy = await context.infra.spool.strategies(strat);
             snapshot.strategies[strat] = {
@@ -1186,7 +1189,7 @@ async function getVaultBalance(vaultAddress: string) {
 export async function printStrategyBalances(context: Context) {
     console.log(`Printing strat balances`);
     const underlyings: { [key: string]: string } = {};
-    for (const strat of context.strategies.All) {
+    for (const strat of context.strategies[context.network].All) {
         console.log(`\t====== Getting ${strat} ======`);
         const balance = await context.infra.spool.callStatic.getStratUnderlying(strat);
         const strategy = await context.infra.spool.strategies(strat);
@@ -1264,24 +1267,68 @@ export async function doEvmSnapshot() {
     return snapshotId;
 }
 
-export async function reallocateVaultsEqual(context: Context, vaultNames: string[]) {
-    return reallocateVaults(context, vaultNames, [1429, 1429, 1429, 1429, 1428, 1428, 1428]);
-}
+export async function getNewProportions(vaultName: string, reallocationType: REALLOCATION_TYPE) : Promise<number[]> {
+    const network = await getNetworkName();
+    const key = 
+      (vaultName.includes("DAI")) ? "DAI"
+    : (vaultName.includes("USDC")) ? "USDC"
+    : "USDT";
 
-export async function reallocateVaults(context: Context, vaultNames: string[], newProportions: number[]) {
+    const vaultDatas: any = JSON.parse(
+        (await readFile(`scripts/data/${network}.allocations.json`)
+        ).toString());
+
+    const vaultData = vaultDatas[key]["LOW_RISK"];
+
+    let size = Object.keys(vaultData)
+    .map((key) =>  vaultData[key].alloc)
+    .filter(val => val > 0)
+    .length;
+
+    let newProportions = new Array(size).fill(0);
+
+    const FULL_PERCENT = 100_00;
+    if(reallocationType == REALLOCATION_TYPE.EQUAL){
+        let entry = Math.floor( FULL_PERCENT / newProportions.length );
+        let lastIndex = newProportions.length-1;
+        for(let i=0; i<lastIndex; i++) newProportions[i] = entry;
+        newProportions[lastIndex] = FULL_PERCENT-(entry*lastIndex);
+    }
+    else if(reallocationType == REALLOCATION_TYPE._100){
+        newProportions[0] = FULL_PERCENT;
+    }
+    else {
+        newProportions[0] = 40_00;
+        let remainder = FULL_PERCENT - newProportions[0];
+        let lastIndex = newProportions.length-1;
+        let entry = Math.floor( remainder / lastIndex );
+        for(let i=1; i<lastIndex; i++) newProportions[i] = entry;
+        newProportions[lastIndex] = remainder-(entry*(lastIndex-1));
+    }
+
+    console.log('newProportions: ' + newProportions);
+
     const sum = newProportions.reduce((s, v) => s + v, 0);
-
     if (sum != 100_00) {
         throw new Error(`Bad vault strats proportions (${newProportions}) sum ${sum}`);
     }
+    return newProportions;
+}
+
+export async function reallocateVaultsEqual(context: Context, vaultNames: string[]) {
+    return reallocateVaults(context, vaultNames, REALLOCATION_TYPE.EQUAL);
+}
+
+export async function reallocateVaults(context: Context, vaultNames: string[], reallocationType: REALLOCATION_TYPE) {
     
     const vaults = [];
 
     for (let vaultName of vaultNames) {
+        let newProportions = await getNewProportions(vaultName, reallocationType);
         console.log(`>> Set new vault "${vaultName}" Proportions: ${newProportions}`);
 
         const vault = context.vaults[vaultName];
-        const vaultStratIndexes = getStrategyIndexes(vault.strategies, context.strategies.All);
+        const vaultStratIndexes = getStrategyIndexes(vault.strategies, context.strategies[context.network].All);
 
         vaults.push({
             vault: vault.address,
@@ -1295,11 +1342,11 @@ export async function reallocateVaults(context: Context, vaultNames: string[], n
 
     const reallocationTable = await context.infra.spool
         .connect(context.accounts.allocationProvider)
-        .callStatic.reallocateVaults(vaults, context.strategies.All, empty2dArray);
+        .callStatic.reallocateVaults(vaults, context.strategies[context.network].All, empty2dArray);
 
     const tx = await context.infra.spool
         .connect(context.accounts.allocationProvider)
-        .reallocateVaults(vaults, context.strategies.All, empty2dArray);
+        .reallocateVaults(vaults, context.strategies[context.network].All, empty2dArray);
 
     await tx.wait();
 
@@ -1381,7 +1428,7 @@ export async function doWithdrawFast(
     const vaultElement = getVaultElement(context, vaultName);
     const vault = Vault__factory.connect(vaultElement.address, user);
 
-    // const rewardSlippages = Array.from(Array(context.strategies.All.length), () => {
+    // const rewardSlippages = Array.from(Array(context.strategies[context.network].All.length), () => {
     //     return { doClaim: false, swapData: [] };
     // });
 
@@ -1412,12 +1459,12 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
     console.log("vaultStrats");
     console.table(vaultStrats);
 
-    const stratsWithAssets = Object.keys(context.strategies).filter(s => s != "All").map(s => {
-        (context.strategies as any)[s]
+    const stratsWithAssets = Object.keys(context.strategies[context.network]).filter(s => s != "All").map(s => {
+        (context.strategies[context.network] as any)[s]
 
         return {
             name: s,
-            address: (context.strategies as any)[s][asset] as string
+            address: (context.strategies[context.network] as any)[s][asset] as string
         }
     })
     console.log("stratsWithAssets");
@@ -1432,6 +1479,18 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
         switch (stratName) {
             case "Aave": {
                 slippages.push([]);
+                continue;
+            }
+            case "AaveV3": {
+                slippages.push([]);
+                continue;
+            }
+            case "Abracadabra": {
+                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                continue;
+            }
+            case "Balancer": {
+                slippages.push([0]);
                 continue;
             }
             case "Compound": {
@@ -1454,6 +1513,10 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 slippages.push([0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
+            case "Curve2pool": {
+                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                continue;
+            }
             case "Harvest": {
                 slippages.push([]);
                 continue;
@@ -1470,8 +1533,16 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 slippages.push([0]);
                 continue;
             }
+            case "TimelessFi": {
+                slippages.push([0]);
+                continue;
+            }
             case "Yearn": {
                 slippages.push([0]);
+                continue;
+            }
+            case "YearnMetapool": {
+                slippages.push([0, ethers.constants.MaxUint256, 0, 0]);
                 continue;
             }
             default: {

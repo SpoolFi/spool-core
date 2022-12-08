@@ -5,7 +5,7 @@ import { SlippagesHelper__factory, SpoolDoHardWorkReallocationHelper__factory } 
 import { SlippageStruct } from "../../build/types/SlippagesHelper";
 import { Result } from "ethers/lib/utils";
 import { Context } from "../../scripts/infrastructure";
-import { customConstants, getStrategyIndexes } from "./utilities";
+import { customConstants, getNetworkName, getStrategyIndexes } from "./utilities";
 import { ReallocationWithdrawDataHelperStruct } from "../../build/types/SpoolDoHardWorkReallocationHelper";
 
 // the view functions will calculate the optimal values. howoever we apply
@@ -33,15 +33,14 @@ function decodeSlippageIfDeposit(slippage: BigNumberish) {
 
 const percents = {
     // deposit, withdrawal, balance - all in basis points
+    "2pool": [30, 30, 3],
     "3pool": [30, 30, 3],
     "4pool": [150, 150, 3],
+    Balancer: [50, 50],
     Idle: [50, 50],
     Notional: [50, 50],
     Yearn: [30, 30],
 };
-// let spoolContracts: any;
-// let contracts: any;
-const stratIndexes: number[] = [];
 
 // reduce a big number by a percentage, expressed in basis points.
 function reduceByPercentage(x: BigNumber, bp: number) {
@@ -58,28 +57,41 @@ function getPercentage(x: BigNumber, bp: number) {
 
 function convertToSlippageStruct(raw: any): SlippageStruct {
     let slippage: SlippageStruct = {
-        slippage: BigNumber.from(raw[0].toString()),
-        isDeposit: Boolean(raw[1]),
-        canProcess: Boolean(raw[2]),
-        balance: BigNumber.from(raw[3].toString()),
+        protocol: BigNumber.from(raw[0].toString()),
+        lp: BigNumber.from(raw[1].toString()),
+        isDeposit: Boolean(raw[2]),
+        canProcess: Boolean(raw[3]),
+        balance: BigNumber.from(raw[4].toString()),
     };
     printSlippage(slippage);
     return slippage;
 }
 
 function printSlippage(slippage: SlippageStruct) {
-    console.log("Slippage argument: " + slippage.slippage.toString());
+    console.log("Slippage (Protocol) argument: " + slippage.protocol.toString());
+    console.log("Slippage (LP) argument: " + slippage.lp.toString());
     console.log("Is it a deposit? : " + slippage.isDeposit);
 
     console.log("Will it have deposits/withdrawals processed by DoHardWork? " + slippage.canProcess);
     console.log("");
 }
 
+function handleLPSlippageResult(slippage: SlippageStruct, _percents: number[]): BigNumber {
+    if (!slippage.canProcess) {
+        return BigNumber.from(0);
+    }
+    let slippageValue = BigNumber.from(slippage.lp);
+    if (slippage.isDeposit) {
+        return encodeDepositSlippage(reduceByPercentage(slippageValue, _percents[0]));
+    }
+    return reduceByPercentage(slippageValue, _percents[1]);
+}
+
 function handleSlippageResult(slippage: SlippageStruct, _percents: number[]): BigNumber {
     if (!slippage.canProcess) {
         return BigNumber.from(0);
     }
-    let slippageValue = BigNumber.from(slippage.slippage);
+    let slippageValue = BigNumber.from(slippage.protocol);
     if (slippage.isDeposit) {
         return encodeDepositSlippage(reduceByPercentage(slippageValue, _percents[0]));
     }
@@ -106,7 +118,8 @@ async function strategyHelperCall(functionName: string, args: any, context: Cont
 
 function findRealocationShares(strat: string, context: Context, reallocationWithdrawnShares?: BigNumber[]) {
     if (reallocationWithdrawnShares && reallocationWithdrawnShares.length > 0) {
-        const i = context.strategies.All.findIndex((s) => s == strat);
+        console.log(context.strategies[context.network].All);
+        const i = context.strategies[context.network].All.findIndex((s) => s == strat);
 
         return reallocationWithdrawnShares[i];
     }
@@ -115,25 +128,73 @@ function findRealocationShares(strat: string, context: Context, reallocationWith
 
 // ************************ SLIPPAGES ********************************************
 
+// gets slippages for Abracadabra(2pool+MIM), Curve 2pool, Yearn (2pool+MIM) (2pool as base pool for all)
+async function get2PoolSlippage(
+    context: Context,
+    reallocationWithdrawnShares?: BigNumber[]
+): Promise<Array<BigNumber[]>> {
+    const strategies = [
+        context.strategies.arbitrum.Abracadabra.USDC,
+        context.strategies.arbitrum.Abracadabra.USDT,
+        context.strategies.arbitrum.Curve2pool.USDC,
+        context.strategies.arbitrum.Curve2pool.USDT,
+        context.strategies.arbitrum.YearnMetapool.USDC,
+        context.strategies.arbitrum.YearnMetapool.USDT,
+    ].flat();
+    
+    const reallocateSharesToWithdraw = strategies.map((s3pl) => {
+        return findRealocationShares(s3pl, context, reallocationWithdrawnShares);
+    });
+
+    let result = await strategyHelperCall("get2PoolSlippage", [strategies, reallocateSharesToWithdraw], context);
+
+    const slippageArgs = new Array<BigNumber[]>();
+    for (let i = 0; i < result.length; i++) {
+        let raw = result[i];
+
+        let slippage = convertToSlippageStruct(raw);
+        let slippageBalance = BigNumber.from(slippage.balance);
+        const balanceSlippage = getPercentage(slippageBalance, percents["2pool"][2]);
+
+        let slippageArg = [
+            slippageBalance.sub(balanceSlippage),
+            slippageBalance.add(balanceSlippage),
+            handleSlippageResult(slippage, percents["2pool"]),
+        ];
+        
+        // add extra Yearn slippage
+        if(i > 3) { 
+            slippageArg.push(
+                handleLPSlippageResult(
+                    slippage, 
+                    slippage.isDeposit ? percents["Yearn"] :  [0, 0] )
+            ); 
+        }
+
+        slippageArgs.push(slippageArg);
+    }
+    return slippageArgs;
+}
+
 // gets slippages for Convex and Curve 3pool (3pool as base pool for all)
 async function get3PoolSlippage(
     context: Context,
     reallocationWithdrawnShares?: BigNumber[]
 ): Promise<Array<BigNumber[]>> {
     const strategies = [
-        context.strategies.ConvexMetapool.DAI,
-        context.strategies.ConvexMetapool.USDC,
-        context.strategies.ConvexMetapool.USDT,
-        context.strategies.Convex.DAI,
-        context.strategies.Convex.USDC,
-        context.strategies.Convex.USDT,
-        context.strategies.Curve.DAI,
-        context.strategies.Curve.USDC,
-        context.strategies.Curve.USDT,
-    ];
+        context.strategies.mainnet.ConvexMetapool.DAI,
+        context.strategies.mainnet.ConvexMetapool.USDC,
+        context.strategies.mainnet.ConvexMetapool.USDT,
+        context.strategies.mainnet.Convex.DAI,
+        context.strategies.mainnet.Convex.USDC,
+        context.strategies.mainnet.Convex.USDT,
+        context.strategies.mainnet.Curve.DAI,
+        context.strategies.mainnet.Curve.USDC,
+        context.strategies.mainnet.Curve.USDT,
+    ].flat();
 
     const reallocateSharesToWithdraw = strategies.map((s3pl) => {
-        return findRealocationShares(s3pl[0], context, reallocationWithdrawnShares);
+        return findRealocationShares(s3pl, context, reallocationWithdrawnShares);
     });
 
     let result = await strategyHelperCall("get3PoolSlippage", [strategies, reallocateSharesToWithdraw], context);
@@ -157,19 +218,32 @@ async function get3PoolSlippage(
     return slippageArgs;
 }
 
+async function getBalancerSlippage(
+    strategy: string,
+    context: Context,
+    reallocationWithdrawnShares?: BigNumber[]
+): Promise<BigNumber[]> {
+    const reallocateSharesToWithdraw = findRealocationShares(strategy, context, reallocationWithdrawnShares);
+
+    const result = await strategyHelperCall("getBalancerSlippage", [strategy, reallocateSharesToWithdraw], context);
+    const slippage = convertToSlippageStruct(result);
+    return [handleSlippageResult(slippage, percents["Balancer"])];
+}
+
+
 // gets slippages for Convex 4pool
 async function getConvex4PoolSlippage(
     context: Context,
     reallocationWithdrawnShares?: BigNumber[]
 ): Promise<Array<BigNumber[]>> {
     const strategies = [
-        context.strategies.Convex4pool.DAI,
-        context.strategies.Convex4pool.USDC,
-        context.strategies.Convex4pool.USDT,
-    ];
+        context.strategies.mainnet.Convex4pool.DAI,
+        context.strategies.mainnet.Convex4pool.USDC,
+        context.strategies.mainnet.Convex4pool.USDT,
+    ].flat();
 
     const reallocateSharesToWithdraw = strategies.map((s3pl) => {
-        return findRealocationShares(s3pl[0], context, reallocationWithdrawnShares);
+        return findRealocationShares(s3pl, context, reallocationWithdrawnShares);
     });
 
     let result = await strategyHelperCall("getConvex4PoolSlippage", [strategies, reallocateSharesToWithdraw], context);
@@ -236,7 +310,8 @@ async function getYearnSlippage(
 }
 
 export async function getSlippages(context: Context) {
-    if (!context.strategies) {
+    const strategies = context.strategies[context.network];
+    if (!strategies) {
         return {
             indexes: [],
             slippages: [],
@@ -245,7 +320,6 @@ export async function getSlippages(context: Context) {
         };
     }
 
-    const strategies = context.strategies;
     const allStrategies = await context.infra.controller.getAllStrategies();
 
     console.log("*********CALCULATING SLIPPAGES*********");
@@ -277,9 +351,10 @@ export async function getSlippages(context: Context) {
 }
 
 async function doHardWorkReallocationHelper(context: Context, reallocationTable: BigNumber[][]) {
-    const stratIndexes = getStrategyIndexes(context.strategies.All, context.strategies.All);
+    const strategies = context.strategies[context.network];
+    const stratIndexes = getStrategyIndexes(strategies.All, strategies.All);
 
-    const rewardSlippages = Array.from(Array(context.strategies.All.length), () => {
+    const rewardSlippages = Array.from(Array(strategies.All.length), () => {
         return { doClaim: false, swapData: [] };
     });
 
@@ -296,7 +371,7 @@ async function doHardWorkReallocationHelper(context: Context, reallocationTable:
 
     const encodedData = reallocationHelper.interface.encodeFunctionData("batchDoHardWorkReallocationHelper", [
         withdrawData,
-        context.strategies.All,
+        strategies.All,
     ]);
 
     const rawResult = await context.infra.spool
@@ -311,13 +386,14 @@ async function doHardWorkReallocationHelper(context: Context, reallocationTable:
 }
 
 export async function getReallocationSlippages(context: Context, reallocationTable: BigNumber[][]) {
-    const stratIndexes = getStrategyIndexes(context.strategies.All, context.strategies.All);
+    const strategies = context.strategies[context.network];
+    const stratIndexes = getStrategyIndexes(strategies.All, strategies.All);
 
-    const priceSlippages = Array.from(Array(context.strategies.All.length), () => {
+    const priceSlippages = Array.from(Array(strategies.All.length), () => {
         return { min: 0, max: customConstants.MaxUint128 };
     });
 
-    const rewardSlippages = Array.from(Array(context.strategies.All.length), () => {
+    const rewardSlippages = Array.from(Array(strategies.All.length), () => {
         return { doClaim: false, swapData: [] };
     });
 
@@ -357,15 +433,15 @@ export async function getReallocationSlippages(context: Context, reallocationTab
     console.log("allStrategies");
     console.table(allStrategies);
 
-    console.log("context.strategies.All");
-    console.table(context.strategies.All);
+    console.log("strategies.All");
+    console.table(strategies.All);
 
     console.log("Strats");
-    const stratNames = Object.keys(context.strategies)
+    const stratNames = Object.keys(strategies)
         .filter((s) => s != "All")
-        .flatMap((s) => Object.keys((context.strategies as any)[s]).map((st) => s + st));
+        .flatMap((s) => Object.keys((strategies as any)[s]).map((st) => s + st));
 
-    console.table(stratNames.map((stratName, i) => [stratName, context.strategies.All[i]]));
+    console.table(stratNames.map((stratName, i) => [stratName, strategies.All[i]]));
 
     return {
         withdrawData,
@@ -375,14 +451,86 @@ export async function getReallocationSlippages(context: Context, reallocationTab
     };
 }
 
+
 async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: BigNumber[]) {
+        const network = await getNetworkName();
+        switch(network){
+            case "arbitrum":
+                return await getDhwSlippagesArbitrum(context, reallocationWithdrawnShares);
+            default:
+                return await getDhwSlippagesMainnet(context, reallocationWithdrawnShares);
+        }
+}
+
+async function getDhwSlippagesArbitrum(context: Context, reallocationWithdrawnShares?: BigNumber[]) {
+    const curvePoolSlippages = await get2PoolSlippage(context, reallocationWithdrawnShares);
+    let slippages = new Array<BigNumber[]>();
+
+    let strategies = context.strategies.arbitrum;
+
+    if (!strategies) return slippages;
+
+    for (let stratName in strategies) {
+        switch (stratName) {
+            case "AaveV3": {
+                slippages.push(
+                    [], 
+                    [], 
+                    []
+                );
+                continue;
+            }
+            case "Abracadabra": {
+                slippages.push(
+                    curvePoolSlippages[0], 
+                    curvePoolSlippages[1]
+                );
+                continue;
+            }
+            case "Balancer": {
+                slippages.push(
+                    await getBalancerSlippage(strategies.Balancer.DAI[0], context, reallocationWithdrawnShares),
+                    await getBalancerSlippage(strategies.Balancer.USDC[0], context, reallocationWithdrawnShares),
+                    await getBalancerSlippage(strategies.Balancer.USDT[0], context, reallocationWithdrawnShares),
+                );
+                continue;
+            }
+            case "Curve2pool": {
+                slippages.push(
+                    curvePoolSlippages[2], 
+                    curvePoolSlippages[3]
+                );
+                continue;
+            }
+            case "TimelessFi": {
+                slippages.push(
+                    []
+                );
+                continue;
+            }
+            case "YearnMetapool": {
+                slippages.push(
+                    curvePoolSlippages[4], 
+                    curvePoolSlippages[5]
+                );
+                continue;
+            }
+        }
+    }
+    
+    return slippages;
+}
+
+async function getDhwSlippagesMainnet(context: Context, reallocationWithdrawnShares?: BigNumber[]) {
     const curvePoolSlippages = await get3PoolSlippage(context, reallocationWithdrawnShares);
     const convex4poolSlippages = await getConvex4PoolSlippage(context, reallocationWithdrawnShares);
     let slippages = new Array<BigNumber[]>();
 
-    if (!context.strategies) return slippages;
+    let strategies = context.strategies.mainnet;
 
-    for (let stratName in context.strategies) {
+    if (!strategies) return slippages;
+
+    for (let stratName in strategies) {
         switch (stratName) {
             case "Aave": {
                 slippages.push([], [], []);
@@ -418,24 +566,24 @@ async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: B
             }
             case "Notional": {
                 slippages.push(
-                    await getNotionalSlippage(context.strategies.Notional.DAI[0], context, reallocationWithdrawnShares),
-                    await getNotionalSlippage(context.strategies.Notional.USDC[0], context, reallocationWithdrawnShares),
+                    await getNotionalSlippage(strategies.Notional.DAI[0], context, reallocationWithdrawnShares),
+                    await getNotionalSlippage(strategies.Notional.USDC[0], context, reallocationWithdrawnShares),
                 );
                 continue;
             }
             case "Idle": {
                 slippages.push(
-                    await getIdleSlippage(context.strategies.Idle.DAI[0], context, reallocationWithdrawnShares),
-                    await getIdleSlippage(context.strategies.Idle.USDC[0], context, reallocationWithdrawnShares),
-                    await getIdleSlippage(context.strategies.Idle.USDT[0], context, reallocationWithdrawnShares)
+                    await getIdleSlippage(strategies.Idle.DAI[0], context, reallocationWithdrawnShares),
+                    await getIdleSlippage(strategies.Idle.USDC[0], context, reallocationWithdrawnShares),
+                    await getIdleSlippage(strategies.Idle.USDT[0], context, reallocationWithdrawnShares)
                 );
                 continue;
             }
             case "Yearn": {
                 slippages.push(
-                    await getYearnSlippage(context.strategies.Yearn.DAI[0], context, reallocationWithdrawnShares),
-                    await getYearnSlippage(context.strategies.Yearn.USDC[0], context, reallocationWithdrawnShares),
-                    await getYearnSlippage(context.strategies.Yearn.USDT[0], context, reallocationWithdrawnShares)
+                    await getYearnSlippage(strategies.Yearn.DAI[0], context, reallocationWithdrawnShares),
+                    await getYearnSlippage(strategies.Yearn.USDC[0], context, reallocationWithdrawnShares),
+                    await getYearnSlippage(strategies.Yearn.USDT[0], context, reallocationWithdrawnShares)
                 );
                 continue;
             }
@@ -449,10 +597,25 @@ function getDhwDepositSlippage(context: Context) {
     const depositSlippage = encodeDepositSlippage(0);
     const slippages = new Array<BigNumberish[]>();
 
-    for (let stratName in context.strategies) {
+    for (let stratName in context.strategies[context.network]) {
         switch (stratName) {
             case "Aave": {
                 slippages.push([], [], []);
+                continue;
+            }
+            case "AaveV3": {
+                slippages.push([], [], []);
+                continue;
+            }
+            case "Abracadabra": {
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                continue;
+            }
+            case "Balancer": {
+                slippages.push([depositSlippage]);
+                slippages.push([depositSlippage]);
+                slippages.push([depositSlippage]);
                 continue;
             }
             case "Compound": {
@@ -483,6 +646,11 @@ function getDhwDepositSlippage(context: Context) {
                 slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
+            case "Curve2pool": {
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                continue;
+            }
             case "Harvest": {
                 slippages.push([], [], []);
                 continue;
@@ -502,10 +670,19 @@ function getDhwDepositSlippage(context: Context) {
                 slippages.push([depositSlippage]);
                 continue;
             }
+            case "TimelessFi": {
+                slippages.push([]);
+                continue;
+            }
             case "Yearn": {
                 slippages.push([depositSlippage]);
                 slippages.push([depositSlippage]);
                 slippages.push([depositSlippage]);
+                continue;
+            }
+            case "YearnMetapool": {
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
                 continue;
             }
         }
