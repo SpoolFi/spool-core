@@ -14,9 +14,11 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Log } from "@ethersproject/abstract-provider";
 import { BaseContract } from "@ethersproject/contracts";
 import { pack } from "@ethersproject/solidity";
-import { mainnet } from "./constants";
+import { mainnet, arbitrum, Arbitrum, Mainnet } from "./constants";
 import { SlippageStruct } from "../../build/types/SlippagesHelper";
 import { parseEther } from "ethers/lib/utils";
+import {HardhatNetworkForkingConfig} from "hardhat/types";
+import {getNetwork} from "ethers/node_modules/@ethersproject/networks";
 
 export { BasisPoints } from "./chaiExtension/chaiExtAssertions";
 export { VaultDetailsStruct };
@@ -32,7 +34,6 @@ export const ADDRESS_ONE = "0x0000000000000000000000000000000000000001";
 const MaxUint16 = BigNumber.from("0xffff");
 const MaxUint128 = BigNumber.from("0xffffffffffffffffffffffffffffffff");
 const Uint2pow255 = BigNumber.from("0x8000000000000000000000000000000000000000000000000000000000000000");
-const mainnetConst = mainnet();
 
 export const customConstants = {
     MaxUint16,
@@ -75,38 +76,130 @@ export async function impersonate(account: string): Promise<SignerWithAddress> {
     return await ethers.getSigner(account);
 }
 
+export async function getNetworkName(): Promise<string> {
+
+    const networks = hre.config.networks;
+    const chainId = await getRemoteChainId();
+    switch(chainId){
+        case networks.arbitrum.chainId: 
+            return "arbitrum";
+        default:
+            return "mainnet";
+    }
+}
+
+export async function getStrategyNames(): Promise<any> {
+
+    const networks = hre.config.networks;
+    const chainId = await getRemoteChainId();
+    switch(chainId){
+        case networks.arbitrum.chainId: 
+            return {
+                AaveV3:        { name: "AaveV3",        assets: ["DAI", "USDC", "USDT"] },
+                Abracadabra:   { name: "Abracadabra",   assets: [       "USDC", "USDT"] },
+                Balancer:      { name: "Balancer",      assets: ["DAI", "USDC", "USDT"] },
+                Curve2pool:    { name: "Curve2pool",    assets: [       "USDC", "USDT"] },
+                TimelessFi:    { name: "TimelessFi",    assets: [       "USDC"        ] },
+                YearnMetapool: { name: "YearnMetapool", assets: [       "USDC", "USDT"] },
+            };
+        default:    
+            return {
+                Aave:           { name: "Aave",                 assets: ["DAI", "USDC", "USDT"] },
+                Notional:       { name: "Notional",             assets: ["DAI", "USDC"        ] },
+                Compound:       { name: "Compound",             assets: ["DAI", "USDC", "USDT"] },
+                Convex4pool:    { name: "ConvexShared4pool",    assets: ["DAI", "USDC", "USDT"] },
+                ConvexMetapool: { name: "ConvexSharedMetapool", assets: ["DAI", "USDC", "USDT"] },
+                Convex:         { name: "ConvexShared",         assets: ["DAI", "USDC", "USDT"] },
+                Curve:          { name: "Curve3pool",           assets: ["DAI", "USDC", "USDT"] },
+                Harvest:        { name: "Harvest",              assets: ["DAI", "USDC", "USDT"] },
+                Idle:           { name: "Idle",                 assets: ["DAI", "USDC", "USDT"] },
+                Morpho:         { name: "Morpho",               assets: ["DAI", "USDC", "USDT"] },
+                Yearn:          { name: "Yearn",                assets: ["DAI", "USDC", "USDT"] },
+            };
+    }
+}
+
+export async function getRemoteChainId(): Promise<number> {
+    // guarantees in any case that the right remote ChainID is fetched.
+    const networks = hre.config.networks;
+    const urlProvider = await ethers.getDefaultProvider(
+        ((networks.hardhat.forking) as HardhatNetworkForkingConfig)
+        .url
+    );
+    return (await(urlProvider).getNetwork()).chainId;
+}
+
+export async function getConstants() : Promise<Arbitrum | Mainnet> {
+    const networks = hre.config.networks;
+    const chainId = await getRemoteChainId();
+    switch(chainId){
+        case networks.arbitrum.chainId: 
+            return (await arbitrum());
+        default:    
+            return (await mainnet());
+    }
+}
+
+
 async function setBalance(account: string, token: string, slot: number){
     const paddedSlot = ethers.utils.hexZeroPad(ethers.utils.hexlify(slot), 32);
     const paddedKey = ethers.utils.hexZeroPad(account, 32);
     const itemSlot = ethers.utils.keccak256(paddedKey + paddedSlot.slice(2));
-    const storageSlot = ethers.utils.hexZeroPad(itemSlot, 32);
+    const storageSlot = ethers.utils.hexStripZeros(itemSlot);
     await ethers.provider.send("hardhat_setStorageAt", [
       token,
       storageSlot,
-      ethers.utils.hexZeroPad( ethers.utils.parseUnits('100000000').toHexString(), 32 )
+      ethers.utils.hexZeroPad(ethers.utils.parseUnits('100000000').toHexString(), 32)
     ]);
 }
+
 export async function getFunds(account: SignerWithAddress) {
-    await setBalance(account.address, mainnetConst.tokens.DAI.contract.address, 2);
-    await setBalance(account.address, mainnetConst.tokens.USDT.contract.address, 2);
-    await setBalance(account.address, mainnetConst.tokens.USDC.contract.delegator.address, 9);
+    const constants = await getConstants();
+
+    await setBalance(account.address, 
+                     constants.tokens.DAI.contract.address, 
+                     constants.tokens.DAI.balanceSlot);
+
+    await setBalance(account.address, 
+                     constants.tokens.USDT.contract.address, 
+                     constants.tokens.USDT.balanceSlot);
+
+    await setBalance(account.address, 
+                     constants.tokens.USDC.contract.delegator.address, 
+                     constants.tokens.USDC.balanceSlot);
 
     // set WETH balance
     await ethers.provider.send("hardhat_setBalance", [account.address, parseEther("1000000").toHexString()]);
 
-    const weth = IWETH__factory.connect(mainnetConst.tokens.WETH.contract.address,  account);
+    const weth = IWETH__factory.connect(constants.tokens.WETH.contract.address,  account);
     await weth.deposit({value: parseEther("100000")});
 }
 
 export async function whitelistStrategy(address: string) {
-    await IHarvestController__factory.connect(
-        mainnetConst.harvest.Controller.address,
-        await impersonate(mainnetConst.harvest.Governance.address)
-    ).addToWhitelist(address);
+    const networkName = await getNetworkName();
+    if(networkName === 'mainnet'){
+        const mainnetConst = await mainnet();
+        await IHarvestController__factory.connect(
+            mainnetConst.harvest.Controller.address,
+            await impersonate(mainnetConst.harvest.Governance.address)
+        ).addToWhitelist(address);
+    }
 }
 
 export function isForking(): boolean {
     return hre.config.networks.hardhat.forking ? true : false;
+}
+
+export async function resetToBlockNumber(blockNumber: number) {
+    if (isForking()) {
+        let params = {
+            forking: {
+                jsonRpcUrl: hre.config.networks.hardhat.forking!.url,
+                blockNumber: blockNumber,
+            },
+        };
+        await ethers.provider.send("hardhat_reset", [params]);
+    }
 }
 
 export async function reset() {
@@ -380,7 +473,7 @@ export function getRewardSwapPathBalancer(swaps: PathBalancerSwap[], assets: Pat
 }
 
 export function printSlippage(slippage: SlippageStruct) {
-    console.log("Slippage argument: " + ethers.utils.formatUnits(slippage.slippage.toString()));
+    console.log("Slippage argument: " + ethers.utils.formatUnits(slippage.protocol.toString()));
     console.log("Is it a deposit? : " + slippage.isDeposit);
     console.log("Will it have deposits/withdrawals processed by DoHardWork? " + slippage.canProcess);
     console.log("");
@@ -390,7 +483,7 @@ export function handleSlippageResult(slippage: SlippageStruct, _percents: number
     if (!slippage.canProcess) {
         return BigNumber.from(0);
     }
-    let arg = BigNumber.from(slippage.slippage);
+    let arg = BigNumber.from(slippage.protocol);
     if (slippage.isDeposit) {
         return encodeDepositSlippage(reduceByPercentage(arg, _percents[0]));
     }

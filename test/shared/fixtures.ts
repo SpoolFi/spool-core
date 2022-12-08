@@ -44,15 +44,14 @@ import {
 
 import { Fixture } from "ethereum-waffle";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { createAndSupply, impersonate, isForking, parseUnits, getFunds } from "./utilities";
+import { createAndSupply, impersonate, isForking, parseUnits, getFunds, getConstants } from "./utilities";
 
-import { mainnet } from "./constants";
+import { arbitrum, mainnet } from "./constants";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { expect } from "chai";
 
-const constants = mainnet();
-
-export const mainnetConst = constants;
+export const mainnetConst = mainnet();
+export const arbitrumConst = arbitrum();
 
 // ***** Interfaces *****
 export interface AccountsFixture {
@@ -151,6 +150,7 @@ export async function accountsFixture(
 }
 
 export async function tokensFixture(administrator: SignerWithAddress): Promise<TokensFixture> {
+    let constants = await getConstants();
     const DAI = isForking()
         ? ((await ethers.getContractAt(
               constants.tokens.DAI.contract.ABI,
@@ -193,6 +193,7 @@ export async function tokensFixture(administrator: SignerWithAddress): Promise<T
 }
 
 async function poolsFixture(accounts: AccountsFixture, tokens: TokensFixture): Promise<PoolsFixture> {
+    let constants = await getConstants();
     const factory = isForking()
         ? ((await ethers.getContractAt(
               constants.uniswap.Factory.ABI,
