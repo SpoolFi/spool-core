@@ -17,7 +17,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log("contracts:");
     console.log(JSON.stringify(contracts));
     await writeContracts(hre, contracts);
-};
 
+};
+func.tags = ["arbitrum", "Spool.owner"];
 export default func;
-func.tags = ["Spool.owner"];

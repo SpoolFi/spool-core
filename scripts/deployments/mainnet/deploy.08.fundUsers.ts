@@ -17,4 +17,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["Spool.fundUsers"];
+func.tags = ["mainnet", "Spool.fundUsers"];
