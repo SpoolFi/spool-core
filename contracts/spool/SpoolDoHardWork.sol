@@ -95,7 +95,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             "BIPT"
         );
 
-        // check if DHW is forcen to be executen on one transaction
+        // check if DHW is forced to be executed in one transaction
         if (forceOneTxDoHardWork) {
             require(stratIndexes.length == allStrategies.length, "1TX");
         }
@@ -106,6 +106,20 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             _doHardWork(stratAddress, slippages[i], rewardSlippages[i]);
             _updatePending(stratAddress);
             _finishStrategyDoHardWork(stratAddress);  
+            allStrategies[stratIndexes[i]] = address(0);
+        }
+        
+        // set total underlying for remaining strategies.
+        // ignore this section if all strategies have already been processed.
+        if(!forceOneTxDoHardWork){
+            for (uint256 i = 0; i < stratIndexes.length; i++) {
+                address strat = allStrategies[i];
+                if(strat != address(0)) {
+                    Strategy storage strategy = strategies[strat];
+                    uint processingIndex = strategy.index + 1;
+                    strategy.totalUnderlying[processingIndex].amount = _totalUnderlying(strat);
+                }
+            }
         }
 
         _updateDoHardWorksLeft(stratIndexes.length);

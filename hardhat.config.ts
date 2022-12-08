@@ -17,6 +17,7 @@ import * as path from "path";
 dotenvConfig();
 
 const FORK_BLOCK_NUMBER = 15854623;
+const ARBITRUM_FORK_BLOCK_NUMBER = 38000000;
 
 task("generate-docs", "Generate docs from contract comments").setAction(async (_, hre) => {
     const excludedContracts = hre.config.dodoc.exclude
@@ -31,71 +32,103 @@ task("generate-docs", "Generate docs from contract comments").setAction(async (_
 });
 
 task("test-e2e", "Runs mocha e2e tests")
-    .addOptionalParam("placement", "The placement of the Mainnet archive node (local or remote)", "", types.string)
+    .addOptionalParam("placement", "The node type (local, remote, arbitrum)", "", types.string)
     .addFlag("log", "Enable node logging")
     .addFlag("noconsole", "Remove console logs")
     .setAction(async (taskArgs, hre) => {
-        const _url = (taskArgs.placement === "local" ? process.env.LOCALHOST : process.env.MAINNET_URL) as string;
+
+        let _url;
+        let _forkBlock;
+
+        if(taskArgs.placement === 'local') { 
+            _url = process.env.LOCALHOST; 
+            _forkBlock = FORK_BLOCK_NUMBER; 
+        }
+        else if(taskArgs.placement === 'arbitrum') { 
+            _url = process.env.ARBITRUM_URL; 
+            _forkBlock = ARBITRUM_FORK_BLOCK_NUMBER; 
+        }
+        else { 
+            _url = process.env.MAINNET_URL; 
+            _forkBlock = FORK_BLOCK_NUMBER; 
+        }
 
         hre.config.networks.hardhat.forking = {
-            url: _url,
-            blockNumber: FORK_BLOCK_NUMBER,
+            url: _url as string,
+            blockNumber: _forkBlock,
             enabled: true,
         };
-
+        
         if (taskArgs.log) {
             hre.config.networks.hardhat.loggingEnabled = true;
         }
+
 
         const tsFiles = glob.sync(path.join(hre.config.paths.tests, "e2e", "**/*.spec.ts"));
         await hre.run("test", { testFiles: [...tsFiles], deployFixture: true });
     });
 
-task("test-fork", "Runs mocha tests on a fork")
-    .addOptionalParam("placement", "The placement of the Mainnet archive node (local or remote)", "", types.string)
-    .addFlag("log", "Enable node logging")
-    .addFlag("noconsole", "Remove console logs")
-    .addFlag("coverage", "Create coverage report")
-    .setAction(async (taskArgs, hre) => {
-        const _url = (taskArgs.placement === "local" ? process.env.LOCALHOST : process.env.MAINNET_URL) as string;
+    task("test-fork", "Runs mocha tests on a fork")
+        .addOptionalParam("placement", "The placement of the Mainnet archive node (local, remote, arbitrum)", "", types.string)
+        .addFlag("log", "Enable node logging")
+        .addFlag("noconsole", "Remove console logs")
+        .addFlag("coverage", "Create coverage report")
+        .setAction(async (taskArgs, hre) => {
 
-        hre.config.networks.hardhat.forking = {
-            url: _url,
-            blockNumber: FORK_BLOCK_NUMBER,
-            enabled: true,
-        };
+            let _url;
+            let _forkBlock;
+            if(taskArgs.placement === 'local') { 
+                _url = process.env.LOCALHOST; 
+                _forkBlock = FORK_BLOCK_NUMBER; 
+            }
+            else if(taskArgs.placement === 'arbitrum') { 
+                _url = process.env.ARBITRUM_URL; 
+                _forkBlock = ARBITRUM_FORK_BLOCK_NUMBER; 
+            }
+            else { 
+                _url = process.env.MAINNET_URL; 
+                _forkBlock = FORK_BLOCK_NUMBER; 
+            }
 
-        if (taskArgs.log) {
-            hre.config.networks.hardhat.loggingEnabled = true;
-        }
+            hre.config.networks.hardhat.forking = {
+                url: _url as string,
+                blockNumber: _forkBlock,
+                enabled: true,
+            };
 
-        if (taskArgs.coverage) {
-            const files = "test/**/*.spec.ts";
-            await hre.run("coverage", { testfiles: files });
-        } else {
-            const files = [
-                ...glob.sync(path.join(hre.config.paths.tests, "strategies/unitTests", "/*.spec.ts")),
-                ...glob.sync(path.join(hre.config.paths.tests, "/*.spec.ts")),
-            ];
-            await hre.run("test", { testFiles: files });
-        }
+            if (taskArgs.log) {
+                hre.config.networks.hardhat.loggingEnabled = true;
+            }
+    
+            if (taskArgs.coverage) {
+                const files = "test/**/*.spec.ts";
+                await hre.run("coverage", { testfiles: files });
+            } else {
+                const testPath = "strategies/unitTests" + ((taskArgs.placement === 'arbitrum') ? "/arbitrum" : "");
+                console.log('testPath: ' + testPath);
+                let files = [...glob.sync(path.join(hre.config.paths.tests, testPath, "/*.spec.ts"))];
+                if(!(taskArgs.placement === 'arbitrum')) files.push(
+                    ...glob.sync(path.join(hre.config.paths.tests, "/*.spec.ts"))
+                );
+                await hre.run("test", { testFiles: files });
+            }
     });
 
-task("test-local", "Runs mocha local tests")
-    .addFlag("log", "Enable node logging")
-    .addFlag("noconsole", "Remove console logs")
-    .addFlag("coverage", "Create coverage report")
-    .setAction(async (taskArgs, hre) => {
-        if (taskArgs.log) {
-            hre.config.networks.hardhat.loggingEnabled = true;
-        }
-
-        if (taskArgs.coverage) {
-            await hre.run("coverage", { testfiles: "test/*.spec.ts" });
-        } else {
-            const files = glob.sync(path.join(hre.config.paths.tests, "*.spec.ts"));
-            await hre.run("test", { testFiles: files });
-        }
+    task("test-local", "Runs mocha local tests")
+        .addFlag("log", "Enable node logging")
+        .addFlag("noconsole", "Remove console logs")
+        .addFlag("coverage", "Create coverage report")
+        .setAction(async (taskArgs, hre) => {
+            if (taskArgs.log) {
+                hre.config.networks.hardhat.loggingEnabled = true;
+            }
+    
+            if (taskArgs.coverage) {
+                await hre.run("coverage", { testfiles: "test/*.spec.ts" });
+            } else {
+                const files = glob.sync(path.join(hre.config.paths.tests, "*.spec.ts"));
+                await hre.run("test", { testFiles: files });
+            }
     });
 
 export default {
@@ -139,6 +172,12 @@ export default {
         },
         mainnet: {
             chainId: 1,
+            url: process.env.MAINNET_URL,
+            accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+            timeout: 60000,
+        },
+        arbitrum: {
+            chainId: 42161,
             url: process.env.MAINNET_URL,
             accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
             timeout: 60000,
