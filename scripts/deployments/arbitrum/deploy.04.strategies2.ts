@@ -2,12 +2,9 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import {
     accountsFixture,
-    DeployCompound,
-    DeployConvex,
-    DeployConvex4pool,
-    DeployConvexMetapool,
-    DeployMorpho,
-    DeployNotional,
+    DeployAbracadabra,
+    DeployCurve2pool,
+    DeployYearnMetapool,
     loadContracts,
     loadSpoolInfra,
     tokensFixture,
@@ -29,20 +26,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const tokens = await tokensFixture(accounts.administrator, hre);
 
     console.log("Deploying all strategies..");
-    let Notional = await DeployNotional(accounts, tokens, spoolFixture, hre);
-    let Compound = await DeployCompound(accounts, tokens, spoolFixture, hre);
-    let Convex = await DeployConvex(accounts, tokens, spoolFixture, hre);
-    let Convex4pool = await DeployConvex4pool(accounts, tokens, spoolFixture, hre);
-    let ConvexMetapool = await DeployConvexMetapool(accounts, tokens, spoolFixture, hre);
-    let Morpho = await DeployMorpho(accounts, tokens, spoolFixture, hre);
+    let Abracadabra = await DeployAbracadabra(accounts, tokens, spoolFixture, hre);
+    let Curve2pool = await DeployCurve2pool(accounts, tokens, spoolFixture, hre);
+    let YearnMetapool = await DeployYearnMetapool(accounts, tokens, hre);
 
     let implementation = {
-        Notional,
-        Compound,
-        Convex,
-        Convex4pool,
-        ConvexMetapool,
-        Morpho
+        Abracadabra,
+        Curve2pool,
+        YearnMetapool
     };
 
     let strategies = (await loadContracts(hre)).strategies;
@@ -54,4 +45,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["Spool.strategies2"];
+func.tags = ["arbitrum", "Spool.strategies2"];

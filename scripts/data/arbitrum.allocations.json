@@ -1,0 +1,56 @@
+{
+    "DAI": {
+        "LOW_RISK": {
+            "AaveV3":        { "risk": "1/10", "alloc": 0.7 },
+            "Abracadabra":   { "risk": "1/10", "alloc": 0 },
+            "Balancer":      { "risk": "1/10", "alloc": 0.3 },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0 },
+            "TimelessFi":    { "risk": "1/10", "alloc": 0 },
+            "YearnMetapool": { "risk": "1/10", "alloc": 0 }
+        },
+        "HIGH_RISK": {
+            "AaveV3":        { "risk": "1/10", "alloc": 0.7 },
+            "Abracadabra":   { "risk": "1/10", "alloc": 0 },
+            "Balancer":      { "risk": "1/10", "alloc": 0.3 },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0 },
+            "TimelessFi":    { "risk": "1/10", "alloc": 0 },
+            "YearnMetapool": { "risk": "1/10", "alloc": 0 }
+        }
+    },
+    "USDC": {
+        "LOW_RISK": {
+            "AaveV3":        { "risk": "1/10", "alloc": 0.15 },
+            "Abracadabra":   { "risk": "1/10", "alloc": 0.15 },
+            "Balancer":      { "risk": "1/10", "alloc": 0.15 },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0.15 },
+            "TimelessFi":    { "risk": "1/10", "alloc": 0.2 },
+            "YearnMetapool": { "risk": "1/10", "alloc": 0.2 }
+        },
+        "HIGH_RISK": {
+            "AaveV3":        { "risk": "1/10", "alloc": 0.15 },
+            "Abracadabra":   { "risk": "1/10", "alloc": 0.15 },
+            "Balancer":      { "risk": "1/10", "alloc": 0.15 },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0.15 },
+            "TimelessFi":    { "risk": "1/10", "alloc": 0.2 },
+            "YearnMetapool": { "risk": "1/10", "alloc": 0.2 }
+        }
+    },
+    "USDT": {
+        "LOW_RISK": {
+            "AaveV3":        { "risk": "1/10", "alloc": 0.1 },
+            "Abracadabra":   { "risk": "1/10", "alloc": 0.2 },
+            "Balancer":      { "risk": "1/10", "alloc": 0.2 },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0.25 },
+            "TimelessFi":    { "risk": "1/10", "alloc": 0 },
+            "YearnMetapool": { "risk": "1/10", "alloc": 0.25 }
+        },
+        "HIGH_RISK": {
+            "AaveV3":        { "risk": "1/10", "alloc": 0.1 },
+            "Abracadabra":   { "risk": "1/10", "alloc": 0.2 },
+            "Balancer":      { "risk": "1/10", "alloc": 0.2 },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0.25 },
+            "TimelessFi":    { "risk": "1/10", "alloc": 0 },
+            "YearnMetapool": { "risk": "1/10", "alloc": 0.25 }
+        }
+    }
+}
