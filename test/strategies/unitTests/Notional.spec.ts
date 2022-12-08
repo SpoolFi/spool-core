@@ -20,7 +20,7 @@ import {
     mineBlocks,
     PathBalancerAsset,
     PathBalancerSwap,
-    reset,
+    resetToBlockNumber,
     SECS_DAY,
 } from "../../shared/utilities";
 
@@ -32,6 +32,7 @@ use(solidity);
 
 const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
+const mainnetBlock = 15082700;
 const depositSlippage = encodeDepositSlippage(0);
 
 const baseSwap : PathBalancerSwap = 
@@ -99,7 +100,7 @@ describe("Strategies Unit Test: Notional", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
-        await reset();
+        await resetToBlockNumber(mainnetBlock);
         ({ accounts } = await loadFixture(underlyingTokensFixture));
     });
 
