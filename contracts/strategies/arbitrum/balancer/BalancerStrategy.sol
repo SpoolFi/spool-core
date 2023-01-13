@@ -19,6 +19,8 @@ contract BalancerStrategy is NoRewardStrategy {
 
     uint256 internal immutable MANTISSA;
 
+    int256 internal constant POOL_DECIMALS = 18;
+
     /* ========== STATE VARIABLES ========== */
 
     /// @notice Vault contract
@@ -63,8 +65,8 @@ contract BalancerStrategy is NoRewardStrategy {
         // is used to convert (see _lpToCoin()).
         // BPT and underlying token decimals may differ, so we handle that here.
         int uDecimals = int(int8(_underlying.decimals()));
-        int pDecimals = int(int8(_pool.decimals()));
-        MANTISSA =  10 ** uint(pDecimals + (pDecimals - uDecimals));
+        require(uDecimals <= (POOL_DECIMALS * 2), "BalancerStrategy::constructor: underlying decimals out of range.");
+        MANTISSA =  10 ** uint(POOL_DECIMALS + (POOL_DECIMALS - uDecimals));
     }
 
     /* ========== VIEWS ========== */
