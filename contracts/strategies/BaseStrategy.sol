@@ -279,6 +279,9 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
             withdrawnAmount += strategy.pendingUserNext.deposit.get();
             strategy.pendingUserNext.deposit = 0;
         }
+        
+        strategy.pendingUser.deposit = strategy.pendingUser.deposit.set();
+        strategy.pendingUserNext.deposit = strategy.pendingUserNext.deposit.set();
 
         // if strategy was already processed in the current index that hasn't finished yet,
         // transfer the withdrawn amount
