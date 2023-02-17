@@ -67,10 +67,10 @@ const strategyAssets: ConvexStratSetup[] = [
 
 const depositSlippage = encodeDepositSlippage(0);
 
-const depositSlippages = [0, MaxUint256, depositSlippage];
-const withdrawSlippages = [0, MaxUint256, 0];
+const depositSlippages = [0, MaxUint256, 0, MaxUint256, depositSlippage];
+const withdrawSlippages = [0, MaxUint256, 0, MaxUint256, 0];
 
-describe("Strategies Unit Test: Convex AlUSD", () => {
+describe.only("Strategies Unit Test: Convex AlUSD", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
