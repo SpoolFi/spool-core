@@ -32,6 +32,7 @@ struct Slippage {
     bool isDeposit;   // whether the strategy will be depositing or withdrawing
     bool canProcess;  // if there are deposits or withdrawals to process
     uint256 balance;  // underlying balance of the strategy
+    uint256 price;  // price of the lp token of the strategy
 }
 
 /// @notice Test Helper contracts for determining DoHardWork slippages for the strategy types that require it.
@@ -57,7 +58,8 @@ contract SlippagesHelper is BaseStorage {
             ICurvePool pool = ICurvePool(strategy.pool());
 
             IERC20 underlying = IERC20( strategy.underlying() );
-            uint stratBalance = _getStrategyBalance(strat);
+            slippages[i].balance = _getStrategyBalance(strat);
+            slippages[i].price = _getStrategyPrice(strat);
             (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
 
             if(isDeposit){
@@ -84,7 +86,6 @@ contract SlippagesHelper is BaseStorage {
                     slippages[i] = _3poolWithdraw(_strategies[i], pool, amount, underlying, lpHelper);
                 }
             }
-            slippages[i].balance = stratBalance;
         }
 
         return slippages;
@@ -99,7 +100,8 @@ contract SlippagesHelper is BaseStorage {
             ICurvePool pool = ICurvePool(strategy.pool());
 
             IERC20 underlying = IERC20( strategy.underlying() );
-            uint stratBalance = _getStrategyBalance(strat);
+            slippages[i].balance = _getStrategyBalance(strat);
+            slippages[i].price = _getStrategyPrice(strat);
             (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
 
             if(isDeposit){
@@ -110,7 +112,6 @@ contract SlippagesHelper is BaseStorage {
                 IStrategyContractHelper lpHelper = IStrategyContractHelper(IConvexSharedStrategy(strat).boosterHelper());
                 slippages[i] = _4poolWithdraw(_strategies[i], pool, amount, underlying, lpHelper);
             }
-            slippages[i].balance = stratBalance;
         }
 
         return slippages;
@@ -182,11 +183,14 @@ contract SlippagesHelper is BaseStorage {
     }
 
     function getYearnSlippage(IYearnStrategy strategy_, uint128 reallocateSharesToWithdraw) external returns(Slippage memory slippage){
-        IYearnStrategy strategy = IYearnStrategy(strategyRegistry.getImplementation(address(strategy_)));
+        address strat = strategyRegistry.getImplementation(address(strategy_));
+        IYearnStrategy strategy = IYearnStrategy(strat);
         Strategy storage strategyStorage = strategies[address(strategy_)];
 
         IYearnTokenVault vault = IYearnTokenVault( strategy.vault() );
         IERC20 underlying = IERC20( strategy.underlying() );
+        slippage.balance = _getStrategyBalance(strat);
+        slippage.price = _getStrategyPrice(strat);
 
         (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy_), reallocateSharesToWithdraw);
         if(amount==0) return slippage;
@@ -222,6 +226,10 @@ contract SlippagesHelper is BaseStorage {
 
     function getStrategyBalance(address _strategy) external returns(uint128){
         return _getStrategyBalance(_strategy);
+    }
+
+    function getStrategyPrice(address _strategy) external returns(uint256){
+        return _getStrategyPrice(_strategy);
     }
 
     function matchDepositsAndWithdrawals(address _strategy, uint128 reallocateSharesToWithdraw) public returns(uint128, bool){
@@ -405,4 +413,11 @@ contract SlippagesHelper is BaseStorage {
         if (!success) revert(_getRevertMsg(result));
         return abi.decode(result, (uint128));
     }
+
+    function _getStrategyPrice(address _strategy) private returns(uint128){
+       (bool success, bytes memory result) = _strategy.delegatecall(abi.encodeWithSelector(IBaseStrategy.getStrategyPrice.selector));
+        if (!success) revert(_getRevertMsg(result));
+        return abi.decode(result, (uint128));
+    }
+
 }

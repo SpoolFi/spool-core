@@ -47,6 +47,12 @@ contract Curve3poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy3Coin
         _sharedKey = _calculateSharedKey();
     }
 
+    /* ========== VIEW FUNCTIONS ========== */
+
+    function getStrategyPrice() public view override returns(uint128) {
+        return _lpToCoin(ONE_LP_UNIT);
+    }
+
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
     /**

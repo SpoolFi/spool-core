@@ -78,6 +78,12 @@ contract ConvexSharedStrategy is CurveStrategy3CoinsBase, MultipleRewardStrategy
         _sharedKey = _calculateSharedKey();
     }
 
+    /* ========== VIEW FUNCTIONS ========== */
+
+    function getStrategyPrice() public view override returns(uint128) {
+        return _lpToCoin(ONE_LP_UNIT);
+    }
+
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
     /**
