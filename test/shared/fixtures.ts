@@ -150,65 +150,77 @@ export async function accountsFixture(
 }
 
 export async function tokensFixture(administrator: SignerWithAddress): Promise<TokensFixture> {
-    let constants = await getConstants();
-    const DAI = isForking()
-        ? ((await ethers.getContractAt(
-              constants.tokens.DAI.contract.ABI,
-              constants.tokens.DAI.contract.address,
-              administrator
-          )) as IERC20)
-        : await new MockToken__factory().connect(administrator).deploy("DAI", "DAI", 18);
+    let DAI: IERC20;
+    let USDC: IERC20;
+    let USDT: IERC20;
+    let WETH: IERC20;
+    let CHEF: IERC20;
 
-    const USDC = isForking()
-        ? ((await ethers.getContractAt(
-              constants.tokens.USDC.contract.implementation.ABI,
-              constants.tokens.USDC.contract.delegator.address,
-              administrator
-          )) as IERC20)
-        : await new MockToken__factory().connect(administrator).deploy("USDC", "USDC", 8);
+    if(isForking()) {
+        let constants = await getConstants();
+        DAI = await ethers.getContractAt(
+                  constants.tokens.DAI.contract.ABI,
+                  constants.tokens.DAI.contract.address,
+                  administrator
+              ) as IERC20;
 
-    const USDT = isForking()
-        ? ((await ethers.getContractAt(
+        USDC = await ethers.getContractAt(
+                  constants.tokens.USDC.contract.implementation.ABI,
+                  constants.tokens.USDC.contract.delegator.address,
+                  administrator
+              ) as IERC20;
+
+        USDT = await ethers.getContractAt(
               constants.tokens.USDT.contract.ABI,
               constants.tokens.USDT.contract.address,
               administrator
-          )) as IERC20)
-        : await new MockToken__factory().connect(administrator).deploy("USDT", "USDT", 8);
+          ) as IERC20;
 
-    const WETH = isForking()
-        ? ((await ethers.getContractAt(
+        WETH = await ethers.getContractAt(
               constants.tokens.WETH.contract.ABI,
               constants.tokens.WETH.contract.address,
               administrator
-          )) as IERC20)
-        : await new MockToken__factory().connect(administrator).deploy("WETH", "Wrapped Ether", 18);
-
-    const CHEF = await new MockToken__factory().connect(administrator).deploy("CHEF", "Chef Reward", 18);
-
-    if (isForking()) {
+          ) as IERC20;
         await getFunds(administrator);
+    } else {
+        DAI = await new MockToken__factory().connect(administrator).deploy("DAI", "DAI", 18);
+        USDC = await new MockToken__factory().connect(administrator).deploy("USDC", "USDC", 8);
+        USDT = await new MockToken__factory().connect(administrator).deploy("USDT", "USDT", 8);
+        WETH = await new MockToken__factory().connect(administrator).deploy("WETH", "Wrapped Ether", 18);
     }
+    CHEF = await new MockToken__factory().connect(administrator).deploy("CHEF", "Chef Reward", 18);
 
     return { DAI, USDC, USDT, WETH, CHEF };
 }
 
 async function poolsFixture(accounts: AccountsFixture, tokens: TokensFixture): Promise<PoolsFixture> {
-    let constants = await getConstants();
-    const factory = isForking()
-        ? ((await ethers.getContractAt(
-              constants.uniswap.Factory.ABI,
-              constants.uniswap.Factory.address
-          )) as UniswapV2Factory)
-        : await new UniswapV2Factory__factory().connect(accounts.administrator).deploy(accounts.administrator.address);
+    let factory: UniswapV2Factory;
+    let router: UniswapV2Router02;
 
-    const router = isForking()
-        ? ((await ethers.getContractAt(
-              constants.uniswap.Router.ABI,
-              constants.uniswap.Router.address
-          )) as UniswapV2Router02)
-        : await new UniswapV2Router02__factory()
-              .connect(accounts.administrator)
-              .deploy(factory.address, tokens.WETH.address);
+    if(isForking()) {
+        let constants = await getConstants();
+        factory = await ethers.getContractAt(
+                  constants.uniswap.Factory.ABI,
+                  constants.uniswap.Factory.address
+              ) as UniswapV2Factory;
+
+        router = await ethers.getContractAt(
+                  constants.uniswap.Router.ABI,
+                  constants.uniswap.Router.address
+              ) as UniswapV2Router02;
+    } else {
+        factory = await new UniswapV2Factory__factory()
+                    .connect(accounts.administrator)
+                    .deploy(accounts.administrator.address);
+
+        router = await new UniswapV2Router02__factory()
+                  .connect(accounts.administrator)
+                  .deploy(factory.address, tokens.WETH.address);
+
+        // These pairs already exit on mainnet. They are not required by the tests directly
+        await createAndSupply(factory, accounts.riskProvider, tokens.USDC, tokens.WETH, [8, 18], ["10000", "2500"]);
+        await createAndSupply(factory, accounts.riskProvider, tokens.DAI, tokens.USDC, [18, 8], ["10000", "10000"]);
+    }
 
     const CHEF_WETH = await createAndSupply(
         factory,
@@ -218,12 +230,6 @@ async function poolsFixture(accounts: AccountsFixture, tokens: TokensFixture): P
         [18, 18],
         ["10000", "2500"]
     );
-
-    // These pairs already exit on mainnet. They are not required by the tests directly
-    if (!isForking()) {
-        await createAndSupply(factory, accounts.riskProvider, tokens.USDC, tokens.WETH, [8, 18], ["10000", "2500"]);
-        await createAndSupply(factory, accounts.riskProvider, tokens.DAI, tokens.USDC, [18, 8], ["10000", "10000"]);
-    }
 
     return { factory, router, CHEF_WETH };
 }

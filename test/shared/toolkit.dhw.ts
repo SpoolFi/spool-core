@@ -3,8 +3,8 @@ import { BigNumber, ContractTransaction } from "ethers";
 import { pack } from "@ethersproject/solidity";
 import { getRewardSwapPathBalancer, getRewardSwapPathV2Weth, PathBalancerAsset, PathBalancerSwap } from "./utilities";
 import { ethers } from "hardhat";
-import { getReallocationSlippages, getSlippages } from "./dhwUtils";
 import {arbitrum, mainnet} from "./constants";
+import {getReallocationSlippages, getSlippages} from "./dhwUtils";
 
 export type ActionType = "deposit" | "withdrawal";
 
@@ -274,3 +274,4 @@ export async function doHardWorkReallocation(context: Context, getRewards: boole
 
     console.log(">> DoHardWork REALLOCATION finished.");
 }
+

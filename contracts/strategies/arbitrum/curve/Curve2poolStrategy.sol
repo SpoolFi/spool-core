@@ -114,9 +114,7 @@ contract Curve2poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy2Coin
 
         if (didClaimNewRewards) {
             Strategy storage strategy = strategies[self];
-            if (rewardTokenAmount > 0) {
-                strategy.pendingRewards[address(rewardToken)] += rewardTokenAmount;
-            }
+            strategy.pendingRewards[address(rewardToken)] += rewardTokenAmount;
         }
 
         return SafeCast.toUint128(strategies[self].pendingRewards[address(rewardToken)]);

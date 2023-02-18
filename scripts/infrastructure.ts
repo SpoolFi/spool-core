@@ -90,6 +90,7 @@ export interface SpoolFixture {
 
 export interface HelperContracts {
     slippagesHelper: string;
+    slippagesHelperArbitrum: string;
     reallocationHelper: string;
 }
 

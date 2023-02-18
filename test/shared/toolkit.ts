@@ -4,6 +4,7 @@ import {
     IERC20__factory,
     IVault__factory,
     MockToken__factory,
+    SlippagesHelperArbitrum__factory,
     SlippagesHelper__factory,
     SpoolDoHardWorkReallocationHelper__factory,
     Vault__factory,
@@ -143,6 +144,11 @@ export async function buildContext(): Promise<Context> {
         .deploy(infra.strategyRegistry.address))
         .connect(hre.ethers.provider);
 
+    const slippagesHelperArbitrum = (await new SlippagesHelperArbitrum__factory()
+        .connect(accounts.administrator)
+        .deploy(infra.strategyRegistry.address))
+        .connect(hre.ethers.provider);
+
     const reallocationHelper = (await new SpoolDoHardWorkReallocationHelper__factory()
         .connect(accounts.administrator)
         .deploy(infra.strategyRegistry.address))
@@ -150,6 +156,7 @@ export async function buildContext(): Promise<Context> {
 
     await writeContracts(hre, {
         slippagesHelper: slippagesHelper.address,
+        slippagesHelperArbitrum: slippagesHelperArbitrum.address,
         reallocationHelper: reallocationHelper.address
     });
 
@@ -163,6 +170,7 @@ export async function buildContext(): Promise<Context> {
         infra,
         helperContracts: {
             slippagesHelper: slippagesHelper.address,
+            slippagesHelperArbitrum: slippagesHelperArbitrum.address,
             reallocationHelper: reallocationHelper.address
         },
         users: signers.slice(20, 80),
