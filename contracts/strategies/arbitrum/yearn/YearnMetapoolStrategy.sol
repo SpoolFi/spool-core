@@ -45,6 +45,12 @@ contract YearnMetapoolStrategy is CurveStrategyMetapoolV2Base {
         oneShare = 10**uint256(_vault.decimals());
     }
 
+    /* ========== VIEW FUNCTIONS ========== */
+
+    function getStrategyPrice() public view override returns(uint128) {
+        return _lpToCoin(ONE_LP_UNIT);
+    }
+
     /* ========== OVERRIDDEN FUNCTIONS ========== */
     /**
      * @notice Returns total strategy balance including pending rewards

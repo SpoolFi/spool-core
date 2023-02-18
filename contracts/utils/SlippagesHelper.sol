@@ -58,8 +58,8 @@ contract SlippagesHelper is BaseStorage {
             ICurvePool pool = ICurvePool(strategy.pool());
 
             IERC20 underlying = IERC20( strategy.underlying() );
-            slippages[i].balance = _getStrategyBalance(strat);
-            slippages[i].price = _getStrategyPrice(strat);
+            uint stratBalance = _getStrategyBalance(strat);
+            uint stratPrice = _getStrategyPrice(strat);
             (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
 
             if(isDeposit){
@@ -86,6 +86,8 @@ contract SlippagesHelper is BaseStorage {
                     slippages[i] = _3poolWithdraw(_strategies[i], pool, amount, underlying, lpHelper);
                 }
             }
+            slippages[i].balance = stratBalance;
+            slippages[i].price = stratPrice;
         }
 
         return slippages;
@@ -100,8 +102,8 @@ contract SlippagesHelper is BaseStorage {
             ICurvePool pool = ICurvePool(strategy.pool());
 
             IERC20 underlying = IERC20( strategy.underlying() );
-            slippages[i].balance = _getStrategyBalance(strat);
-            slippages[i].price = _getStrategyPrice(strat);
+            uint stratBalance = _getStrategyBalance(strat);
+            uint stratPrice = _getStrategyPrice(strat);
             (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
 
             if(isDeposit){
@@ -112,6 +114,8 @@ contract SlippagesHelper is BaseStorage {
                 IStrategyContractHelper lpHelper = IStrategyContractHelper(IConvexSharedStrategy(strat).boosterHelper());
                 slippages[i] = _4poolWithdraw(_strategies[i], pool, amount, underlying, lpHelper);
             }
+            slippages[i].balance = stratBalance;
+            slippages[i].price = stratPrice;
         }
 
         return slippages;
