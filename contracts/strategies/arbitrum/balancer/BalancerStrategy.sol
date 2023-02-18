@@ -164,10 +164,10 @@ contract BalancerStrategy is NoRewardStrategy {
             toInternalBalance : false
         });
 
-        // withdraw idle tokens from vault
-        uint256 underlyingBefore = underlying.balanceOf(address(this));
-        vault.exitPool(poolId, address(this), address(this), poolRequest);
-        uint256 underlyingWithdrawn = underlying.balanceOf(address(this)) - underlyingBefore;
+        // withdraw balancer tokens from vault
+        uint256 underlyingWithdrawn = _exitPool(poolRequest);
+
+        emit Slippage(self, underlying, false, shares, underlyingWithdrawn);
         
         return SafeCast.toUint128(underlyingWithdrawn);
     }
@@ -222,5 +222,17 @@ contract BalancerStrategy is NoRewardStrategy {
         uint256 result = (lp * lpToCoin) / MANTISSA;
 
         return SafeCast.toUint128(result);
+    }
+
+    /**
+     * @notice Exit pool
+     * @param poolRequest request to exit pool
+     */
+    function _exitPool(ExitPoolRequest memory poolRequest) internal returns (uint256) {
+        // withdraw BPT tokens from vault
+        uint256 underlyingBefore = underlying.balanceOf(address(this));
+        vault.exitPool(poolId, address(this), address(this), poolRequest);
+        uint256 underlyingWithdrawn = underlying.balanceOf(address(this)) - underlyingBefore;
+        return underlyingWithdrawn;
     }
 }
