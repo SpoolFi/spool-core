@@ -124,7 +124,7 @@ contract SlippagesHelper is BaseStorage {
         IIdleToken idleToken = IIdleToken(strategy.idleToken());
         IERC20 underlying = IERC20(strategy.underlying());
 
-        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy), reallocateSharesToWithdraw);
+        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy_), reallocateSharesToWithdraw);
         if(amount==0) return slippage;
         slippage.canProcess = true;
         if(isDeposit){
@@ -160,7 +160,7 @@ contract SlippagesHelper is BaseStorage {
         IERC20 underlying = IERC20(strategy.underlying());
         INToken nToken = INToken(strategy.nToken());
 
-        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy), reallocateSharesToWithdraw);
+        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy_), reallocateSharesToWithdraw);
         if(amount==0) return slippage;
         slippage.canProcess = true;
         if(isDeposit){
@@ -188,7 +188,7 @@ contract SlippagesHelper is BaseStorage {
         IYearnTokenVault vault = IYearnTokenVault( strategy.vault() );
         IERC20 underlying = IERC20( strategy.underlying() );
 
-        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy), reallocateSharesToWithdraw);
+        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy_), reallocateSharesToWithdraw);
         if(amount==0) return slippage;
         slippage.canProcess = true;
         if(isDeposit){

@@ -121,7 +121,7 @@ contract SlippagesHelperArbitrum is BaseStorage {
         bytes32 poolId = strategy.poolId();
         uint256 nCoin = strategy.nCoin();
 
-        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy), reallocateSharesToWithdraw);
+        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy_), reallocateSharesToWithdraw);
         if(amount==0) return slippage;
         if(isDeposit){
             slippage = _balancerDeposit(pool, vault, poolId, nCoin, underlying, amount);
