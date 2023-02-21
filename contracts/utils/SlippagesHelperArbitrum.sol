@@ -42,80 +42,20 @@ contract SlippagesHelperArbitrum is BaseStorage {
 
     uint256 constant STRATS_PER_TYPE = 3;
 
+    enum RewardStrat { ABRACADABRA, CURVE2POOL }
+
     constructor (IStrategyRegistry _strategyRegistry) {
         strategyRegistry = _strategyRegistry;
     }
 
-    function get2PoolSlippage(ICurveStrategyBase[] memory _strategies, uint128[] memory reallocateSharesToWithdraw) external returns(Slippage[6] memory){
+    function get2PoolSlippage(ICurveStrategyBase[] calldata _strategies, uint128[] calldata reallocateSharesToWithdraw, bool doCompound) external returns(Slippage[6] memory slippages){
         require(_strategies.length == 6, "get2PoolSlippage: invalid strategies length");
-        Slippage[6] memory slippages;
-        
-        // Abracadabra
-        uint i = 0;
-        for(; i < 2; i++) {
-            address strat = strategyRegistry.getImplementation(address(_strategies[i]));
-            IERC20 underlying = IERC20( _strategies[i].underlying() );
-            address lpHelper;
-            uint stratBalance = _getStrategyBalance(strat);
-            uint stratPrice = _getStrategyPrice(strat);
 
-            (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
-            if(isDeposit){ // Deposit
-                IDepositZap depositZap = (IConvexSharedMetapoolStrategy(strat)).depositZap();
-                underlying.safeApprove(address( depositZap ), amount);
-                slippages[i] = _metapool3Deposit(_strategies[i], depositZap, amount);
-            }else { // Withdrawal
-                    IDepositZap depositZap = (IConvexSharedMetapoolStrategy(strat)).depositZap();
-                    lpHelper  = IAbracadabraMetapoolStrategy(strat).farmHelper();
-                    slippages[i] = _metapoolWithdraw(_strategies[i], depositZap, amount, underlying, IStrategyContractHelper(lpHelper));
-                }
-            slippages[i].balance = stratBalance;
-            slippages[i].price = stratPrice;
-        }
+        Slippage[2] memory abraSlippages = _getAbracadabraSlippage(_strategies[0:2], reallocateSharesToWithdraw[0:2], doCompound);
+        Slippage[2] memory curveSlippages = _getCurve2PoolSlippage(_strategies[2:4], reallocateSharesToWithdraw[2:4], doCompound);
+        Slippage[2] memory yearnSlippages = _getYearnMetapoolSlippage(_strategies[4:], reallocateSharesToWithdraw[4:]);
 
-        // Curve 2pool
-        for(; i < 4; i++) {
-            address strat = strategyRegistry.getImplementation(address(_strategies[i]));
-            IERC20 underlying = IERC20( _strategies[i].underlying() );
-            address pool = _strategies[i].pool();
-            address lpHelper;
-            uint stratBalance = _getStrategyBalance(strat);
-            uint stratPrice = _getStrategyPrice(strat);
-
-            (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
-            if(isDeposit){ // Deposit
-                underlying.safeApprove(pool, amount);
-                slippages[i] = _2poolDeposit(_strategies[i], IStableSwap2Pool(pool), amount);
-            }else { // Withdrawal
-                lpHelper  = ICurve2poolStrategy(strat).gaugeHelper();
-                slippages[i] = _2poolWithdraw(_strategies[i], ICurvePool(pool), amount, underlying, lpHelper);
-            }
-            slippages[i].balance = stratBalance;
-            slippages[i].price = stratPrice;
-        }
-
-        // Yearn Metapool
-        for(; i < 6; i++) {
-            address strat = strategyRegistry.getImplementation(address(_strategies[i]));
-            Strategy storage strategyStorage = strategies[strat];
-            IERC20 underlying = IERC20( _strategies[i].underlying() );
-            IERC20 lpToken = IERC20( _strategies[i].lpToken() );
-            IYearnTokenVault vault = IYearnTokenVault( IYearnMetapoolStrategy(strat).vault() );
-            int128 nCoin = _strategies[i].nCoin();
-            uint stratBalance = _getStrategyBalance(strat);
-            uint stratPrice = _getStrategyPrice(strat);
-
-            (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
-            if(isDeposit){ // Deposit
-                slippages[i] = _yearnDeposit(_strategies[i], vault, underlying, lpToken, amount);
-            }else { // Withdrawal
-                slippages[i] = _yearnWithdraw(_strategies[i], vault, underlying, lpToken, strategyStorage, nCoin, amount);
-            }
-            slippages[i].balance = stratBalance;
-            slippages[i].price = stratPrice;
-        }
-
-        return slippages;
+        slippages = [ abraSlippages[0], abraSlippages[1], curveSlippages[0], curveSlippages[1], yearnSlippages[0], yearnSlippages[1]];
     }
 
     function getBalancerSlippage(IBalancerStrategy strategy_, uint128 reallocateSharesToWithdraw) external returns(Slippage memory slippage){
@@ -240,6 +180,77 @@ contract SlippagesHelperArbitrum is BaseStorage {
         slippage.protocol = bptTokenNew;
     }
 
+    function _getAbracadabraSlippage(ICurveStrategyBase[] calldata _strategies, uint128[] calldata reallocateSharesToWithdraw, bool doCompound) internal returns(Slippage[2] memory slippages) {
+        for(uint i=0; i < 2; i++) {
+            address strat = strategyRegistry.getImplementation(address(_strategies[i]));
+            IERC20 underlying = IERC20( _strategies[i].underlying() );
+            address lpHelper;
+            if(doCompound) _claimRewards(strat, RewardStrat.ABRACADABRA);
+
+            uint stratBalance = _getStrategyBalance(strat);
+            uint stratPrice = _getStrategyPrice(strat);
+
+            (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
+            if(isDeposit){ // Deposit
+                IDepositZap depositZap = (IConvexSharedMetapoolStrategy(strat)).depositZap();
+                underlying.safeApprove(address( depositZap ), amount);
+                slippages[i] = _metapool3Deposit(_strategies[i], depositZap, amount);
+            }else { // Withdrawal
+                    IDepositZap depositZap = (IConvexSharedMetapoolStrategy(strat)).depositZap();
+                    lpHelper  = IAbracadabraMetapoolStrategy(strat).farmHelper();
+                    slippages[i] = _metapoolWithdraw(_strategies[i], depositZap, amount, underlying, IStrategyContractHelper(lpHelper));
+                }
+            slippages[i].balance = stratBalance;
+            slippages[i].price = stratPrice;
+        }
+    }
+
+    function _getCurve2PoolSlippage(ICurveStrategyBase[] calldata _strategies, uint128[] calldata reallocateSharesToWithdraw, bool doCompound) internal returns(Slippage[2] memory slippages) {
+        for(uint i=0; i < 2; i++) {
+            address strat = strategyRegistry.getImplementation(address(_strategies[i]));
+            IERC20 underlying = IERC20( _strategies[i].underlying() );
+            address pool = _strategies[i].pool();
+            address lpHelper;
+            if(doCompound) _claimRewards(strat, RewardStrat.CURVE2POOL);
+
+            uint stratBalance = _getStrategyBalance(strat);
+            uint stratPrice = _getStrategyPrice(strat);
+
+            (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
+            if(isDeposit){ // Deposit
+                underlying.safeApprove(pool, amount);
+                slippages[i] = _2poolDeposit(_strategies[i], IStableSwap2Pool(pool), amount);
+            }else { // Withdrawal
+                lpHelper  = ICurve2poolStrategy(strat).gaugeHelper();
+                slippages[i] = _2poolWithdraw(_strategies[i], ICurvePool(pool), amount, underlying, lpHelper);
+            }
+            slippages[i].balance = stratBalance;
+            slippages[i].price = stratPrice;
+        }
+    }
+
+    function _getYearnMetapoolSlippage(ICurveStrategyBase[] calldata _strategies, uint128[] calldata reallocateSharesToWithdraw) internal returns(Slippage[2] memory slippages) {
+        // Yearn Metapool
+        for(uint i=0; i < 2; i++) {
+            address strat = strategyRegistry.getImplementation(address(_strategies[i]));
+            IERC20 underlying = IERC20( _strategies[i].underlying() );
+            IERC20 lpToken = IERC20( _strategies[i].lpToken() );
+            IYearnTokenVault vault = IYearnTokenVault( IYearnMetapoolStrategy(strat).vault() );
+            uint stratBalance = _getStrategyBalance(strat);
+            uint stratPrice = _getStrategyPrice(strat);
+
+            (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(_strategies[i]), reallocateSharesToWithdraw[i]);
+            if(isDeposit){ // Deposit
+                slippages[i] = _yearnDeposit(_strategies[i], vault, underlying, lpToken, amount);
+            }else { // Withdrawal
+                slippages[i] = _yearnWithdraw(_strategies[i], vault, underlying, lpToken, amount);
+            }
+            slippages[i].balance = stratBalance;
+            slippages[i].price = stratPrice;
+        }
+    }
+
+
     function _2poolDeposit(ICurveStrategyBase strategy, IStableSwap2Pool pool, uint256 amount) internal returns(Slippage memory slippage) {
         if(amount==0) return slippage;
         
@@ -358,13 +369,15 @@ contract SlippagesHelperArbitrum is BaseStorage {
         return slippage;
     }
 
-    function _yearnWithdraw(ICurveStrategyBase strat, IYearnTokenVault vault, IERC20 underlying, IERC20 lpToken, Strategy storage strategyStorage, int128 nCoin, uint256 amount) internal returns(Slippage memory slippage) {
+    function _yearnWithdraw(ICurveStrategyBase strat, IYearnTokenVault vault, IERC20 underlying, IERC20 lpToken, uint256 amount) internal returns(Slippage memory slippage) {
         if(amount==0) return slippage;
         slippage.canProcess = true;
 
         IYearnMetapoolStrategy strategy = IYearnMetapoolStrategy(address(strat));
         IDepositZap depositZap = IDepositZap( strategy.depositZap() );
 
+        Strategy storage strategyStorage = strategies[address( strat )];
+        int128 nCoin = strat.nCoin();
         uint256 yearnTokenBalance = strategyStorage.lpTokens;
         uint256 yearnTokenWithdraw = (yearnTokenBalance * amount) / strategyStorage.totalShares;
         uint lpBalanceBefore = lpToken.balanceOf(address(this));
@@ -414,6 +427,22 @@ contract SlippagesHelperArbitrum is BaseStorage {
        (bool success, bytes memory result) = _strategy.delegatecall(abi.encodeWithSelector(IBaseStrategy.getStrategyPrice.selector));
         if (!success) revert(_getRevertMsg(result));
         return abi.decode(result, (uint128));
+    }
+
+    function _claimRewards(address _strategy, RewardStrat rewardStrat) private {
+        SwapData[] memory swapData = new SwapData[](1);
+        bytes memory path;
+        if(rewardStrat == RewardStrat.ABRACADABRA){
+            path = hex"02";
+        } else if (rewardStrat == RewardStrat.CURVE2POOL){
+            path = hex"05000bb80001f4";
+        } else {
+            revert("_claimRewards: Invalid reward strategy");
+        }
+        swapData[0] = SwapData({ slippage : 1, path : path });
+
+       (bool success, bytes memory result) = _strategy.delegatecall(abi.encodeWithSelector(IBaseStrategy.claimRewards.selector, swapData));
+        if (!success) revert(_getRevertMsg(result));
     }
 
 }
