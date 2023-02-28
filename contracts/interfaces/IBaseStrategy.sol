@@ -10,6 +10,8 @@ interface IBaseStrategy {
 
     function getStrategyBalance() external view returns (uint128);
 
+    function getStrategyPrice() external view returns (uint128);
+
     function getStrategyUnderlyingWithRewards() external view returns(uint128);
 
     function process(uint256[] calldata, bool, SwapData[] calldata) external;

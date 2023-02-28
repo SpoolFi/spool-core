@@ -46,6 +46,12 @@ contract Curve2poolStrategy is ClaimFullSingleRewardStrategy, CurveStrategy2Coin
         gaugeHelper = _gaugeHelper;
     }
 
+    /* ========== VIEW FUNCTIONS ========== */
+
+    function getStrategyPrice() public view override returns(uint128) {
+        return _lpToCoin(ONE_LP_UNIT);
+    }
+
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 
     /**
