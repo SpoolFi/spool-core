@@ -1494,7 +1494,7 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 continue;
             }
             case "Abracadabra": {
-                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
             case "Balancer": {
@@ -1506,23 +1506,23 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 continue;
             }
             case "Convex": {
-                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
             case "Convex4pool": {
-                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
             case "ConvexMetapool": {
-                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
             case "Curve": {
-                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
             case "Curve2pool": {
-                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
             case "Harvest": {
@@ -1546,11 +1546,11 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 continue;
             }
             case "Yearn": {
-                slippages.push([0]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
             case "YearnMetapool": {
-                slippages.push([0, ethers.constants.MaxUint256, 0, 0]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0, 0]);
                 continue;
             }
             default: {

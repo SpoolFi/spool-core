@@ -58,8 +58,8 @@ const strategyAssets: AbracadabraStratSetup[] = [
 
 const depositSlippage = encodeDepositSlippage(0);
 
-const depositSlippages = [0, MaxUint256, depositSlippage];
-const withdrawSlippages = [0, MaxUint256, 0];
+const depositSlippages = [0, MaxUint256, 0, MaxUint256, depositSlippage];
+const withdrawSlippages = [0, MaxUint256, 0, MaxUint256, 0];
 
 describe("Strategies Unit Test: Arbitrum - Abracadabra.money MIM-2CRV", () => {
     let accounts: AccountsFixture;

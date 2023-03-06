@@ -52,8 +52,8 @@ const strategyAssets: ConvexStratSetup[] = [
 
 const depositSlippage = encodeDepositSlippage(0);
 
-const depositSlippages = [0, MaxUint256, depositSlippage];
-const withdrawSlippages = [0, MaxUint256, 0];
+const depositSlippages = [0, MaxUint256, 0, MaxUint256, depositSlippage];
+const withdrawSlippages = [0, MaxUint256, 0, MaxUint256, 0];
 
 describe("Strategies Unit Test: Arbitrum - Curve Liquidity Gauge 2pool", () => {
     let accounts: AccountsFixture;

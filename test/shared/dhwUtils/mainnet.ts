@@ -38,7 +38,7 @@ const percents = {
     "4pool": [150, 150, 3],
     Idle: [50, 50],
     Notional: [50, 50],
-    Yearn: [30, 30],
+    Yearn: [30, 30, 3],
 };
 
 // reduce a big number by a percentage, expressed in basis points.
@@ -60,6 +60,7 @@ function convertToSlippageStruct(raw: any): SlippageStruct {
         isDeposit: Boolean(raw[1]),
         canProcess: Boolean(raw[2]),
         balance: BigNumber.from(raw[3].toString()),
+        price: BigNumber.from(raw[4].toString()),
     };
     printSlippage(slippage);
     return slippage;
@@ -143,11 +144,15 @@ async function get3PoolSlippage(
 
         let slippage = convertToSlippageStruct(raw);
         let slippageBalance = BigNumber.from(slippage.balance);
+        let slippagePrice = BigNumber.from(slippage.price);
         const balanceSlippage = getPercentage(slippageBalance, percents["3pool"][2]);
+        const priceSlippage = getPercentage(slippagePrice, percents["3pool"][2]);
 
         let slippageArg = [
             slippageBalance.sub(balanceSlippage),
             slippageBalance.add(balanceSlippage),
+            slippagePrice.sub(priceSlippage),
+            slippagePrice.add(priceSlippage),
             handleSlippageResult(slippage, percents["3pool"]),
         ];
 
@@ -179,11 +184,15 @@ async function getConvex4PoolSlippage(
 
         let slippage = convertToSlippageStruct(raw);
         let slippageBalance = BigNumber.from(slippage.balance);
+        let slippagePrice = BigNumber.from(slippage.price);
         const balanceSlippage = getPercentage(slippageBalance, percents["4pool"][2]);
+        const priceSlippage = getPercentage(slippagePrice, percents["4pool"][2]);
 
         let slippageArg = [
             slippageBalance.sub(balanceSlippage),
             slippageBalance.add(balanceSlippage),
+            slippagePrice.sub(priceSlippage),
+            slippagePrice.add(priceSlippage),
             handleSlippageResult(slippage, percents["4pool"]),
         ];
 
@@ -227,11 +236,25 @@ async function getYearnSlippage(
 
     const result = await strategyHelperCall("getYearnSlippage", [strategy, reallocateSharesToWithdraw], context);
     const slippage = convertToSlippageStruct(result);
+    let slippageBalance = BigNumber.from(slippage.balance);
+    let slippagePrice = BigNumber.from(slippage.price);
+    const balanceSlippage = getPercentage(slippageBalance, percents["Yearn"][2]);
+    const priceSlippage = getPercentage(slippagePrice, percents["Yearn"][2]);
+
+    let slippageArg = [
+        slippageBalance.sub(balanceSlippage),
+        slippageBalance.add(balanceSlippage),
+        slippagePrice.sub(priceSlippage),
+        slippagePrice.add(priceSlippage),
+    ]
     if (slippage.isDeposit) {
-        return [handleSlippageResult(slippage, percents["Yearn"])];
+        slippageArg.push(handleSlippageResult(slippage, percents["Yearn"]));
+    } else {
+        // in the withdraw case, a maxLoss basis points value is directly passed, so no reduction in percent
+        slippageArg.push(handleSlippageResult(slippage, [0, 0]));
     }
-    // in the withdraw case, a maxLoss basis points value is directly passed, so no reduction in percent
-    return [handleSlippageResult(slippage, [0, 0])];
+
+    return slippageArg;
 }
 
 export async function getSlippagesMainnet(context: Context) {
@@ -248,7 +271,7 @@ export async function getSlippagesMainnet(context: Context) {
     const allStrategies = await context.infra.controller.getAllStrategies();
 
     console.log("*********CALCULATING SLIPPAGES*********");
-    const slippages = await getDhwSlippages(context);
+    const slippages = await getDhwSlippagesMainnet(context);
     console.log("*********SLIPPAGE CALCULATED*********");
 
     let indexes = allStrategies.map((strat) => {
@@ -324,7 +347,7 @@ export async function getReallocationSlippagesMainnet(context: Context, realloca
 
     const reallocationWithdrawnShares = await doHardWorkReallocationHelper(context, reallocationTable);
 
-    const withdrawSlippages = await getDhwSlippages(context, reallocationWithdrawnShares);
+    const withdrawSlippages = await getDhwSlippagesMainnet(context, reallocationWithdrawnShares);
 
     console.log("reallocationWithdrawnShares");
     console.table(reallocationWithdrawnShares.map((ss) => decodeSlippageIfDeposit(ss).toString()));
@@ -376,16 +399,6 @@ export async function getReallocationSlippagesMainnet(context: Context, realloca
     };
 }
 
-
-async function getDhwSlippages(context: Context, reallocationWithdrawnShares?: BigNumber[]) {
-        const network = await getNetworkName();
-        switch(network){
-            case "arbitrum":
-                return await getDhwSlippagesArbitrum(context, reallocationWithdrawnShares);
-            default:
-                return await getDhwSlippagesMainnet(context, reallocationWithdrawnShares);
-        }
-}
 
 export async function getDhwSlippagesMainnet(context: Context, reallocationWithdrawnShares?: BigNumber[]) {
     const curvePoolSlippages = await get3PoolSlippage(context, reallocationWithdrawnShares);
@@ -474,8 +487,8 @@ function getDhwDepositSlippage(context: Context) {
                 continue;
             }
             case "Abracadabra": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Balancer": {
@@ -489,32 +502,32 @@ function getDhwDepositSlippage(context: Context) {
                 continue;
             }
             case "Convex": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Convex4pool": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "ConvexMetapool": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Curve": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Curve2pool": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Harvest": {
@@ -541,14 +554,14 @@ function getDhwDepositSlippage(context: Context) {
                 continue;
             }
             case "Yearn": {
-                slippages.push([depositSlippage]);
-                slippages.push([depositSlippage]);
-                slippages.push([depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "YearnMetapool": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
                 continue;
             }
         }

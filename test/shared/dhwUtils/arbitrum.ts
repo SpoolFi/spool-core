@@ -58,6 +58,7 @@ function convertToSlippageStruct(raw: any): SlippageStruct {
         isDeposit: Boolean(raw[2]),
         canProcess: Boolean(raw[3]),
         balance: BigNumber.from(raw[4].toString()),
+        price: BigNumber.from(raw[5].toString()),
     };
     printSlippage(slippage);
     return slippage;
@@ -150,11 +151,15 @@ async function get2PoolSlippage(
 
         let slippage = convertToSlippageStruct(raw);
         let slippageBalance = BigNumber.from(slippage.balance);
+        let slippagePrice = BigNumber.from(slippage.price);
         const balanceSlippage = getPercentage(slippageBalance, percents["2pool"][2]);
+        const priceSlippage = getPercentage(slippagePrice, percents["2pool"][2]);
 
         let slippageArg = [
             slippageBalance.sub(balanceSlippage),
             slippageBalance.add(balanceSlippage),
+            slippagePrice.sub(priceSlippage),
+            slippagePrice.add(priceSlippage),
             handleSlippageResult(slippage, percents["2pool"]),
         ];
         
@@ -401,8 +406,8 @@ function getDhwDepositSlippage(context: Context) {
                 continue;
             }
             case "Abracadabra": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Balancer": {
@@ -416,32 +421,32 @@ function getDhwDepositSlippage(context: Context) {
                 continue;
             }
             case "Convex": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Convex4pool": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "ConvexMetapool": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Curve": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Curve2pool": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "Harvest": {
@@ -468,14 +473,14 @@ function getDhwDepositSlippage(context: Context) {
                 continue;
             }
             case "Yearn": {
-                slippages.push([depositSlippage]);
-                slippages.push([depositSlippage]);
-                slippages.push([depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "YearnMetapool": {
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage, depositSlippage]);
                 continue;
             }
         }
