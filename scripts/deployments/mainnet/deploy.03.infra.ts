@@ -42,4 +42,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["Spool.infra"];
+func.tags = ["mainnet", "Spool.infra"];

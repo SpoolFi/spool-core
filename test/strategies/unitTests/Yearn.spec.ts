@@ -10,18 +10,19 @@ import {
     encodeDepositSlippage,
     getMillionUnits,
     mineBlocks,
-    reset,
+    resetToBlockNumber,
     SECS_DAY,
 } from "../../shared/utilities";
 
 import { getStrategySetupObject, getStrategyState, setStrategyState } from "./shared/stratSetupUtilities";
 
-const { Zero, AddressZero } = constants;
+const { Zero, AddressZero, MaxUint256 } = constants;
 
 use(solidity);
 
 const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
+const mainnetBlock = 16110000;
 
 type YearnStratSetup = {
     name: keyof TokensFixture & keyof Tokens;
@@ -44,12 +45,14 @@ const strategyAssets: YearnStratSetup[] = [
 ];
 
 const depositSlippage = encodeDepositSlippage(0);
+const depositSlippages = [0, MaxUint256, 0, MaxUint256, depositSlippage];
+const withdrawSlippages = [0, MaxUint256, 0, MaxUint256, 0];
 
 describe("Strategies Unit Test: Yearn", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
-        await reset();
+        await resetToBlockNumber(mainnetBlock);
         ({ accounts } = await loadFixture(underlyingTokensFixture));
     });
 
@@ -124,7 +127,7 @@ describe("Strategies Unit Test: Yearn", () => {
                     token.transfer(yearnContract.address, depositAmount);
 
                     // ACT
-                    await yearnContract.process([depositSlippage], false, []);
+                    await yearnContract.process(depositSlippages, false, []);
 
                     // ASSERT
                     const balance = await yearnContract.getStrategyBalance();
@@ -145,7 +148,7 @@ describe("Strategies Unit Test: Yearn", () => {
                     await setStrategyState(yearnContract, stratSetup);
                     token.transfer(yearnContract.address, depositAmount);
 
-                    await yearnContract.process([depositSlippage], false, []);
+                    await yearnContract.process(depositSlippages, false, []);
 
                     console.log("mining blocks...");
                     await mineBlocks(100, SECS_DAY);
@@ -157,7 +160,7 @@ describe("Strategies Unit Test: Yearn", () => {
                     token.transfer(yearnContract.address, depositAmount);
 
                     // ACT
-                    await yearnContract.process([depositSlippage], false, []);
+                    await yearnContract.process(depositSlippages, false, []);
 
                     // ASSERT
                     const balance = await yearnContract.getStrategyBalance();
@@ -182,7 +185,7 @@ describe("Strategies Unit Test: Yearn", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(yearnContract, stratSetupDeposit);
                     token.transfer(yearnContract.address, depositAmount);
-                    await yearnContract.process([depositSlippage], false, []);
+                    await yearnContract.process(depositSlippages, false, []);
 
                     // set withdraw
                     const stratSetupWithdraw = await getStrategyState(yearnContract);
@@ -191,7 +194,7 @@ describe("Strategies Unit Test: Yearn", () => {
                     await setStrategyState(yearnContract, stratSetupWithdraw);
 
                     // ACT
-                    await yearnContract.process([0], false, []);
+                    await yearnContract.process(withdrawSlippages, false, []);
 
                     // ASSERT
                     const balance = await yearnContract.getStrategyBalance();
@@ -210,7 +213,7 @@ describe("Strategies Unit Test: Yearn", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(yearnContract, stratSetupDeposit);
                     token.transfer(yearnContract.address, depositAmount);
-                    await yearnContract.process([depositSlippage], false, []);
+                    await yearnContract.process(depositSlippages, false, []);
 
                     // mine block, to gain reward
                     console.log("mining blocks...");
@@ -220,7 +223,7 @@ describe("Strategies Unit Test: Yearn", () => {
                     const stratSetupWithdraw = await getStrategyState(yearnContract);
 
                     // ACT
-                    await yearnContract.fastWithdraw(stratSetupWithdraw.totalShares, [0], []);
+                    await yearnContract.fastWithdraw(stratSetupWithdraw.totalShares, withdrawSlippages, []);
 
                     // ASSERT
 
@@ -245,7 +248,7 @@ describe("Strategies Unit Test: Yearn", () => {
                     stratSetupDeposit.pendingUser.deposit = depositAmount;
                     await setStrategyState(yearnContract, stratSetupDeposit);
                     token.transfer(yearnContract.address, depositAmount);
-                    await yearnContract.process([depositSlippage], false, []);
+                    await yearnContract.process(depositSlippages, false, []);
 
                     // add pending deposit
                     const pendingDeposit = millionUnits.div(5);

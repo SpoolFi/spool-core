@@ -77,6 +77,13 @@ contract ConvexSharedMetapoolStrategy is CurveStrategyMetapoolBase, MultipleRewa
         boosterHelper = _boosterDeposit;
     }
 
+    /* ========== VIEW FUNCTIONS ========== */
+
+    function getStrategyPrice() public view override returns(uint128) {
+        return _lpToCoin(ONE_LP_UNIT);
+    }
+
+
     /* ========== OVERRIDDEN FUNCTIONS ========== */
     /**
      * @dev Dynamically return slippage length

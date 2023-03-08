@@ -644,7 +644,7 @@ contract Vault is VaultRestricted {
                     _proportions = _proportions.set14BitUintByIndex(i, lastProportion);
                 }
 
-                uint256 newProportions = _proportions;
+                uint256 newProportions;
 
                 uint256 lastNewElement = lastElement - 1;
                 uint256 newProportionsLeft = FULL_PERCENT;

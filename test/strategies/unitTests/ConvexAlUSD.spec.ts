@@ -35,7 +35,6 @@ const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
 
 const swapPathWeth = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
 const swapPathWeth10000 = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._10000, UNISWAP_V3_FEE._500);
-const swapPathDirect3000 = getRewardSwapPathV3Direct(UNISWAP_V3_FEE._3000);
 
 type ConvexStratSetup = {
     name: keyof TokensFixture & keyof Tokens;
@@ -45,37 +44,31 @@ type ConvexStratSetup = {
     }[];
 };
 
-const swapDataDAI = [
+const swapData = [
     { slippage: 1, path: swapPathWeth },      // CRV
     { slippage: 1, path: swapPathWeth10000 }, // CVX
     { slippage: 1, path: swapPathWeth10000 }  // ALCX
 ];
 
-const swapDataAll = [
-    { slippage: 1, path: swapPathDirect3000 }, // CRV
-    { slippage: 1, path: swapPathWeth10000 },  // CVX
-    { slippage: 1, path: swapPathWeth }        // ALCX
-];
-
 const strategyAssets: ConvexStratSetup[] = [
     {
         name: "DAI",
-        swapData: swapDataDAI,
+        swapData: swapData,
     },
     {
         name: "USDC",
-        swapData: swapDataAll,
+        swapData: swapData,
     },
     {
         name: "USDT",
-        swapData: swapDataAll,
+        swapData: swapData,
     },
 ];
 
 const depositSlippage = encodeDepositSlippage(0);
 
-const depositSlippages = [0, MaxUint256, depositSlippage];
-const withdrawSlippages = [0, MaxUint256, 0];
+const depositSlippages = [0, MaxUint256, 0, MaxUint256, depositSlippage];
+const withdrawSlippages = [0, MaxUint256, 0, MaxUint256, 0];
 
 describe("Strategies Unit Test: Convex AlUSD", () => {
     let accounts: AccountsFixture;

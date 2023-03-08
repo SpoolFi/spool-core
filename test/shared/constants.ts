@@ -50,6 +50,10 @@ export type Token = {
     units: number;
 };
 
+export interface UnderlyingToken extends Token {
+    balanceSlot: number;
+}
+
 export interface Aave {
     aDAI: Contract;
     aUSDC: Contract;
@@ -58,6 +62,26 @@ export interface Aave {
     LendingPool: Proxy;
     IncentiveController: Proxy;
     LendingPoolAddressesProvider: Contract;
+}
+
+export interface AaveV3 {
+    RewardsController: Address;
+    PoolAddressesProvider: Address;
+}
+
+export interface Abracadabra {
+    Farm: Address;
+}
+
+export interface StablePool3USD {
+    Pool: Address;
+    DAI: number;
+    USDT: number;
+    USDC: number;
+}
+
+export interface Balancer {
+    staBAL: StablePool3USD;
 }
 
 export interface BarnBridgeContracts {
@@ -124,6 +148,13 @@ export interface Curve {
     _fraxusdc: CurvePool;
 }
 
+export interface CurveArb {
+    CRV: Address;
+    GaugeFactory: Address;
+    _2pool: CurvePool;
+    _mim: CurvePool;
+}
+
 export interface HarvestContracts {
     Vault: Contract;
     Pool: Contract;
@@ -188,6 +219,12 @@ export interface StakeDAO {
     Token: Contract;
 }
 
+export interface TimelessFi {
+    xPYT: Address;
+    vault: Address;
+    gate: Address;
+}
+
 export interface Uniswap {
     Factory: Contract;
     Router: Contract;
@@ -199,11 +236,18 @@ export interface Yearn {
     USDTVault: Contract;
 }
 
-export interface Tokens {
-    DAI: Token;
-    USDC: Token;
-    USDT: Token;
+export interface YearnArb {
+    CurveMIMVault: Address;
+}
+
+export interface TokensBase {
+    DAI: UnderlyingToken;
+    USDC: UnderlyingToken;
+    USDT: UnderlyingToken;
     WETH: Token;
+}
+
+export interface Tokens extends TokensBase {
     AAVE: Token;
     stkAAVE: Token;
     COMP: Token;
@@ -211,23 +255,6 @@ export interface Tokens {
     CVX: Token;
     IDLE: Token;
     symbols: any;
-}
-
-export interface Network {
-    aave: Aave;
-    barnBridge: BarnBridge;
-    compound: Compound;
-    convex: Convex;
-    curve: Curve;
-    harvest: Harvest;
-    idle: Idle;
-    idleTranches: IdleTranches;
-    masterchef: Masterchef;
-    morpho: Morpho;
-    notional: Notional;
-    uniswap: Uniswap;
-    yearn: Yearn;
-    tokens: Tokens;
 }
 
 export interface Strategy {
@@ -253,7 +280,33 @@ export interface Strategies {
     Yearn: StrategyType;
 }
 
-export interface Mainnet extends Network {}
+export interface Mainnet {
+    aave: Aave;
+    barnBridge: BarnBridge;
+    compound: Compound;
+    convex: Convex;
+    curve: Curve;
+    harvest: Harvest;
+    idle: Idle;
+    idleTranches: IdleTranches;
+    masterchef: Masterchef;
+    morpho: Morpho;
+    notional: Notional;
+    uniswap: Uniswap;
+    yearn: Yearn;
+    tokens: Tokens;
+}
+
+export interface Arbitrum {
+    aave: AaveV3;
+    abracadabra: Abracadabra;
+    balancer: Balancer;
+    curve: CurveArb;
+    timelessfi: TimelessFi;
+    uniswap: Uniswap;
+    yearn: YearnArb;
+    tokens: TokensBase;
+}
 
 export const mainnet = function mainnet(): Mainnet {
     let aave = {
@@ -472,18 +525,20 @@ export const mainnet = function mainnet(): Mainnet {
     let yearn = {
         DAIVault: { address: "0xdA816459F1AB5631232FE5e97a05BBBb94970c95", ABI: IYearnTokenVault__factory.abi },
         USDCVault: { address: "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE", ABI: IYearnTokenVault__factory.abi },
-        USDTVault: { address: "0x7Da96a3891Add058AdA2E826306D812C638D87a7", ABI: IYearnTokenVault__factory.abi },
+        USDTVault: { address: "0x3B27F92C0e212C671EA351827EDF93DB27cc0c65", ABI: IYearnTokenVault__factory.abi },
     };
 
     let tokens = {
         DAI: {
             contract: { address: "0x6b175474e89094c44da98b954eedeac495271d0f", ABI: IDAI__factory.abi } as Contract,
             units: 18,
+            balanceSlot: 2
         },
 
         USDT: {
             contract: { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", ABI: IUSDT__factory.abi } as Contract,
             units: 6,
+            balanceSlot: 2
         },
 
         WETH: {
@@ -496,6 +551,7 @@ export const mainnet = function mainnet(): Mainnet {
                 implementation: { address: "0xa2327a938febf5fec13bacfb16ae10ecbc4cbdcf", ABI: IUSDC__factory.abi },
             } as Proxy,
             units: 6,
+            balanceSlot: 9
         },
         AAVE: {
             contract: { address: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9", ABI: null } as Contract,
@@ -548,6 +604,99 @@ export const mainnet = function mainnet(): Mainnet {
         masterchef,
         morpho,
         notional,
+        uniswap,
+        yearn,
+        tokens
+    };
+};
+export const arbitrum = function arbitrum(): Arbitrum {
+    let aave = {
+        RewardsController: { address: "0x929EC64c34a17401F460460D4B9390518E5B473e" },
+        PoolAddressesProvider: { address: "0xa97684ead0e402dc232d5a977953df7ecbab3cdb" }
+    };
+    let abracadabra = {
+        Farm: { address: "0x839de324a1ab773f76a53900d70ac1b913d2b387" }
+    };
+    let balancer = {
+        staBAL: { 
+            Pool: { address: "0x1533A3278f3F9141d5F820A184EA4B017fce2382" },
+            DAI: 0,
+            USDT: 1,
+            USDC: 2
+        }
+    };
+    let curve = {
+        CRV: { address: "0x11cdb42b0eb46d95f990bedd4695a6e3fa034978" },
+        GaugeFactory: { address: "0xabC000d88f23Bb45525E447528DBF656A9D55bf5" },
+        _2pool: {
+            pool: { address: "0x7f90122BF0700F9E7e1F688fe926940E8839F353" },
+            lpToken: { address: "0x7f90122BF0700F9E7e1F688fe926940E8839F353" },
+            depositZap: { address: "" },
+            LiquidityGauge: { address: "0xCE5F24B7A95e9cBa7df4B54E911B4A3Dc8CDAf6f" },
+            totalTokens: 2,
+        },
+        _mim: {
+            pool: { address: "0x30df229cefa463e991e29d42db0bae2e122b2ac7" },
+            lpToken: { address: "0x30df229cefa463e991e29d42db0bae2e122b2ac7" },
+            depositZap: { address: "0x7544Fe3d184b6B55D6B36c3FCA1157eE0Ba30287" },
+            LiquidityGauge: { address: "" },
+            totalTokens: 3,
+        },
+    };
+    let timelessfi = {
+        xPYT: { address: "0x841120e51ad43efe489244728532854a352073ad" },
+        vault: { address: "0x1c0aca7cec87ce862638bc0dd8d8fa874d8ad95f" },
+        gate: { address: "0xbb443d6740322293fcee4414d03978c7e4bf5d55" }
+    };
+    let yearn = {
+        CurveMIMVault: { address: "0x1dBa7641dc69188D6086a73B972aC4bda29Ec35d" }
+    };
+
+    let uniswap = {
+        Factory: { address: "0x1F98431c8aD98523631AE4a59f267346ea31F984", ABI: IUniswapV2Factory__factory.abi },
+        Router: { address: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", ABI: IUniswapV2Router02__factory.abi },
+    };
+
+    let tokens = {
+        DAI: {
+            contract: { address: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1", ABI: IDAI__factory.abi } as Contract,
+            units: 18,
+            balanceSlot: 2
+        },
+
+        USDT: {
+            contract: { address: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", ABI: IUSDT__factory.abi } as Contract,
+            units: 6,
+            balanceSlot: 51
+        },
+
+        WETH: {
+            contract: { address: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1", ABI: IWETH__factory.abi } as Contract,
+            units: 18,
+        },
+        USDC: {
+            contract: {
+                delegator: { address: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8", ABI: IFiatTokenProxy__factory.abi },
+                implementation: { address: "0x1efb3f88bc88f03fd1804a5c53b7141bbef5ded8", ABI: IUSDC__factory.abi },
+            } as Proxy,
+            units: 6,
+            balanceSlot: 51
+        },
+        symbols: {
+            // enables lookup with address: tokens[tokens.symbols[address]]
+            "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1": "DAI",
+            "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9": "USDT",
+            "0x82af49447d8a07e3bd95bd0d56f35241523fbab1": "WETH",
+            "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8": "USDC",
+        },
+    };
+
+    return {
+        aave,
+        abracadabra,
+        balancer,
+        curve,
+        timelessfi,
         uniswap,
         yearn,
         tokens

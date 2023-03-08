@@ -95,7 +95,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             "BIPT"
         );
 
-        // check if DHW is forcen to be executen on one transaction
+        // check if DHW is forced to be executed in one transaction
         if (forceOneTxDoHardWork) {
             require(stratIndexes.length == allStrategies.length, "1TX");
         }
@@ -107,7 +107,7 @@ abstract contract SpoolDoHardWork is ISpoolDoHardWork, SpoolStrategy {
             _updatePending(stratAddress);
             _finishStrategyDoHardWork(stratAddress);  
         }
-
+        
         _updateDoHardWorksLeft(stratIndexes.length);
 
         // if DHW for index finished

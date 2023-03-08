@@ -11,6 +11,8 @@ interface ILiquidityGauge {
 
     function minter() external view returns(address);
 
+    function factory() external view returns(address);
+
     function lp_token() external view returns(address);
 
     function crv_token() external view returns(address);

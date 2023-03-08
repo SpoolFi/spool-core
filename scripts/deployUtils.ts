@@ -4,45 +4,43 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import {
     Controller,
     Controller__factory,
-    FastWithdraw,
     FastWithdraw__factory,
-    FeeHandler,
     FeeHandler__factory,
     IERC20,
-    ProxyAdmin,
     ProxyAdmin__factory,
-    RiskProviderRegistry,
     RiskProviderRegistry__factory,
-    SlippagesHelper__factory,
-    Spool,
     Spool__factory,
     SpoolOwner__factory,
-    StrategyRegistry,
     StrategyRegistry__factory,
-    Vault,
     Vault__factory,
 } from "../build/types";
 
-import { BarnBridgeMultiContracts, HarvestContracts, mainnet, nToken, Tokens } from "../test/shared/constants";
+import { arbitrum, BarnBridgeMultiContracts, HarvestContracts, mainnet, nToken, Tokens } from "../test/shared/constants";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { getContractAddress } from "ethers/lib/utils";
-import { StrategiesContracts, UnderlyingContracts } from "./data/interface";
 import assert from "assert";
 import { BigNumber } from "ethers";
 import { VaultDetailsStruct } from "../build/types/Controller";
-import { HelperContracts, NamedVault, SpoolFixture } from "./infrastructure";
+import { ArbitrumContracts, MainnetContracts, UnderlyingContracts, HelperContracts, NamedVault, SpoolFixture } from "./infrastructure";
 import { existsSync } from "fs";
 import { ethers } from "hardhat";
+import {getConstants, getNetworkName, getStrategyNames} from "../test/shared/utilities";
 
-const constants = mainnet();
 const AddressZero = ethers.constants.AddressZero;
 
-export const mainnetConst = constants;
+export const mainnetConst = mainnet();
+export const arbitrumConst = arbitrum();
 
 type UnderlyingAssets = "DAI" | "USDC" | "USDT";
 const strategyAssets: ("DAI" | "USDC" | "USDT")[] = ["DAI", "USDC", "USDT"];
+const _2poolAssets: ("USDC" | "USDT")[] = ["USDC", "USDT"];
 
 const TREASURY_ADDRESS = "0xF6Bc2E3b1F939C435D9769D078a6e5048AaBD463";
+
+type BalancerStratSetup = {
+    name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
+    nCoin: number;
+};
 
 type BarnBridgeStratSetup = {
     name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
@@ -88,6 +86,21 @@ type YearnStratSetup = {
     name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
     yVault: string;
 };
+
+const Balancer: BalancerStratSetup[] = [
+    {
+        name: "DAI",
+        nCoin: arbitrumConst.balancer.staBAL.DAI
+    },
+    {
+        name: "USDC",
+        nCoin: arbitrumConst.balancer.staBAL.USDC
+    },
+    {
+        name: "USDT",
+        nCoin: arbitrumConst.balancer.staBAL.USDT
+    },
+];
 
 export const BarnBridge: BarnBridgeStratSetup[] = [
     {
@@ -271,6 +284,7 @@ export async function tokensFixture(
     administrator: SignerWithAddress,
     hre: HardhatRuntimeEnvironment
 ): Promise<TokensFixture> {
+    const constants = await getConstants();
     const DAI = (await hre.ethers.getContractAt(
         constants.tokens.DAI.contract.ABI,
         constants.tokens.DAI.contract.address,
@@ -299,7 +313,7 @@ export async function tokensFixture(
 }
 
 export async function loadContracts(hre: HardhatRuntimeEnvironment) {
-    const network = hre.network.name;
+    const network = await getNetworkName();
     const filePath = `scripts/data/${network}.contracts.json`;
     return existsSync(filePath) ? JSON.parse((await readFile(filePath)).toString()) : {};
 }
@@ -328,7 +342,7 @@ export async function LoadSpoolOwner(hre: HardhatRuntimeEnvironment): Promise<st
     return contracts.spoolOwner;
 }
 
-export async function loadStrategies(hre: HardhatRuntimeEnvironment): Promise<StrategiesContracts> {
+export async function loadStrategies(hre: HardhatRuntimeEnvironment): Promise<MainnetContracts | ArbitrumContracts> {
     const contracts = await loadContracts(hre);
     return contracts.strategies;
 }
@@ -342,7 +356,7 @@ export async function writeContracts(hre: HardhatRuntimeEnvironment, contracts: 
     const storedContracts = await loadContracts(hre);
     const newValue = { ...storedContracts, ...contracts };
 
-    const network = hre.network.name;
+    const network = await getNetworkName();
     await writeFile(`scripts/data/${network}.contracts.json`, JSON.stringify(newValue, null, 2), "utf8");
     return newValue;
 }
@@ -574,6 +588,113 @@ export async function DeployAave(
 
     return implementation;
 }
+
+export async function DeployAaveV3(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    for (let name of strategyAssets) {
+        let token: IERC20 = tokens[name];
+
+        console.log("Deploying AaveV3 Strategy for token: " + name + "...");
+        const args = [
+            arbitrumConst.aave.PoolAddressesProvider.address,
+            arbitrumConst.aave.RewardsController.address,
+            token.address,
+            AddressZero
+        ];
+
+        const strat = await deploy(hre, accounts, `AaveV3Strategy${name}`, { contract: "AaveV3Strategy", args });
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
+export async function DeployAbracadabra(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    spool: SpoolFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    for (let name of _2poolAssets) {
+        let token: IERC20 = tokens[name];
+        console.log("Deploying Abracadabra Strategy for token: " + name + "...");
+
+        const helperArgs = [
+            spool.spool.address,
+            arbitrumConst.abracadabra.Farm.address,
+        ];
+        const abracadabraFarmHelper = await deploy(hre, accounts, `AbracadabraFarmContractHelper${name}`, {
+            contract: "AbracadabraFarmContractHelper",
+            args: helperArgs,
+        });
+        const abracadabraFarmHelperProxy = await deployProxy(
+            hre,
+            accounts,
+            `AbracadabraFarmContractHelper${name}`,
+            abracadabraFarmHelper.address,
+            spool.proxyAdmin.address
+        );
+
+        await writeContracts(hre, {
+            [`AbracadabraHelper${name}`]: {
+                proxy: abracadabraFarmHelperProxy.address,
+                implementation: abracadabraFarmHelper.address,
+            },
+        });
+
+        const args = [
+            arbitrumConst.abracadabra.Farm.address,
+            arbitrumConst.curve._2pool.pool.address,
+            arbitrumConst.curve._mim.depositZap.address,
+            arbitrumConst.curve._mim.lpToken.address,
+            token.address,
+            abracadabraFarmHelperProxy.address,
+            ethers.constants.AddressZero
+        ];
+        const strat = await deploy(hre, accounts, `AbracadabraStrategy${name}`, {
+            contract: "AbracadabraMetapoolStrategy",
+            args,
+        });
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
+
+export async function DeployBalancer(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    console.log("Strategy Deployment: Balancer");
+    for (let { name, nCoin } of Balancer) {
+        console.log(`: ${name}`);
+        let token: IERC20 = tokens[name];
+        console.log("Deploying Balancer Strategy for token: " + name + "...");
+
+        const args = [
+            arbitrumConst.balancer.staBAL.Pool.address,
+            token.address, 
+            nCoin, 
+            AddressZero
+        ];
+        const strat = await deploy(hre, accounts, `BalancerStrategy${name}`, { contract: "BalancerStrategy", args });
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
 
 export async function DeployCompound(
     accounts: AccountsFixture,
@@ -813,7 +934,7 @@ export async function DeployConvex2pool(
     const helperArgs = [
         spool.spool.address,
         mainnetConst.convex.Booster.address,
-        mainnetConst.convex._sUSD.boosterPoolId,
+        mainnetConst.convex._fraxusdc.boosterPoolId,
     ];
     const boosterHelperName = `ConvexBooster2poolContractHelper${name}`;
     const convexBoosterHelper = await deploy(hre, accounts, boosterHelperName, {
@@ -862,7 +983,7 @@ export async function DeployCurve(
 
     for (let name of strategyAssets) {
         let token: IERC20 = tokens[name];
-        console.log("Deploying Curve Strategy for token: " + name + "...");
+        console.log("Deploying Curve 3pool Strategy for token: " + name + "...");
         const args = [
             mainnetConst.curve._3pool.pool.address,
             mainnetConst.curve._3pool.LiquidityGauge.address,
@@ -875,6 +996,61 @@ export async function DeployCurve(
         });
 
         implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
+export async function DeployCurve2pool(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    spool: SpoolFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { USDC: [], DAI:[], USDT:[] };
+    for (let name of _2poolAssets) {
+
+        let token: IERC20 = tokens[name as keyof TokensFixture];
+        console.log("Deploying Curve 2pool Strategy for token: " + name + "...");
+
+        const helperArgs = [
+            spool.spool.address,
+            arbitrumConst.curve._2pool.LiquidityGauge.address,
+            arbitrumConst.curve.CRV.address,
+        ];
+        const curveHelperName = `CurveGaugeContractHelper${name}`;
+        const curveGaugeHelper = await deploy(hre, accounts, curveHelperName, {
+            contract: "CurveGaugeContractHelper",
+            args: helperArgs,
+        });
+        const curveHelperProxy = await deployProxy(
+            hre,
+            accounts,
+            curveHelperName,
+            curveGaugeHelper.address,
+            spool.proxyAdmin.address
+        );
+
+        await writeContracts(hre, {
+            [`curve2poolHelper${name}`]: {
+                proxy: curveHelperProxy.address,
+                implementation: curveGaugeHelper.address,
+            },
+        });
+
+        const args = [
+            arbitrumConst.curve._2pool.pool.address,
+            arbitrumConst.curve._2pool.lpToken.address,
+            arbitrumConst.curve.CRV.address,
+            token.address, 
+            curveHelperProxy.address,
+            ethers.constants.AddressZero
+        ];
+        const strat = await deploy(hre, accounts, `Curve2poolStrategy${name}`, {
+            contract: "Curve2poolStrategy",
+            args,
+        });
+        implementation[name as keyof UnderlyingContracts].push(strat.address);
     }
 
     return implementation;
@@ -1114,6 +1290,32 @@ export async function DeployNotional(
     return implementation;
 }
 
+export async function DeployTimelessFi(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    const name = "USDC";
+    console.log("Strategy Deployment: TimelessFi");
+    console.log(`: ${name}`);
+    let token: IERC20 = tokens[name];
+    console.log("Deploying TimelessFi Strategy for token: " + name + "...");
+
+    const args = [
+        arbitrumConst.timelessfi.xPYT.address, 
+        arbitrumConst.timelessfi.vault.address, 
+        arbitrumConst.timelessfi.gate.address, 
+        token.address, 
+        AddressZero
+    ];
+    const strat = await deploy(hre, accounts, `TimelessFiStrategy${name}`, { contract: "TimelessFiStrategy", args });
+    implementation[name].push(strat.address);
+
+    return implementation;
+}
+
 export async function DeployYearn(
     accounts: AccountsFixture,
     tokens: TokensFixture,
@@ -1135,11 +1337,39 @@ export async function DeployYearn(
     return implementation;
 }
 
+export async function DeployYearnMetapool(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    console.log("Strategy Deployment: Yearn Metapool");
+    for (let name of _2poolAssets) {
+        console.log(`: ${name}`);
+        let token: IERC20 = tokens[name as keyof TokensFixture];
+        console.log("Deploying Yearn Metapool Strategy for token: " + name + "...");
+
+        const args = [
+            arbitrumConst.yearn.CurveMIMVault.address,
+            arbitrumConst.curve._2pool.pool.address,
+            arbitrumConst.curve._mim.depositZap.address,
+            arbitrumConst.curve._mim.lpToken.address,
+            token.address,
+            AddressZero,
+        ];
+        const strat = await deploy(hre, accounts, `YearnMetapoolStrategy${name}`, { contract: "YearnMetapoolStrategy", args });
+        implementation[name as keyof UnderlyingContracts].push(strat.address);
+    }
+
+    return implementation;
+}
+
 export async function deployVaults(
     controller: Controller,
     accounts: AccountsFixture,
     tokens: TokensFixture,
-    strategies: StrategiesContracts,
+    strategies: MainnetContracts | ArbitrumContracts,
     riskToleranceHigh: number,
     riskToleranceLow: number,
     fee: number,
@@ -1149,10 +1379,11 @@ export async function deployVaults(
 ): Promise<{ [name: string]: NamedVault }> {
     const assets = ["DAI", "USDC", "USDT"];
     const riskKeys = ["LOW_RISK", "HIGH_RISK"];
-    const vaultData: any = JSON.parse((await readFile("scripts/data/allocations.json")).toString());
+    const network = await getNetworkName();
+    const vaultData: any = JSON.parse((await readFile(`scripts/data/${network}.allocations.json`)).toString());
 
     const parseAlloc = (value: number) => Math.round(value * 10_000);
-    const strategyKeys = ["Aave", "Notional", "Compound", "Convex", "Convex4pool", "ConvexMetapool", "Curve", "Harvest", "Morpho", "Yearn", "Idle"];
+    const strategyKeys = Object.keys(await getStrategyNames());
 
     const vaults: any = {};
     for (const assetKey of assets) {

@@ -279,6 +279,9 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
             withdrawnAmount += strategy.pendingUserNext.deposit.get();
             strategy.pendingUserNext.deposit = 0;
         }
+        
+        strategy.pendingUser.deposit = strategy.pendingUser.deposit.set();
+        strategy.pendingUserNext.deposit = strategy.pendingUserNext.deposit.set();
 
         // if strategy was already processed in the current index that hasn't finished yet,
         // transfer the withdrawn amount
@@ -323,7 +326,7 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
      */
     function _validateStrategyBalance(uint256[] calldata slippages) internal virtual returns(uint256[] calldata) {
         if (doValidateBalance) {
-            require(slippages.length >= 2, "BaseStrategy:: _validateStrategyBalance: Invalid number of slippages");
+            require(slippages.length >= 4, "BaseStrategy:: _validateStrategyBalance: Invalid number of slippages");
             uint128 strategyBalance =  getStrategyBalance();
 
             require(
@@ -332,7 +335,15 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
                 "BaseStrategy::_validateStrategyBalance: Bad strategy balance"
             );
 
-            return slippages[2:];
+            uint128 strategyPrice =  getStrategyPrice();
+
+            require(
+                slippages[2] <= strategyPrice &&
+                slippages[3] >= strategyPrice,
+                "BaseStrategy::_validateStrategyBalance: Bad strategy price"
+            );
+
+            return slippages[4:];
         }
 
         return slippages;
@@ -495,6 +506,15 @@ abstract contract BaseStrategy is IBaseStrategy, BaseStorage, BaseConstants {
         virtual
         override
         returns (uint128);
+
+    function getStrategyPrice()
+        public
+        view
+        virtual
+        override
+        returns (uint128){
+            return 0;
+        }
 
     function _processRewards(SwapData[] calldata) internal virtual;
     function _emergencyWithdraw(address recipient, uint256[] calldata data) internal virtual;

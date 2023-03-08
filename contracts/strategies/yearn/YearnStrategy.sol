@@ -32,7 +32,7 @@ contract YearnStrategy is NoRewardStrategy {
         IERC20 _underlying,
         address _self
     )
-        NoRewardStrategy(_underlying, 1, 1, 1, false, _self)
+        NoRewardStrategy(_underlying, 1, 1, 1, true, _self)
     {
         require(address(_vault) != address(0), "YearnStrategy::constructor: Vault address cannot be 0");
         vault = _vault;
@@ -49,6 +49,11 @@ contract YearnStrategy is NoRewardStrategy {
         uint256 yearnTokenAmount = vault.balanceOf(address(this));
         return SafeCast.toUint128(_getYearnTokenValue(yearnTokenAmount));
     }
+
+    function getStrategyPrice() public view override returns(uint128) {
+        return SafeCast.toUint128(_getYearnTokenValue(oneShare));
+    }
+
 
     /* ========== OVERRIDDEN FUNCTIONS ========== */
 

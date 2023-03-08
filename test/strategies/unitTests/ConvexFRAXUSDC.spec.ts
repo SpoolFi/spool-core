@@ -19,7 +19,7 @@ import {
     getRewardSwapPathV3Direct,
     getRewardSwapPathV3Weth,
     mineBlocks,
-    reset,
+    resetToBlockNumber,
     SECS_DAY,
     UNISWAP_V3_FEE,
 } from "../../shared/utilities";
@@ -32,6 +32,7 @@ use(solidity);
 
 const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
+const mainnetBlock = 15854623;
 
 const swapPathWeth = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._3000, UNISWAP_V3_FEE._500);
 const swapPathWeth10000 = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._10000, UNISWAP_V3_FEE._500);
@@ -50,11 +51,6 @@ const swapData = [
     { slippage: 1, path: swapPathWeth10000 },
 ];
 
-const swapDataUSDT = [
-    { slippage: 1, path: swapPathDirect3000 },
-    { slippage: 1, path: swapPathWeth10000 },
-];
-
 const strategyAssets: ConvexStratSetup[] = [
     {
         name: "USDC",
@@ -64,14 +60,14 @@ const strategyAssets: ConvexStratSetup[] = [
 
 const depositSlippage = encodeDepositSlippage(0);
 
-const depositSlippages = [0, MaxUint256, depositSlippage];
-const withdrawSlippages = [0, MaxUint256, 0];
+const depositSlippages = [0, MaxUint256, 0, MaxUint256, depositSlippage];
+const withdrawSlippages = [0, MaxUint256, 0, MaxUint256, 0];
 
 describe("Strategies Unit Test: Convex FRAXUSDC", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
-        await reset();
+        await resetToBlockNumber(mainnetBlock);
         ({ accounts } = await loadFixture(underlyingTokensFixture));
     });
 
