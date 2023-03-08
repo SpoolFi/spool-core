@@ -155,6 +155,15 @@ export interface CurveArb {
     _mim: CurvePool;
 }
 
+export interface Euler {
+    euler: Address;
+    eDAI: Address;
+    eUSDC: Address;
+    eUSDT: Address;
+    stakingRewardsUSDC: Address;
+    stakingRewardsUSDT: Address;
+}
+
 export interface HarvestContracts {
     Vault: Contract;
     Pool: Contract;
@@ -286,6 +295,7 @@ export interface Mainnet {
     compound: Compound;
     convex: Convex;
     curve: Curve;
+    euler: Euler;
     harvest: Harvest;
     idle: Idle;
     idleTranches: IdleTranches;
@@ -457,6 +467,15 @@ export const mainnet = function mainnet(): Mainnet {
         },
     };
 
+    let euler = {
+        euler: { address: "0x27182842E098f60e3D576794A5bFFb0777E025d3" },
+        eDAI: { address: "0xe025E3ca2bE02316033184551D4d3Aa22024D9DC" },
+        eUSDC: { address: "0xEb91861f8A4e1C12333F42DCE8fB0Ecdc28dA716" },
+        eUSDT: { address: "0x4d19F33948b99800B6113Ff3e83beC9b537C85d2" },
+        stakingRewardsUSDC: { address: "0xE5aFE81e63f0A52a3a03B922b30f73B8ce74D570" },
+        stakingRewardsUSDT: { address: "0x7882f919e3acca984babd70529100f937d90f860" }
+    }
+
     let harvest = {
         FARM: { address: "0xa0246c9032bC3A600820415aE600c6388619A14D", ABI: IFARM__factory.abi },
         DAI: {
@@ -598,6 +617,7 @@ export const mainnet = function mainnet(): Mainnet {
         compound,
         convex,
         curve,
+        euler,
         harvest,
         idle,
         idleTranches,

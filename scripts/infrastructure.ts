@@ -39,6 +39,7 @@ export interface MainnetContracts {
     Convex4pool: UnderlyingContracts;
     ConvexMetapool: UnderlyingContracts;
     Curve: UnderlyingContracts;
+    Euler: UnderlyingContracts;
     Harvest: UnderlyingContracts;
     Idle: UnderlyingContracts;
     Morpho: UnderlyingContracts;

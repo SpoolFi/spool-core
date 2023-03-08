@@ -118,6 +118,7 @@ export async function getStrategyNames(): Promise<any> {
                 Convex2pool:       { name: "ConvexShared2pool",    assets: [       "USDC",       ] },
                 MorphoAave:        { name: "MorphoAave",           assets: ["DAI", "USDC", "USDT"] },
                 IdleTranchesEuler: { name: "IdleTranchesEuler",    assets: ["DAI", "USDC", "USDT"] },
+                Euler:             { name: "Euler",                assets: ["DAI", "USDC", "USDT"] },
             };
     }
 }

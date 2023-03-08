@@ -1529,6 +1529,10 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
+            case "Euler": {
+                slippages.push([0]);
+                continue;
+            }
             case "Harvest": {
                 slippages.push([]);
                 continue;

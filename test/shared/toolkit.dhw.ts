@@ -203,6 +203,13 @@ function getRewardSlippage(stratName: string) {
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] }
             ];
         }
+        case "Euler": {
+            return [ 
+                { doClaim: false, swapData: [] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathWeth10000 }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathWeth10000 }] }
+            ];
+        }
         case "Idle": {
             return [ 
                 { doClaim: true, swapData: swapSlippages }, 

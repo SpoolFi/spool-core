@@ -52,6 +52,12 @@ type CompoundStratSetup = {
     cToken: string;
 };
 
+type EulerStratSetup = {
+    name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
+    eToken: string;
+    stakingRewards: string;
+};
+
 type HarvestStratSetup = {
     name: keyof TokensFixture & keyof Tokens & UnderlyingAssets;
     contracts: HarvestContracts;
@@ -129,6 +135,24 @@ export const Compound: CompoundStratSetup[] = [
     {
         name: "USDT",
         cToken: mainnetConst.compound.cUSDT.delegator.address,
+    },
+];
+
+export const Euler: EulerStratSetup[] = [
+    {
+        name: "DAI",
+        eToken: mainnetConst.euler.eDAI.address,
+        stakingRewards: ethers.constants.AddressZero,
+    },
+    {
+        name: "USDC",
+        eToken: mainnetConst.euler.eUSDC.address,
+        stakingRewards: mainnetConst.euler.stakingRewardsUSDC.address,
+    },
+    {
+        name: "USDT",
+        eToken: mainnetConst.euler.eUSDT.address,
+        stakingRewards: mainnetConst.euler.stakingRewardsUSDT.address,
     },
 ];
 
@@ -1055,6 +1079,36 @@ export async function DeployCurve2pool(
 
     return implementation;
 }
+
+export async function DeployEuler(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { DAI: [], USDC: [], USDT: [] };
+
+    console.log("Strategy Deployment: Euler");
+    for (let { name, eToken, stakingRewards } of Euler) {
+        console.log(`: ${name}`);
+        // DAI has no rewards
+        console.log("Deploying Euler Strategy for token: " + name + "...");
+        let token: IERC20 = tokens[name];
+        let args = [mainnetConst.euler.euler.address, eToken, token.address];
+
+        let strat;
+        if(name == "DAI") {
+            args.push(AddressZero);
+            strat = await deploy(hre, accounts, `EulerStrategy${name}`, { contract: "EulerNoReward", args });
+        }else {
+            args.push(stakingRewards, AddressZero);
+            strat = await deploy(hre, accounts, `EulerStrategy${name}`, { contract: "EulerStrategy", args });
+        }
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
 
 export async function DeployHarvest(
     accounts: AccountsFixture,

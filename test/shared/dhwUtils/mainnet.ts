@@ -36,6 +36,7 @@ const percents = {
     "2pool": [30, 30, 3],
     "3pool": [30, 30, 3],
     "4pool": [150, 150, 3],
+    Euler: [50, 50],
     Idle: [50, 50],
     Notional: [50, 50],
     Yearn: [30, 30, 3],
@@ -237,6 +238,18 @@ async function getConvex4PoolSlippage(
         slippageArgs.push(slippageArg);
     }
     return slippageArgs;
+}
+
+async function getEulerSlippage(
+    strategy: string,
+    context: Context,
+    reallocationWithdrawnShares?: BigNumber[]
+): Promise<BigNumber[]> {
+    const reallocateSharesToWithdraw = findRealocationShares(strategy, context, reallocationWithdrawnShares);
+
+    const result = await strategyHelperCall("getEulerSlippage", [strategy, reallocateSharesToWithdraw], context);
+    const slippage = convertToSlippageStruct(result);
+    return [handleSlippageResult(slippage, percents["Euler"])];
 }
 
 // gets slippages for Convex Metapool
@@ -477,6 +490,14 @@ export async function getDhwSlippagesMainnet(context: Context, reallocationWithd
                 slippages.push(curvePoolSlippages[6], curvePoolSlippages[7], curvePoolSlippages[8]);
                 continue;
             }
+            case "Euler": {
+                slippages.push(
+                    await getEulerSlippage(strategies.Euler.DAI[0], context, reallocationWithdrawnShares),
+                    await getEulerSlippage(strategies.Euler.USDC[0], context, reallocationWithdrawnShares),
+                    await getEulerSlippage(strategies.Euler.USDT[0], context, reallocationWithdrawnShares),
+                );
+                continue;
+            }
             case "Harvest": {
                 slippages.push([], [], []);
                 continue;
@@ -584,6 +605,12 @@ function getDhwDepositSlippage(context: Context) {
             case "Curve2pool": {
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                continue;
+            }
+            case "Euler": {
+                slippages.push([depositSlippage]);
+                slippages.push([depositSlippage]);
+                slippages.push([depositSlippage]);
                 continue;
             }
             case "Harvest": {
