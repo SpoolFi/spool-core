@@ -525,7 +525,7 @@ export const mainnet = function mainnet(): Mainnet {
     let yearn = {
         DAIVault: { address: "0xdA816459F1AB5631232FE5e97a05BBBb94970c95", ABI: IYearnTokenVault__factory.abi },
         USDCVault: { address: "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE", ABI: IYearnTokenVault__factory.abi },
-        USDTVault: { address: "0x7Da96a3891Add058AdA2E826306D812C638D87a7", ABI: IYearnTokenVault__factory.abi },
+        USDTVault: { address: "0x3B27F92C0e212C671EA351827EDF93DB27cc0c65", ABI: IYearnTokenVault__factory.abi },
     };
 
     let tokens = {

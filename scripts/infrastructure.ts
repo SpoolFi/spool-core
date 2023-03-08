@@ -35,6 +35,7 @@ export interface MainnetContracts {
     Aave: UnderlyingContracts;
     Compound: UnderlyingContracts;
     Convex: UnderlyingContracts;
+    Convex2pool: UnderlyingContracts;
     Convex4pool: UnderlyingContracts;
     ConvexMetapool: UnderlyingContracts;
     Curve: UnderlyingContracts;

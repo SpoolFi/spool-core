@@ -20,11 +20,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const tokens = await tokensFixture(accounts.administrator, hre);
 
     console.log("Deploying idle Tranches (Euler)..");
-    let idleTranchesEuler = await DeployIdleTranchesEuler(accounts, tokens, hre);
+    let IdleTranchesEuler = await DeployIdleTranchesEuler(accounts, tokens, hre);
 
 
     let implementation = {
-        idleTranchesEuler
+        IdleTranchesEuler
     };
 
     let strategies = (await loadContracts(hre)).strategies;

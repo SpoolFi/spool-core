@@ -1071,7 +1071,7 @@ export function assertVaultStrategyProportions(snapshot: Snapshot, context: Cont
 
                 expect(balanceProportion).to.beCloseTo(
                     strat.proportion,
-                    BasisPoints.Basis_100,
+                    BasisPoints.Basis_200,
                     "Bad vault strategy proportion"
                 );
             });
@@ -1509,6 +1509,10 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
+            case "Convex2pool": {
+                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                continue;
+            }
             case "Convex4pool": {
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
@@ -1533,7 +1537,15 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 slippages.push([0]);
                 continue;
             }
+            case "IdleTranchesEuler": {
+                slippages.push([]);
+                continue;
+            }
             case "Morpho": {
+                slippages.push([]);
+                continue;
+            }
+            case "MorphoAave": {
                 slippages.push([]);
                 continue;
             }

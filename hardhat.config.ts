@@ -16,7 +16,7 @@ import * as path from "path";
 
 dotenvConfig();
 
-const FORK_BLOCK_NUMBER = 15854623;
+const FORK_BLOCK_NUMBER = 16110000;
 const ARBITRUM_FORK_BLOCK_NUMBER = 38000000;
 
 task("generate-docs", "Generate docs from contract comments").setAction(async (_, hre) => {

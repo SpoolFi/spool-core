@@ -4,7 +4,7 @@ import { createFixtureLoader, MockProvider, solidity } from "ethereum-waffle";
 import { IBaseStrategy, IERC20, TestStrategySetup__factory, YearnStrategy__factory } from "../../../build/types";
 import { AccountsFixture, mainnetConst, TokensFixture, underlyingTokensFixture } from "../../shared/fixtures";
 import { Tokens } from "../../shared/constants";
-0
+
 import {
     BasisPoints,
     encodeDepositSlippage,
@@ -22,7 +22,7 @@ use(solidity);
 
 const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
-const mainnetBlock = 15082700;
+const mainnetBlock = 16110000;
 
 type YearnStratSetup = {
     name: keyof TokensFixture & keyof Tokens;

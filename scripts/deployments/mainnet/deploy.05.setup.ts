@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { accountsFixture, loadSpoolInfra, loadStrategies } from "../scripts/deployUtils";
+import {getStrategyNames} from "../test/shared/utilities";
 
 /**
  * Add strategies to system and
@@ -16,7 +17,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     console.log("Loading strategies..");
     const strategies: any = await loadStrategies(hre);
 
-    const strategyNames = ["Aave",  "Notional", "Compound", "Convex4pool", "ConvexMetapool", "Convex", "Curve", "Harvest", "Idle", "Morpho", "Yearn"];
+    const strategyNames = Object.keys( await getStrategyNames() );
 
     for (const strategy of strategyNames) {
         for (const assetKey of ["DAI", "USDC", "USDT"]) {

@@ -104,17 +104,20 @@ export async function getStrategyNames(): Promise<any> {
             };
         default:    
             return {
-                Aave:           { name: "Aave",                 assets: ["DAI", "USDC", "USDT"] },
-                Notional:       { name: "Notional",             assets: ["DAI", "USDC"        ] },
-                Compound:       { name: "Compound",             assets: ["DAI", "USDC", "USDT"] },
-                Convex4pool:    { name: "ConvexShared4pool",    assets: ["DAI", "USDC", "USDT"] },
-                ConvexMetapool: { name: "ConvexSharedMetapool", assets: ["DAI", "USDC", "USDT"] },
-                Convex:         { name: "ConvexShared",         assets: ["DAI", "USDC", "USDT"] },
-                Curve:          { name: "Curve3pool",           assets: ["DAI", "USDC", "USDT"] },
-                Harvest:        { name: "Harvest",              assets: ["DAI", "USDC", "USDT"] },
-                Idle:           { name: "Idle",                 assets: ["DAI", "USDC", "USDT"] },
-                Morpho:         { name: "Morpho",               assets: ["DAI", "USDC", "USDT"] },
-                Yearn:          { name: "Yearn",                assets: ["DAI", "USDC", "USDT"] },
+                Aave:              { name: "Aave",                 assets: ["DAI", "USDC", "USDT"] },
+                Notional:          { name: "Notional",             assets: ["DAI", "USDC"        ] },
+                Compound:          { name: "Compound",             assets: ["DAI", "USDC", "USDT"] },
+                Convex4pool:       { name: "ConvexShared4pool",    assets: ["DAI", "USDC", "USDT"] },
+                ConvexMetapool:    { name: "ConvexSharedMetapool", assets: ["DAI", "USDC", "USDT"] },
+                Convex:            { name: "ConvexShared",         assets: ["DAI", "USDC", "USDT"] },
+                Curve:             { name: "Curve3pool",           assets: ["DAI", "USDC", "USDT"] },
+                Harvest:           { name: "Harvest",              assets: ["DAI", "USDC", "USDT"] },
+                Idle:              { name: "Idle",                 assets: ["DAI", "USDC", "USDT"] },
+                Morpho:            { name: "Morpho",               assets: ["DAI", "USDC", "USDT"] },
+                Yearn:             { name: "Yearn",                assets: ["DAI", "USDC", "USDT"] },
+                Convex2pool:       { name: "ConvexShared2pool",    assets: [       "USDC",       ] },
+                MorphoAave:        { name: "MorphoAave",           assets: ["DAI", "USDC", "USDT"] },
+                IdleTranchesEuler: { name: "IdleTranchesEuler",    assets: ["DAI", "USDC", "USDT"] },
             };
     }
 }
@@ -432,10 +435,11 @@ export function convertBPToPercentage(bp: number): number {
 
 export function convertToSlippageStruct(raw: any): SlippageStruct {
     let slippage: SlippageStruct = {
-        slippage: BigNumber.from(raw[0].toString()),
-        isDeposit: Boolean(raw[1]),
-        canProcess: Boolean(raw[2]),
-        balance: BigNumber.from(raw[3].toString()),
+        protocol: BigNumber.from(raw[0].toString()),
+        lp: BigNumber.from(raw[1].toString()),
+        isDeposit: Boolean(raw[2]),
+        canProcess: Boolean(raw[3]),
+        balance: BigNumber.from(raw[4].toString()),
     };
     printSlippage(slippage);
     return slippage;

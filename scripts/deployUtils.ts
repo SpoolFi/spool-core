@@ -934,7 +934,7 @@ export async function DeployConvex2pool(
     const helperArgs = [
         spool.spool.address,
         mainnetConst.convex.Booster.address,
-        mainnetConst.convex._sUSD.boosterPoolId,
+        mainnetConst.convex._fraxusdc.boosterPoolId,
     ];
     const boosterHelperName = `ConvexBooster2poolContractHelper${name}`;
     const convexBoosterHelper = await deploy(hre, accounts, boosterHelperName, {
@@ -1055,7 +1055,6 @@ export async function DeployCurve2pool(
 
     return implementation;
 }
-
 
 export async function DeployHarvest(
     accounts: AccountsFixture,

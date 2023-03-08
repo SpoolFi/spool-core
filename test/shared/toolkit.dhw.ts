@@ -1,7 +1,7 @@
 import { Context } from "../../scripts/infrastructure";
 import { BigNumber, ContractTransaction } from "ethers";
 import { pack } from "@ethersproject/solidity";
-import { getRewardSwapPathBalancer, getRewardSwapPathV2Weth, PathBalancerAsset, PathBalancerSwap } from "./utilities";
+import { getRewardSwapPathBalancer, getRewardSwapPathV2Weth, getRewardSwapPathV3Direct, PathBalancerAsset, PathBalancerSwap } from "./utilities";
 import { ethers } from "hardhat";
 import {arbitrum, mainnet} from "./constants";
 import {getReallocationSlippages, getSlippages} from "./dhwUtils";
@@ -46,6 +46,7 @@ function getRewardSwapPathV3Weth(fee1: FeeValue, fee2: FeeValue) {
 }
 
 const swapPathWeth = getRewardSwapPathV2Weth();
+const swapPathDirect3000 = getRewardSwapPathV3Direct(UNISWAP_V3_FEE._3000);
 
 const swapPathStkAave = getRewardSwapPathV3Custom(UNISWAP_V3_FEE._3000, [
     // AAVE
@@ -62,6 +63,11 @@ const swapPathWeth10000 = getRewardSwapPathV3Weth(UNISWAP_V3_FEE._10000, UNISWAP
 
 const swapDataConvex = [
     { slippage: 1, path: swapPath3000Weth500 },
+    { slippage: 1, path: swapPathWeth10000 },
+];
+
+const swapDataConvex2pool = [
+    { slippage: 1, path: swapPathWeth },
     { slippage: 1, path: swapPathWeth10000 },
 ];
 
@@ -165,6 +171,11 @@ function getRewardSlippage(stratName: string) {
                 { doClaim: true, swapData: swapDataConvex } 
             ]
         }
+        case "Convex2pool": {
+            return [ 
+                { doClaim: true, swapData: swapDataConvex2pool },
+            ]
+        }
         case "Convex4pool": {
             return [ 
                 { doClaim: true, swapData: swapDataConvexExtra }, 
@@ -204,6 +215,14 @@ function getRewardSlippage(stratName: string) {
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] }
+            ]
+        }
+        case "MorphoAave": {
+            // Like Morpho this does have rewards, but attempt to claim when there are no rewards results in execution failure, so we don't claim for the e2e tests.
+            return [ 
+                { doClaim: false, swapData: [] }, 
+                { doClaim: false, swapData: [] }, 
+                { doClaim: false, swapData: [] } 
             ]
         }
         case "Notional": {

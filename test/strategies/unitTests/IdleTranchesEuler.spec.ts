@@ -10,7 +10,7 @@ import {
     encodeDepositSlippage,
     getMillionUnits,
     mineBlocks,
-    reset,
+    resetToBlockNumber,
     SECS_DAY,
 } from "../../shared/utilities";
 
@@ -22,6 +22,7 @@ use(solidity);
 
 const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
+const mainnetBlock = 15082700;
 
 type idleTranchesStratSetup = {
     name: keyof TokensFixture & keyof Tokens;
@@ -47,7 +48,7 @@ describe("Strategies Unit Test: IdleTranches Euler", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
-        await reset();
+        await resetToBlockNumber(mainnetBlock);
         ({ accounts } = await loadFixture(underlyingTokensFixture));
     });
 

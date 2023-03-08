@@ -4,6 +4,8 @@ import { formatUnits } from "ethers/lib/utils";
 
 export enum BasisPoints {
     Basis_1000 = 10_00, // 10%
+    Basis_500 = 5_00, // 5%
+    Basis_200 = 2_00, // 2%
     Basis_100 = 1_00, // 1%
     Basis_50 = 0_50, // 0.5%
     Basis_10 = 0_10, // 0.1%

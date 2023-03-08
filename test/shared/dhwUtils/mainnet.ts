@@ -161,6 +161,44 @@ async function get3PoolSlippage(
     return slippageArgs;
 }
 
+// gets slippages for Convex 2pool
+async function getConvex2PoolSlippage(
+    context: Context,
+    reallocationWithdrawnShares?: BigNumber[]
+): Promise<Array<BigNumber[]>> {
+    const strategies = [
+        context.strategies.mainnet.Convex2pool.USDC,
+    ].flat();
+
+    const reallocateSharesToWithdraw = strategies.map((s3pl) => {
+        return findRealocationShares(s3pl, context, reallocationWithdrawnShares);
+    });
+
+    let result = await strategyHelperCall("getConvex2PoolSlippage", [strategies, reallocateSharesToWithdraw], context);
+
+    const slippageArgs = new Array<BigNumber[]>();
+    for (let i = 0; i < result.length; i++) {
+        let raw = result[i];
+
+        let slippage = convertToSlippageStruct(raw);
+        let slippageBalance = BigNumber.from(slippage.balance);
+        let slippagePrice = BigNumber.from(slippage.price);
+        const balanceSlippage = getPercentage(slippageBalance, percents["2pool"][2]);
+        const priceSlippage = getPercentage(slippagePrice, percents["2pool"][2]);
+
+        let slippageArg = [
+            slippageBalance.sub(balanceSlippage),
+            slippageBalance.add(balanceSlippage),
+            slippagePrice.sub(priceSlippage),
+            slippagePrice.add(priceSlippage),
+            handleSlippageResult(slippage, percents["2pool"]),
+        ];
+
+        slippageArgs.push(slippageArg);
+    }
+    return slippageArgs;
+}
+
 // gets slippages for Convex 4pool
 async function getConvex4PoolSlippage(
     context: Context,
@@ -200,7 +238,6 @@ async function getConvex4PoolSlippage(
     }
     return slippageArgs;
 }
-
 
 // gets slippages for Convex Metapool
 async function getIdleSlippage(
@@ -402,6 +439,7 @@ export async function getReallocationSlippagesMainnet(context: Context, realloca
 
 export async function getDhwSlippagesMainnet(context: Context, reallocationWithdrawnShares?: BigNumber[]) {
     const curvePoolSlippages = await get3PoolSlippage(context, reallocationWithdrawnShares);
+    const convex2poolSlippages = await getConvex2PoolSlippage(context, reallocationWithdrawnShares);
     const convex4poolSlippages = await getConvex4PoolSlippage(context, reallocationWithdrawnShares);
     let slippages = new Array<BigNumber[]>();
 
@@ -421,6 +459,10 @@ export async function getDhwSlippagesMainnet(context: Context, reallocationWithd
             }
             case "Convex": {
                 slippages.push(curvePoolSlippages[3], curvePoolSlippages[4], curvePoolSlippages[5]);
+                continue;
+            }
+            case "Convex2pool": {
+                slippages.push(convex2poolSlippages[0]);
                 continue;
             }
             case "Convex4pool": {
@@ -443,6 +485,10 @@ export async function getDhwSlippagesMainnet(context: Context, reallocationWithd
                 slippages.push([], [], []);
                 continue;
             }
+            case "MorphoAave": {
+                slippages.push([], [], []);
+                continue;
+            }
             case "Notional": {
                 slippages.push(
                     await getNotionalSlippage(strategies.Notional.DAI[0], context, reallocationWithdrawnShares),
@@ -456,6 +502,10 @@ export async function getDhwSlippagesMainnet(context: Context, reallocationWithd
                     await getIdleSlippage(strategies.Idle.USDC[0], context, reallocationWithdrawnShares),
                     await getIdleSlippage(strategies.Idle.USDT[0], context, reallocationWithdrawnShares)
                 );
+                continue;
+            }
+            case "IdleTranchesEuler": {
+                slippages.push([], [], []);
                 continue;
             }
             case "Yearn": {
@@ -502,6 +552,12 @@ function getDhwDepositSlippage(context: Context) {
                 continue;
             }
             case "Convex": {
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+                continue;
+            }
+            case "Convex2pool": {
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);

@@ -10,7 +10,7 @@ import {
     getMillionUnits,
     getRewardSwapPathV3Custom,
     mineBlocks,
-    reset,
+    resetToBlockNumber,
     SECS_DAY,
     UNISWAP_V3_FEE,
 } from "../../shared/utilities";
@@ -30,6 +30,7 @@ use(solidity);
 
 const myProvider = new MockProvider();
 const loadFixture = createFixtureLoader(myProvider.getWallets(), myProvider);
+const mainnetBlock = 15854623;
 
 const strategyAssets: (keyof TokensFixture & keyof Tokens)[] = ["DAI", "USDC", "USDT"];
 
@@ -37,7 +38,7 @@ describe("Strategies Unit Test: AAVE", () => {
     let accounts: AccountsFixture;
 
     before(async () => {
-        await reset();
+        await resetToBlockNumber(mainnetBlock);
         ({ accounts } = await loadFixture(underlyingTokensFixture));
     });
 
