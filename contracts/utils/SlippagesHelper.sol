@@ -6,6 +6,7 @@ pragma solidity 0.8.11;
 
 import "../external/@openzeppelin/token/ERC20/IERC20.sol";
 import "../external/@openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import "../external/interfaces/euler/IEToken.sol";
 import "../external/interfaces/idle-finance/IIdleToken.sol";
 import "../external/interfaces/curve/ICurvePool.sol";
 import "../external/interfaces/curve/ILiquidityGauge.sol";
@@ -17,6 +18,7 @@ import "../interfaces/IBaseStrategy.sol";
 import "../interfaces/INotionalStrategyContractHelper.sol";
 import "../interfaces/IStrategyContractHelper.sol";
 import "../interfaces/IStrategyRegistry.sol";
+import "./interfaces/strategies/IEulerStrategy.sol";
 import "./interfaces/strategies/IIdleStrategy.sol";
 import "./interfaces/strategies/INotionalStrategy.sol";
 import "./interfaces/strategies/IYearnStrategy.sol";
@@ -148,6 +150,40 @@ contract SlippagesHelper is BaseStorage {
         }
 
         return slippages;
+    }
+
+    function getEulerSlippage(IEulerStrategy strategy_, uint128 reallocateSharesToWithdraw) external returns(Slippage memory slippage){
+        IEulerStrategy strategy = IEulerStrategy(strategyRegistry.getImplementation(address(strategy_)));
+        Strategy storage strategyStorage = strategies[address(strategy_)];
+
+        IERC20 underlying = IERC20(strategy.underlying());
+        IEToken eToken = IEToken(strategy.eToken());
+        address euler = strategy.euler();
+
+        (uint128 amount, bool isDeposit) = matchDepositsAndWithdrawals(address(strategy), reallocateSharesToWithdraw);
+        if(amount==0) return slippage;
+        slippage.canProcess = true;
+        if(isDeposit){
+            slippage.isDeposit = true;
+            // deposit underlying
+            underlying.safeApprove(euler, amount);
+
+            uint256 eTokenBalance = eToken.balanceOf(address(this));
+            eToken.deposit(0, amount);
+            uint256 eTokenBalanceNew = eToken.balanceOf(address(this)) - eTokenBalance;
+            underlying.safeApprove(euler, 0);
+            slippage.slippage = eTokenBalanceNew;
+        }else {
+            uint256 eTokenBalance = eToken.balanceOfUnderlying(address(this));
+            uint256 eTokenWithdraw = (eTokenBalance * amount) / strategyStorage.totalShares;
+
+            uint256 underlyingBalance = underlying.balanceOf(address(this));
+            eToken.withdraw(0, eTokenWithdraw);
+            uint256 underlyingWithdrawn = underlying.balanceOf(address(this)) - underlyingBalance;
+            slippage.slippage = underlyingWithdrawn;
+        }
+
+        return slippage;
     }
 
     function getIdleSlippage(IIdleStrategy strategy_, uint128 reallocateSharesToWithdraw) external returns(Slippage memory slippage){
