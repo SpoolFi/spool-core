@@ -73,6 +73,7 @@ abstract contract ProcessStrategy is BaseStrategy {
         if (totalPendingDeposit == 0 && pendingSharesToWithdraw == 0) {
             // Set underlying at index
             strategy.totalUnderlying[processingIndex].amount = getStrategyBalance();
+            strategy.totalUnderlying[processingIndex].totalShares = strategyTotalShares;
             return;
         }
 
