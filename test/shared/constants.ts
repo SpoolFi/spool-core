@@ -29,6 +29,7 @@ import {
     INotional__factory,
     IERC20__factory,
     IAToken__factory,
+    IBoosterV2__factory,
 } from "../../build/types";
 
 export type Contract = {
@@ -129,6 +130,11 @@ export interface Convex {
     _sUSD: ConvexPool;
     _alUSD: ConvexPool;
     _fraxusdc: ConvexPool;
+}
+
+export interface ConvexArb {
+    Booster: Contract;
+    _2pool: ConvexPool;
 }
 
 export type CurvePool = {
@@ -301,6 +307,7 @@ export interface Arbitrum {
     aave: AaveV3;
     abracadabra: Abracadabra;
     balancer: Balancer;
+    convex: ConvexArb;
     curve: CurveArb;
     timelessfi: TimelessFi;
     uniswap: Uniswap;
@@ -625,6 +632,13 @@ export const arbitrum = function arbitrum(): Arbitrum {
             USDC: 2
         }
     };
+    let convex = {
+        Booster: { address: "0xF403C135812408BFbE8713b5A23a04b3D48AAE31", ABI: IBoosterV2__factory.abi },
+        _2pool: {
+            boosterPoolId: 1,
+        }
+    };
+
     let curve = {
         CRV: { address: "0x11cdb42b0eb46d95f990bedd4695a6e3fa034978" },
         GaugeFactory: { address: "0xabC000d88f23Bb45525E447528DBF656A9D55bf5" },
@@ -695,6 +709,7 @@ export const arbitrum = function arbitrum(): Arbitrum {
         aave,
         abracadabra,
         balancer,
+        convex,
         curve,
         timelessfi,
         uniswap,

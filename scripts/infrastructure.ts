@@ -25,6 +25,7 @@ export interface ArbitrumContracts {
     AaveV3: UnderlyingContracts;
     Abracadabra: UnderlyingContracts;
     Balancer: UnderlyingContracts;
+    Convex2pool: UnderlyingContracts;
     Curve2pool: UnderlyingContracts;
     TimelessFi: UnderlyingContracts;
     YearnMetapool: UnderlyingContracts;

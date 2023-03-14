@@ -4,6 +4,7 @@
             "AaveV3":        { "risk": "1/10", "alloc": 0.7 },
             "Abracadabra":   { "risk": "1/10", "alloc": 0 },
             "Balancer":      { "risk": "1/10", "alloc": 0.3 },
+            "Convex2pool":   { "risk": "1/10", "alloc": 0 },
             "Curve2pool":    { "risk": "1/10", "alloc": 0 },
             "TimelessFi":    { "risk": "1/10", "alloc": 0 },
             "YearnMetapool": { "risk": "1/10", "alloc": 0 }
@@ -12,6 +13,7 @@
             "AaveV3":        { "risk": "1/10", "alloc": 0.7 },
             "Abracadabra":   { "risk": "1/10", "alloc": 0 },
             "Balancer":      { "risk": "1/10", "alloc": 0.3 },
+            "Convex2pool":   { "risk": "1/10", "alloc": 0 },
             "Curve2pool":    { "risk": "1/10", "alloc": 0 },
             "TimelessFi":    { "risk": "1/10", "alloc": 0 },
             "YearnMetapool": { "risk": "1/10", "alloc": 0 }
@@ -22,7 +24,8 @@
             "AaveV3":        { "risk": "1/10", "alloc": 0.15 },
             "Abracadabra":   { "risk": "1/10", "alloc": 0.15 },
             "Balancer":      { "risk": "1/10", "alloc": 0.15 },
-            "Curve2pool":    { "risk": "1/10", "alloc": 0.15 },
+            "Convex2pool":   { "risk": "1/10", "alloc": 0.1  },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0.05 },
             "TimelessFi":    { "risk": "1/10", "alloc": 0.2 },
             "YearnMetapool": { "risk": "1/10", "alloc": 0.2 }
         },
@@ -30,7 +33,8 @@
             "AaveV3":        { "risk": "1/10", "alloc": 0.15 },
             "Abracadabra":   { "risk": "1/10", "alloc": 0.15 },
             "Balancer":      { "risk": "1/10", "alloc": 0.15 },
-            "Curve2pool":    { "risk": "1/10", "alloc": 0.15 },
+            "Convex2pool":   { "risk": "1/10", "alloc": 0.1  },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0.05 },
             "TimelessFi":    { "risk": "1/10", "alloc": 0.2 },
             "YearnMetapool": { "risk": "1/10", "alloc": 0.2 }
         }
@@ -40,7 +44,8 @@
             "AaveV3":        { "risk": "1/10", "alloc": 0.1 },
             "Abracadabra":   { "risk": "1/10", "alloc": 0.2 },
             "Balancer":      { "risk": "1/10", "alloc": 0.2 },
-            "Curve2pool":    { "risk": "1/10", "alloc": 0.25 },
+            "Convex2pool":   { "risk": "1/10", "alloc": 0.1  },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0.15 },
             "TimelessFi":    { "risk": "1/10", "alloc": 0 },
             "YearnMetapool": { "risk": "1/10", "alloc": 0.25 }
         },
@@ -48,7 +53,8 @@
             "AaveV3":        { "risk": "1/10", "alloc": 0.1 },
             "Abracadabra":   { "risk": "1/10", "alloc": 0.2 },
             "Balancer":      { "risk": "1/10", "alloc": 0.2 },
-            "Curve2pool":    { "risk": "1/10", "alloc": 0.25 },
+            "Convex2pool":   { "risk": "1/10", "alloc": 0.1 },
+            "Curve2pool":    { "risk": "1/10", "alloc": 0.15 },
             "TimelessFi":    { "risk": "1/10", "alloc": 0 },
             "YearnMetapool": { "risk": "1/10", "alloc": 0.25 }
         }

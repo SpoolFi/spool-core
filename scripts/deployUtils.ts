@@ -974,6 +974,62 @@ export async function DeployConvex2pool(
     return implementation;
 }
 
+export async function DeployConvex2poolV2(
+    accounts: AccountsFixture,
+    tokens: TokensFixture,
+    spool: SpoolFixture,
+    hre: HardhatRuntimeEnvironment
+): Promise<UnderlyingContracts> {
+    let implementation: UnderlyingContracts = { USDC: [], DAI:[], USDT:[] };
+
+    for (let name of _2poolAssets) {
+        let token: IERC20 = tokens[name];
+        console.log("Deploying Convex 2pool (V2) Strategy for token: " + name + "...");
+
+        const helperArgs = [
+            spool.spool.address,
+            arbitrumConst.convex.Booster.address,
+            arbitrumConst.convex._2pool.boosterPoolId,
+        ];
+        const boosterHelperName = `ConvexBooster2poolV2ContractHelper${name}`;
+        const convexBoosterHelper = await deploy(hre, accounts, boosterHelperName, {
+            contract: "ConvexBoosterContractHelperV2",
+            args: helperArgs,
+        });
+        const convexHelperProxy = await deployProxy(
+            hre,
+            accounts,
+            boosterHelperName,
+            convexBoosterHelper.address,
+            spool.proxyAdmin.address
+        );
+
+        await writeContracts(hre, {
+            [`convex2poolV2Helper${name}`]: {
+                proxy: convexHelperProxy.address,
+                implementation: convexBoosterHelper.address,
+            },
+        });
+
+        const args = [
+            arbitrumConst.convex.Booster.address,
+            arbitrumConst.convex._2pool.boosterPoolId,
+            arbitrumConst.curve._2pool.pool.address,
+            arbitrumConst.curve._2pool.lpToken.address,
+            token.address,
+            convexHelperProxy.address,
+            ethers.constants.AddressZero
+        ];
+        const strat = await deploy(hre, accounts, `ConvexShared2poolV2Strategy${name}`, {
+            contract: "ConvexShared2poolStrategyV2",
+            args,
+        });
+        implementation[name].push(strat.address);
+    }
+
+    return implementation;
+}
+
 export async function DeployCurve(
     accounts: AccountsFixture,
     tokens: TokensFixture,
@@ -1400,6 +1456,8 @@ export async function deployVaults(
                 .map((key) => vaultData[assetKey][riskKey][key].alloc)
                 .map(parseAlloc)
                 .filter(Number);
+
+            console.log("Proportions: " + proportions);
 
             const delta = 10000 - proportions.reduce((a, b) => a + b);
             if (Math.abs(delta) > 1) {

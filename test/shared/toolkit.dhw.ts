@@ -71,6 +71,11 @@ const swapDataConvex2pool = [
     { slippage: 1, path: swapPathWeth10000 },
 ];
 
+const swapDataConvex2poolV2 = [
+    { slippage: 1, path: swapPath3000Weth500 },
+    { slippage: 1, path: swapPathWeth10000 },
+];
+
 const swapDataConvexExtra = [
     { slippage: 1, path: swapPath3000Weth500 },
     { slippage: 1, path: swapPathWeth10000 },
@@ -127,23 +132,32 @@ const assetsUSDC : PathBalancerAsset[] = [
 const swapPathBalancerNOTEDAI = getRewardSwapPathBalancer(swapDAI, assetsDAI);
 const swapPathBalancerNOTEUSDC = getRewardSwapPathBalancer(swapUSDC, assetsUSDC);
 
-function getRewardSlippages(strategies: any) {
+export function getRewardSlippages(network: string, strategies: any) {
+    if(network === "arbitrum") {
+        return getRewardSlippagesArbitrum(strategies);
+    }
+    return getRewardSlippagesMainnet(strategies);
+}
+
+function getRewardSlippagesArbitrum(strategies: any){
     return Object.keys(strategies)
         .filter((s) => s != "All")
         .flatMap((stratName) => {
-            return getRewardSlippage(stratName);
+            return getRewardSlippageArbitrum(stratName);
         });
 }
 
-function getRewardSlippage(stratName: string) {
+function getRewardSlippagesMainnet(strategies: any){
+    return Object.keys(strategies)
+        .filter((s) => s != "All")
+        .flatMap((stratName) => {
+            return getRewardSlippageMainnet(stratName);
+        });
+}
+
+export function getRewardSlippageArbitrum(stratName: string) {
+    console.log("stratName: " + stratName);
     switch (stratName) {
-        case "Aave": {
-            return [
-                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] },
-                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] },
-                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] }
-            ]
-        }
         case "AaveV3": {
             return [
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] },
@@ -155,6 +169,49 @@ function getRewardSlippage(stratName: string) {
             return [
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPathWeth }] },
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPathWeth }] }
+            ]
+        }
+        case "Convex2pool": {
+            return [ 
+                { doClaim: true, swapData: swapDataConvex2poolV2 },
+                { doClaim: true, swapData: swapDataConvex2poolV2 },
+            ]
+        }
+        case "Curve2pool": {
+            return [ 
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPath3000Weth500 }] }
+            ];
+        }
+        case "TimelessFi": {
+            return [ 
+                { doClaim: false, swapData: [] },
+            ]
+        }
+        case "YearnMetapool": {
+            return [ 
+                { doClaim: false, swapData: [] },
+                { doClaim: false, swapData: [] },
+            ]
+        }
+        default: {
+            return [ 
+                { doClaim: false, swapData: [] }, 
+                { doClaim: false, swapData: [] }, 
+                { doClaim: false, swapData: [] } 
+            ];
+        }
+    }
+}
+
+export function getRewardSlippageMainnet(stratName: string) {
+    console.log("stratName: " + stratName);
+    switch (stratName) {
+        case "Aave": {
+            return [
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] },
+                { doClaim: true, swapData: [{ slippage: 1, path: swapPathStkAave }] }
             ]
         }
         case "Compound": {
@@ -231,17 +288,6 @@ function getRewardSlippage(stratName: string) {
                 { doClaim: true, swapData: [{ slippage: 1, path: swapPathBalancerNOTEUSDC }] },
             ]
         }
-        case "TimelessFi": {
-            return [ 
-                { doClaim: false, swapData: [] },
-            ]
-        }
-        case "YearnMetapool": {
-            return [ 
-                { doClaim: false, swapData: [] },
-                { doClaim: false, swapData: [] },
-            ]
-        }
         default: {
             return [ 
                 { doClaim: false, swapData: [] }, 
@@ -262,8 +308,6 @@ export async function doHardWork(context: Context, getRewards: boolean): Promise
     
     const _strategies = context.strategies[context.network];
     const strategies = _strategies!.All;
-    const rewardSlippages = getRewardSlippages(_strategies);
-
     const chainStrats = await context.infra.controller.getAllStrategies();
 
     console.log('All strats:');
@@ -272,7 +316,7 @@ export async function doHardWork(context: Context, getRewards: boolean): Promise
     console.log('chain strats:');
     console.log(chainStrats);
 
-    const { indexes, slippages } = await getSlippages(context);
+    const { indexes, slippages, rewardSlippages } = await getSlippages(context);
     return context.infra.spool
         .connect(context.accounts.doHardWorker)
         .batchDoHardWork(indexes, slippages, rewardSlippages, strategies);
