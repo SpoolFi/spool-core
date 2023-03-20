@@ -1,0 +1,106 @@
+{
+  "spoolOwner": "0x9bC22966dc0c4681FE5A90B3510A71b442324BB1",
+  "strategies": {
+    "AaveV3": {
+      "DAI": [
+        "0x0b54fc5223c34b2A8Fa61aA42FC961Ae218b1C6c"
+      ],
+      "USDC": [
+        "0x7211cFCF4d3082Ee65C917DFAEAD4fc2ed9E4d68"
+      ],
+      "USDT": [
+        "0xcb4fE5adD5f65ff3dA51404A491c0b690973ef9C"
+      ]
+    },
+    "Balancer": {
+      "DAI": [
+        "0xfc905C369cA59b411C5D52CDE75E47A856cC5Adc"
+      ],
+      "USDC": [
+        "0x81DD1BC54029B011b46bC303044d736BC00E2ad8"
+      ],
+      "USDT": [
+        "0xFEA5818bf61b7C4c463953DC5bf93f3546BE818b"
+      ]
+    },
+    "TimelessFi": {
+      "DAI": [],
+      "USDC": [
+        "0x725eB5914B27a13AdB009C6Bf2135F6F754eCf6B"
+      ],
+      "USDT": []
+    },
+    "Abracadabra": {
+      "DAI": [],
+      "USDC": [
+        "0xAE1D0F8459797A284BBB0bB5b28f187230D2AEB7"
+      ],
+      "USDT": [
+        "0xF6F3bbA1ee20e32D0BA501b58D9BCdf8719992c8"
+      ]
+    },
+    "Curve2pool": {
+      "USDC": [
+        "0xd521237CeD7FD0d643880c14E2bb79042e28e400"
+      ],
+      "DAI": [],
+      "USDT": [
+        "0xE42BD393dCE80236313F8C7D9CB53f517912aB6B"
+      ]
+    },
+    "YearnMetapool": {
+      "DAI": [],
+      "USDC": [
+        "0xfc07810d8Ef42b35D76382bbd68e5Ce80fAB4E0D"
+      ],
+      "USDT": [
+        "0x6e89DAa9b2ec4dc9e073bd78a4fBEfD5441D1335"
+      ]
+    }
+  },
+  "underlying": {
+    "DAI": "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
+    "USDC": "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+    "USDT": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"
+  },
+  "infra": {
+    "strategyRegistry": "0x45EB199634679a41ED1Fe9a6D7214126B6216FBB",
+    "controller": "0xD31FF4536Bd190C87039C7697B3a5843196C1B94",
+    "fastWithdraw": "0xc8846ae9Ce9eC2288ab22e036e01909f76418635",
+    "feeHandler": "0xBbb0e84f4e3d4fFAcd3bd4241136B8B53A0b5BBA",
+    "riskProviderRegistry": "0x00032E3Ad684d9766647fb3c63460131d4f8deC2",
+    "spool": "0xe4b6347395262d203E3FeC5c8ebDE4cfE92111B3",
+    "vault": "0x3164a58724f2F0bE6AcddF1DBD8e4FF38E8F069b",
+    "spoolOwner": "0x9bC22966dc0c4681FE5A90B3510A71b442324BB1",
+    "proxyAdmin": "0xee76365c948f33C14d9Dd50A4799Ac8f4222dbeE"
+  },
+  "infraImpl": {
+    "strategyRegistry": "0x45EB199634679a41ED1Fe9a6D7214126B6216FBB",
+    "controller": "0xB8939db4A4460b448516496707CBff5915f526AA",
+    "fastWithdraw": "0x10eE8A0Ba7939a70823C7B7bD9D30baD970208B1",
+    "feeHandler": "0xcCf03f0045e28f0E2fB1f444400746Cf4DFfeb48",
+    "riskProviderRegistry": "0xb28760f0437e8A2D443A9Ef230c744AA8415749c",
+    "spool": "0xB434238730094E7b0c205E8B89B21b13b078c7D2",
+    "vault": "0x3164a58724f2F0bE6AcddF1DBD8e4FF38E8F069b",
+    "spoolOwner": "0x9bC22966dc0c4681FE5A90B3510A71b442324BB1",
+    "proxyAdmin": "0xee76365c948f33C14d9Dd50A4799Ac8f4222dbeE"
+  },
+  "slippagesHelperArbitrum": "0xbAE51b69Ef49E614878d5b53CBBFddF8441ce4d8",
+  "reallocationHelper": "0xE367cc6277705e492f285B0015B8c955793FAaF6",
+  "AbracadabraHelperUSDC": {
+    "proxy": "0x14Af6E9535473b2E25000C457B0D2381BDDBd4Cf",
+    "implementation": "0x1F65a100fc9297b4395003D146CE66461FDE9204"
+  },
+  "AbracadabraHelperUSDT": {
+    "proxy": "0x8f2a0a07d2193E77DbAd89821Bc65D67E58C3859",
+    "implementation": "0x2da01C2dd20b1ca7ba9a5b23882c59F4417129c1"
+  },
+  "curve2poolHelperUSDC": {
+    "proxy": "0x26F5F0FF1784d17382cE3796382fCBB71EC38939",
+    "implementation": "0x463cE1eBdcAE426A4a4FfA53E770a8C1a77D4583"
+  },
+  "curve2poolHelperUSDT": {
+    "proxy": "0xa6166EA6101A2874cc779ae7177e30967fD6B76E",
+    "implementation": "0xDBEF5e6c81855c140830557a3E148Dc8596A1F2e"
+  }
+}
