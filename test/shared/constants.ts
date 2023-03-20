@@ -635,7 +635,7 @@ export const arbitrum = function arbitrum(): Arbitrum {
     let convex = {
         Booster: { address: "0xF403C135812408BFbE8713b5A23a04b3D48AAE31", ABI: IBoosterV2__factory.abi },
         _2pool: {
-            boosterPoolId: 1,
+            boosterPoolId: 7,
         }
     };
 

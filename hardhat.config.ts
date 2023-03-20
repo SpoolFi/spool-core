@@ -17,7 +17,7 @@ import * as path from "path";
 dotenvConfig();
 
 const FORK_BLOCK_NUMBER = 16110000;
-const ARBITRUM_FORK_BLOCK_NUMBER = 60000000;
+const ARBITRUM_FORK_BLOCK_NUMBER = 71740000;
 
 task("generate-docs", "Generate docs from contract comments").setAction(async (_, hre) => {
     const excludedContracts = hre.config.dodoc.exclude
