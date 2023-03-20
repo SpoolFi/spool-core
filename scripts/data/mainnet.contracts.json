@@ -1,0 +1,246 @@
+{
+  "spoolOwner": "0x4f03f70A99E5c3b49d733dDd7458f80Fa9B5A5B5",
+  "strategies": {
+    "Aave": {
+      "DAI": [
+        "0xa71a526c962d08206a44b560a4dd67e97bb5fbc0"
+      ],
+      "USDC": [
+        "0xf36d05c1b7810013334ce6f1986aaefde1eb34fc"
+      ],
+      "USDT": [
+        "0xf6157d5ff062aa7bfb783ca997b3c7dd18d366c8"
+      ]
+    },
+    "Curve": {
+      "DAI": [
+        "0xae0f58c408514e60cc6d844cc80965aeab4bf6ff"
+      ],
+      "USDC": [
+        "0xc7c5652874de32a5ce305bd9195b7c665281648e"
+      ],
+      "USDT": [
+        "0xd9174b81f540272e2441a6237c0d61da32b4a73d"
+      ]
+    },
+    "Harvest": {
+      "DAI": [
+        "0x9e177bb9f107bffdc0f9b512f969f6c071d57d76"
+      ],
+      "USDC": [
+        "0x9e9d4d747a3dfe3d135077cfa1baf98599cf5b80"
+      ],
+      "USDT": [
+        "0xe12286c9b881ea429cfd9e6ca0fb666c819981b0"
+      ]
+    },
+    "Idle": {
+      "DAI": [
+        "0xe78e22ab9204e36948eff81facd92a7231f40210"
+      ],
+      "USDC": [
+        "0x335bd363fe258f0af80a2b664c1c9b45ab6fce9d"
+      ],
+      "USDT": [
+        "0x94df827cadc7101452a24161d6bb2f6da2c6f698"
+      ]
+    },
+    "Yearn": {
+      "DAI": [
+        "0x767f653905b82fd88369b8f24bf9ff71e6ba2a7c"
+      ],
+      "USDC": [
+        "0x7957901a8941fad236483eaa0332880c2f507654"
+      ],
+      "USDT": [
+        "0x96cd104e480bebbfa5d07529e5ac42216e2eeeba"
+      ]
+    },
+    "Notional": {
+      "DAI": [
+        "0x47b2fa8b3a5be5644a10c8acb9f0e0924b2eefb3"
+      ],
+      "USDC": [
+        "0x31c2f932052f7861ac3f301c584d6888b6e6896d"
+      ],
+      "USDT": []
+    },
+    "Compound": {
+      "DAI": [
+        "0xf24ebddfe5d73423dec966f14c1ec714f59a6656"
+      ],
+      "USDC": [
+        "0x87581d026eb25269e3ebb61a47025892c6a1e79c"
+      ],
+      "USDT": [
+        "0xf619f9c3f86a4a7242343711474afd4997bc4fa5"
+      ]
+    },
+    "Convex": {
+      "DAI": [
+        "0xd72320a3dc67d9815a0348199be7ff98d7df3158"
+      ],
+      "USDC": [
+        "0x0e3f4f0e9c6ac6dbd8f662d5874dec0c2aae727e"
+      ],
+      "USDT": [
+        "0x652930670a7fe06328bcfabc6dad13b76d13feb6"
+      ]
+    },
+    "Convex4pool": {
+      "DAI": [
+        "0x30e826f480f1e245e9e0cf9858a9016475c76249"
+      ],
+      "USDC": [
+        "0xb1f298e91cfcae8f7f8bd98b19f3d0868a47b254"
+      ],
+      "USDT": [
+        "0x4505747d78dc1516d17d12911b0ceda9b4436da7"
+      ]
+    },
+    "ConvexMetapool": {
+      "DAI": [
+        "0x0dd68aa64484b5861844ad8ecd59851e66131594"
+      ],
+      "USDC": [
+        "0x0b7f42dc09a48d2d40f0226a79be86c71da44ba6"
+      ],
+      "USDT": [
+        "0xa561972edb915788cdd9a291877373587f4e7aa7"
+      ]
+    },
+    "Morpho": {
+      "DAI": [
+        "0xfe4925d9f428cea987a3d7463aedbb546d856ee3"
+      ],
+      "USDC": [
+        "0x099f65906d09fea4628d9f0b5e0637293a79e28b"
+      ],
+      "USDT": [
+        "0x30826399cf8f6d53e350d53f8d026db4f35bb498"
+      ]
+    },
+    "Convex2pool": {
+      "USDC": [
+        "0x2394d04f0071397d799d9ed392e631ac2499fed7"
+      ],
+      "DAI": [],
+      "USDT": []
+    },
+    "MorphoAave": {
+      "DAI": [
+        "0x55257a0fa604e291ec5e1a4285d77079b7d3d5d2"
+      ],
+      "USDC": [
+        "0x87f0c2b4659a79a9bbe1bfc3889eaba55ac0350d"
+      ],
+      "USDT": [
+        "0xd8afdfff54e5add708b4f581fd0831d376ae38f5"
+      ]
+    },
+    "IdleTranchesEuler": {
+      "DAI": [
+        "0x5713298ea1c643ad4b6e4376ea163505bda41381"
+      ],
+      "USDC": [
+        "0xbfa7646f4a20cc303501ab7c9ee4416401ccd532"
+      ],
+      "USDT": [
+        "0x413e7caaf85136ede266025bc24bc60f089c0687"
+      ]
+    }
+  },
+  "underlying": {
+    "DAI": "0x6b175474e89094c44da98b954eedeac495271d0f",
+    "USDC": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+  },
+  "infra": {
+    "strategyRegistry": "0x0ecbd2c2b5d35416a7c5578d3370b51f88214420",
+    "controller": "0xdd4051c3571c143b989c3227e8eb50983974835c",
+    "fastWithdraw": "0x4788c0a425abb27721e05a39c417b69cba6b065a",
+    "feeHandler": "0x3d3d0a7876d18770a21a5ea05fef211eba808e72",
+    "riskProviderRegistry": "0xc815e5241be7f695fe9ecb7255154b2950c55fc1",
+    "spool": "0xe140bb5f424a53e0687bfc10f6845a5672d7e242",
+    "vault": "0xa308828904977bbceb91a9b0cb3db07636734fb7",
+    "spoolOwner": "0x4f03f70A99E5c3b49d733dDd7458f80Fa9B5A5B5",
+    "proxyAdmin": "0x0e1dDE6CD48758482528B718EF8d27a7E69EAE62"
+  },
+  "infraImpl": {
+    "strategyRegistry": "0x0ecbd2c2b5d35416a7c5578d3370b51f88214420",
+    "controller": "0x7d0C7372f38958d9CF5aE6DA2b0794337045559b",
+    "fastWithdraw": "0x5fa90dda9e5bce3ce4c814dfc9a16d6a849999eb",
+    "feeHandler": "0x71EBff1106Cd316e812878f04DA36262eDFdAefB",
+    "riskProviderRegistry": "0xb12bDE20175296059537CC424c075EEf5DCDa868",
+    "spool": "0x816BAA993114656C028e8c3DcAe3fc6FC11E4aDd",
+    "vault": "0xa308828904977bbceb91a9b0cb3db07636734fb7",
+    "spoolOwner": "0x4f03f70A99E5c3b49d733dDd7458f80Fa9B5A5B5",
+    "proxyAdmin": "0x0e1dDE6CD48758482528B718EF8d27a7E69EAE62"
+  },
+  "compoundHelperDAI": {
+    "proxy": "0x64c666E0E8deAd91BF07330DF2c31fF64EBBAf23",
+    "implementation": "0xb8c9a884Fb4Cfa8399Bd0Fc2A6A695AF26efaD1e"
+  },
+  "compoundHelperUSDC": {
+    "proxy": "0x05908a050C81f51c35a108Ce5a3EDf52a92846De",
+    "implementation": "0xccB5B39B77CF75B3A5D6DE5cA98bBC0c2bf598b6"
+  },
+  "compoundHelperUSDT": {
+    "proxy": "0xc83972Ea63c6CaAF681b240edf96F616651b8252",
+    "implementation": "0x2AC2055dd25BadD67287e45Ee80B1313F3A8775a"
+  },
+  "convexHelperDAI": {
+    "proxy": "0x27571fACDe87cED95cFA0475CFAd337d4c8e620A",
+    "implementation": "0x62fb97Eb9D4a3300456C883e171E3904bbeA3955"
+  },
+  "convexHelperUSDC": {
+    "proxy": "0x63Aa126Ae3e83D35C17134B61a5D035cc636992F",
+    "implementation": "0x6dc4084F6b8570C618B437Af53Ca419EC1454b55"
+  },
+  "convexHelperUSDT": {
+    "proxy": "0x1A17451f2cd78Ac233826c2F8F4be674C831E9C4",
+    "implementation": "0x41d4e78D4b7376Fbb6A4e8B040Bd0572e85fa298"
+  },
+  "convex4poolHelperDAI": {
+    "proxy": "0x3A8e21f85f427B7d60240f414a1671bbFF13f073",
+    "implementation": "0x1396Afd42912970073E9A21c0C63E5483D10f16b"
+  },
+  "convex4poolHelperUSDC": {
+    "proxy": "0xd2aAff7d645a9EC23d2b893E0A3C46D241EC88C0",
+    "implementation": "0x357ba78082D886B61F54cADDf7cF902Fcfe7476e"
+  },
+  "convex4poolHelperUSDT": {
+    "proxy": "0x172A6747Fb98FeE70B8468De6269124f5Cdf0CB7",
+    "implementation": "0x2d86eFa60ee62b8630A3B1454Cd880676b128e51"
+  },
+  "convexMetapoolHelperDAI": {
+    "proxy": "0xD5F167A28491Ee9f98B08374a1B1c920abf4C0bb",
+    "implementation": "0xD9619800d0d35d405E59e882A4D4047af19331AE"
+  },
+  "convexMetapoolHelperUSDC": {
+    "proxy": "0xbc852b7ba2f26aD2ee305CE999F570040d045f74",
+    "implementation": "0x360441EA57fe3FCF159a0A1f2B15D644269e9C7b"
+  },
+  "convexMetapoolHelperUSDT": {
+    "proxy": "0x9047Edd02514749107F0794Da266e3b1fF1002EC",
+    "implementation": "0x177D1a11Dba4966E252a48f4b156fF3639d7bc84"
+  },
+  "morphoHelperDAI": {
+    "proxy": "0x0Cd4649271F96EF3b3949881B8ce394965a9bdA5",
+    "implementation": "0x69b075A3B8B41E622f92b6f91e4Fc39E3663D435"
+  },
+  "morphoHelperUSDC": {
+    "proxy": "0x767aac0fe5C70edC8655618fd9dB060C4bf1CCf8",
+    "implementation": "0xcf3AB437B7369B04E30CBBcAD46b7583cD902Ca9"
+  },
+  "morphoHelperUSDT": {
+    "proxy": "0x7d0558C4B8E4DDaD92989593178Dd7A0BCd87CcD",
+    "implementation": "0x65Ca532D67Cd5E0d454B43F60E4f9f85f147E968"
+  },
+  "convex2poolHelperUSDC": {
+    "proxy": "0x95D89B4732FeF17f06340F90B1B32bA353134Fb8",
+    "implementation": "0x6E0EAa036A6BB8E093Ce0BB439e157338278bB93"
+  },
+  "slippagesHelper": "0x497E1231ccfc8200085eB5038fFCB385bF0ebF9A",
+  "reallocationHelper": "0x95025EF109E7D71B273771D8696A746955FC760C"
+}
