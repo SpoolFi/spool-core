@@ -225,10 +225,11 @@ contract FastWithdraw is IFastWithdraw, ReentrancyGuard, SpoolPausable {
             uint256 strategyShares = vaultWithdraw.userStrategyShares[strategies[i]];
 
             if(strategyShares > 0) {
-                totalWithdrawn += spool.fastWithdrawStrat(strategies[i], address(vault.underlying()), strategyShares, slippages[i], swapData[i]);
                 vaultWithdraw.userStrategyShares[strategies[i]] = 0;
+                totalWithdrawn += spool.fastWithdrawStrat(strategies[i], address(vault.underlying()), strategyShares, slippages[i], new SwapData[](0));
                 emit StrategyWithdrawn(user, address(vault), strategies[i]);
             }
+        }
         }
         
         require(totalWithdrawn > 0, "FastWithdraw::_executeWithdraw: Nothing withdrawn");
