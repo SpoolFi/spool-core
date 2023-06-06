@@ -3,10 +3,9 @@
 pragma solidity 0.8.11;
 
 import "./SwapHelperUniswap.sol";
-import "./../SwapHelperBalancer.sol";
 
-/// @title Contains logic facilitating swapping using Uniswap / Balancer
-abstract contract SwapHelper is SwapHelperBalancer, SwapHelperUniswap {
+/// @title Contains logic facilitating swapping using Uniswap
+abstract contract SwapHelper is SwapHelperUniswap {
     using BytesLib for bytes;
 
     /**
@@ -19,7 +18,6 @@ abstract contract SwapHelper is SwapHelperBalancer, SwapHelperUniswap {
                 ISwapRouter02(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506), 
             0x82aF49447D8a07e3bd95BD0d56f35241523fBab1,
             _protocol)
-        SwapHelperBalancer()
     {}
 
     /**
@@ -36,10 +34,6 @@ abstract contract SwapHelper is SwapHelperBalancer, SwapHelperUniswap {
         uint256 amount,
         SwapData calldata swapData
     ) internal virtual returns (uint256) {
-        // If first byte is les or equal to 6, we swap via the Uniswap
-        if (swapData.path.toUint8(0) <= 6) {
-            return _approveAndSwapUniswap(from, to, amount, swapData);
-        }
-        return _approveAndSwapBalancer(from, to, amount, swapData);
+        return _approveAndSwapUniswap(from, to, amount, swapData);
     }
 }

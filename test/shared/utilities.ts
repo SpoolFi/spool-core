@@ -95,12 +95,13 @@ export async function getStrategyNames(): Promise<any> {
     switch(chainId){
         case networks.arbitrum.chainId: 
             return {
-                AaveV3:        { name: "AaveV3",        assets: ["DAI", "USDC", "USDT"] },
-                Abracadabra:   { name: "Abracadabra",   assets: [       "USDC", "USDT"] },
-                Balancer:      { name: "Balancer",      assets: ["DAI", "USDC", "USDT"] },
-                Curve2pool:    { name: "Curve2pool",    assets: [       "USDC", "USDT"] },
-                TimelessFi:    { name: "TimelessFi",    assets: [       "USDC"        ] },
-                YearnMetapool: { name: "YearnMetapool", assets: [       "USDC", "USDT"] },
+                AaveV3:        { name: "AaveV3",              assets: ["DAI", "USDC", "USDT"] },
+                Abracadabra:   { name: "Abracadabra",         assets: [       "USDC", "USDT"] },
+                Balancer:      { name: "Balancer",            assets: ["DAI", "USDC", "USDT"] },
+                Curve2pool:    { name: "Curve2pool",          assets: [       "USDC", "USDT"] },
+                TimelessFi:    { name: "TimelessFi",          assets: [       "USDC"        ] },
+                YearnMetapool: { name: "YearnMetapool",       assets: [       "USDC", "USDT"] },
+                Convex2pool:   { name: "ConvexShared2poolV2", assets: [       "USDC", "USDT"] },
             };
         default:    
             return {
@@ -431,18 +432,6 @@ export function reduceByPercentage(x: BigNumber, bp: number) {
 
 export function convertBPToPercentage(bp: number): number {
     return (bp / 10000) * 100;
-}
-
-export function convertToSlippageStruct(raw: any): SlippageStruct {
-    let slippage: SlippageStruct = {
-        protocol: BigNumber.from(raw[0].toString()),
-        lp: BigNumber.from(raw[1].toString()),
-        isDeposit: Boolean(raw[2]),
-        canProcess: Boolean(raw[3]),
-        balance: BigNumber.from(raw[4].toString()),
-    };
-    printSlippage(slippage);
-    return slippage;
 }
 
 export type PathBalancerSwap = {

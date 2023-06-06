@@ -1510,7 +1510,7 @@ function getFastWithdrawSlippages(context: Context, vaultName: string) {
                 continue;
             }
             case "Convex2pool": {
-                slippages.push([0, ethers.constants.MaxUint256, 0]);
+                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, 0]);
                 continue;
             }
             case "Convex4pool": {

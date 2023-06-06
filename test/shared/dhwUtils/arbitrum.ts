@@ -7,6 +7,7 @@ import { Result } from "ethers/lib/utils";
 import { Context } from "../../../scripts/infrastructure";
 import { customConstants, getStrategyIndexes } from "./../utilities";
 import { ReallocationWithdrawDataHelperStruct } from "../../../build/types/SpoolDoHardWorkReallocationHelper";
+import {getRewardSlippages} from "../toolkit.dhw";
 
 // the view functions will calculate the optimal values. howoever we apply
 // a small perentage difference before passing the slippage as an argument, in the case
@@ -137,13 +138,24 @@ async function get2PoolSlippage(
         context.strategies.arbitrum.Curve2pool.USDT,
         context.strategies.arbitrum.YearnMetapool.USDC,
         context.strategies.arbitrum.YearnMetapool.USDT,
+        context.strategies.arbitrum.Convex2pool.USDC,
+        context.strategies.arbitrum.Convex2pool.USDT,
     ].flat();
     
     const reallocateSharesToWithdraw = strategies.map((s3pl) => {
         return findRealocationShares(s3pl, context, reallocationWithdrawnShares);
     });
 
-    let result = await strategyHelperCall("get2PoolSlippage", [strategies, reallocateSharesToWithdraw], context);
+    const rewardSlippages = getRewardSlippages("arbitrum", {
+        "Abracadabra": {},
+        "Curve2pool": {},
+        "YearnMetapool": {},
+        "Convex2pool": {},
+    });
+
+    console.log("rewardSlippages", JSON.stringify( rewardSlippages ));
+
+    let result = await strategyHelperCall("get2PoolSlippage", [strategies, reallocateSharesToWithdraw, rewardSlippages], context);
 
     const slippageArgs = new Array<BigNumber[]>();
     for (let i = 0; i < result.length; i++) {
@@ -164,7 +176,7 @@ async function get2PoolSlippage(
         ];
         
         // add extra Yearn slippage
-        if(i > 3) { 
+        if(i == 4 || i == 5) {
             slippageArg.push(
                 handleLPSlippageResult(
                     slippage, 
@@ -341,6 +353,7 @@ export async function getDhwSlippagesArbitrum(context: Context, reallocationWith
     if (!strategies) return slippages;
 
     for (let stratName in strategies) {
+        console.log("stratName: " + stratName);
         switch (stratName) {
             case "AaveV3": {
                 slippages.push(
@@ -362,6 +375,13 @@ export async function getDhwSlippagesArbitrum(context: Context, reallocationWith
                     await getBalancerSlippage(strategies.Balancer.DAI[0], context, reallocationWithdrawnShares),
                     await getBalancerSlippage(strategies.Balancer.USDC[0], context, reallocationWithdrawnShares),
                     await getBalancerSlippage(strategies.Balancer.USDT[0], context, reallocationWithdrawnShares),
+                );
+                continue;
+            }
+            case "Convex2pool": {
+                slippages.push(
+                    curvePoolSlippages[6], 
+                    curvePoolSlippages[7]
                 );
                 continue;
             }
@@ -396,11 +416,8 @@ function getDhwDepositSlippage(context: Context) {
     const slippages = new Array<BigNumberish[]>();
 
     for (let stratName in context.strategies[context.network]) {
+        console.log("stratName: " + stratName);
         switch (stratName) {
-            case "Aave": {
-                slippages.push([], [], []);
-                continue;
-            }
             case "AaveV3": {
                 slippages.push([], [], []);
                 continue;
@@ -416,30 +433,7 @@ function getDhwDepositSlippage(context: Context) {
                 slippages.push([depositSlippage]);
                 continue;
             }
-            case "Compound": {
-                slippages.push([], [], []);
-                continue;
-            }
-            case "Convex": {
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                continue;
-            }
-            case "Convex4pool": {
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                continue;
-            }
-            case "ConvexMetapool": {
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                continue;
-            }
-            case "Curve": {
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
+            case "Convex2pool": {
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
@@ -449,33 +443,8 @@ function getDhwDepositSlippage(context: Context) {
                 slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
-            case "Harvest": {
-                slippages.push([], [], []);
-                continue;
-            }
-            case "Idle": {
-                slippages.push([depositSlippage]);
-                slippages.push([depositSlippage]);
-                slippages.push([depositSlippage]);
-                continue;
-            }
-            case "Morpho": {
-                slippages.push([], [], []);
-                continue;
-            }
-            case "Notional": {
-                slippages.push([depositSlippage]);
-                slippages.push([depositSlippage]);
-                continue;
-            }
             case "TimelessFi": {
                 slippages.push([]);
-                continue;
-            }
-            case "Yearn": {
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
-                slippages.push([0, ethers.constants.MaxUint256, 0, ethers.constants.MaxUint256, depositSlippage]);
                 continue;
             }
             case "YearnMetapool": {
